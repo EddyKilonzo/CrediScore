@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String     @id @default(uuid())
+  name        String
+  email       String     @unique
+  password    String
+  phone       String?    @unique
+  role        UserRole   @default(CUSTOMER)
+  isActive    Boolean    @default(true)
+  reviews     Review[]
+  businesses  Business[] // For owners
+  fraudReports FraudReport[]
+  reputation  Int        @default(0) // Reviewer credibility score
+  lastLoginAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Business {
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  category      String?
+  website       String?
+  phone         String?
+  email         String?
+  owner         User?       @relation(fields: [ownerId], references: [id])
+  ownerId       String?
+  location      String?     // Address
+  latitude      Float?      // Google Maps
+  longitude     Float?
+  isVerified    Boolean     @default(false)
+  isActive      Boolean     @default(true)
+  documents     Document[]
+  reviews       Review[]
+  payments      Payment[]
+  trustScore    TrustScore?
+  fraudReports  FraudReport[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Document {
+  id          String    @id @default(uuid())
+  url         String    // File storage link
+  type        String    // e.g. Registration certificate
+  verified    Boolean   @default(false)
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String
+  uploadedAt  DateTime  @default(now())
+}
+
+model Review {
+  id          String    @id @default(uuid())
+  rating      Int       // 1–5
+  comment     String?
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String
+  credibility Int       @default(0) // AI/manual scoring of review
+  isVerified  Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Payment {
+  id          String    @id @default(uuid())
+  type        PaymentType
+  number      String    // Till or Paybill number
+  verified    Boolean   @default(false)
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String
+  addedAt     DateTime  @default(now())
+}
+
+model TrustScore {
+  id          String    @id @default(uuid())
+  grade       String    // A+, A, B, C, D, F
+  score       Int       // Numeric 0–100
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String    @unique
+  factors     Json?     // Store scoring factors breakdown
+  updatedAt   DateTime  @updatedAt
+}
+
+model FraudReport {
+  id          String    @id @default(uuid())
+  reporter    User      @relation(fields: [reporterId], references: [id])
+  reporterId  String
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String
+  reason      String    // Fraud reason
+  description String?
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model BusinessCategory {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  businesses  Business[]
+  createdAt   DateTime  @default(now())
+}
+
+enum UserRole {
+  CUSTOMER
+  BUSINESS_OWNER
+  ADMIN
+}
+
+enum PaymentType {
+  TILL
+  PAYBILL
+  BANK
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
