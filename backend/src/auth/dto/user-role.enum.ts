@@ -1,0 +1,5 @@
+export enum UserRoleDto {
+  CUSTOMER = 'CUSTOMER',
+  BUSINESS_OWNER = 'BUSINESS_OWNER',
+  ADMIN = 'ADMIN',
+}

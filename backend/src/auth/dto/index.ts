@@ -3,6 +3,7 @@ export * from './signup.dto';
 export * from './login.dto';
 export * from './profile.dto';
 export * from './error.dto';
+export * from './user-role.enum';
 
 // Re-export commonly used DTOs for convenience
 export { SignUpDto, SignUpResponseDto } from './signup.dto';

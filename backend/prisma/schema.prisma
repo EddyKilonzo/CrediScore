@@ -50,6 +50,8 @@ model Business {
   payments      Payment[]
   trustScore    TrustScore?
   fraudReports  FraudReport[]
+  businessCategory BusinessCategory? @relation(fields: [businessCategoryId], references: [id])
+  businessCategoryId String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }

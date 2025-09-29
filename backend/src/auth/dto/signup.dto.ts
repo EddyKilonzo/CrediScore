@@ -9,7 +9,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
+import { UserRoleDto } from './user-role.enum';
 
 export class SignUpDto {
   @ApiProperty({
@@ -59,15 +59,15 @@ export class SignUpDto {
 
   @ApiProperty({
     description: 'User role',
-    enum: UserRole,
-    example: UserRole.CUSTOMER,
-    default: UserRole.CUSTOMER,
+    enum: UserRoleDto,
+    example: UserRoleDto.CUSTOMER,
+    default: UserRoleDto.CUSTOMER,
   })
-  @IsEnum(UserRole, {
+  @IsEnum(UserRoleDto, {
     message: 'Role must be either CUSTOMER, BUSINESS_OWNER, or ADMIN',
   })
   @IsOptional()
-  role?: UserRole = UserRole.CUSTOMER;
+  role?: UserRoleDto = UserRoleDto.CUSTOMER;
 }
 
 export class SignUpResponseDto {
@@ -97,10 +97,10 @@ export class SignUpResponseDto {
 
   @ApiProperty({
     description: 'User role',
-    enum: UserRole,
-    example: UserRole.CUSTOMER,
+    enum: UserRoleDto,
+    example: UserRoleDto.CUSTOMER,
   })
-  role: UserRole;
+  role: UserRoleDto;
 
   @ApiProperty({
     description: 'Account creation timestamp',

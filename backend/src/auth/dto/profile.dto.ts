@@ -3,13 +3,12 @@ import {
   IsNotEmpty,
   IsString,
   IsOptional,
-  IsEnum,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
+import { UserRoleDto } from './user-role.enum';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({
@@ -71,10 +70,10 @@ export class UserProfileDto {
 
   @ApiProperty({
     description: 'User role',
-    enum: UserRole,
-    example: UserRole.CUSTOMER,
+    enum: UserRoleDto,
+    example: UserRoleDto.CUSTOMER,
   })
-  role: UserRole;
+  role: UserRoleDto;
 
   @ApiProperty({
     description: 'User reputation score',
