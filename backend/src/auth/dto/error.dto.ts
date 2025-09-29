@@ -49,7 +49,7 @@ export class ValidationErrorDto {
     description: 'Value that failed validation',
     example: 'invalid-email',
   })
-  value: any;
+  value: string | number | boolean | null;
 }
 
 export class AuthErrorDto {

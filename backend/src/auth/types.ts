@@ -8,5 +8,16 @@ export type DbUser = {
   id: string;
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  phone?: string;
+  role: string;
+  isActive: boolean;
+  provider: string;
+  providerId?: string;
+  avatar?: string;
+  emailVerified: boolean;
+  reputation: number;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 };

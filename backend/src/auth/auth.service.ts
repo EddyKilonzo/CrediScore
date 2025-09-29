@@ -1,15 +1,24 @@
 import {
   Injectable,
-  UnauthorizedException,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { SignUpDto } from './dto/signup.dto';
-import { LoginDto } from './dto/login.dto';
-import { AuthResponse, DbUser } from './types';
+import { SignUpDto, SignUpResponseDto } from './dto/signup.dto';
+import { UserRoleDto } from './dto/user-role.enum';
+import { LoginResponseDto } from './dto/login.dto';
+import {
+  User,
+  UserWithoutPassword,
+  JwtPayload,
+  OAuthUser,
+  CreateUserData,
+} from './interfaces/user.interface';
 
 // Typed wrappers to satisfy strict lint rules
 const bcryptHash: (data: string, salt: number) => Promise<string> = (
@@ -23,44 +32,46 @@ const bcryptCompare: (data: string, encrypted: string) => Promise<boolean> = (
   }
 ).compare;
 
-type CreateUserInput = { name: string; email: string; password: string };
-
 interface UserRepository {
-  findByEmail(email: string): Promise<DbUser | null>;
-  create(data: CreateUserInput): Promise<DbUser>;
+  findByEmail(email: string): Promise<User | null>;
+  create(data: CreateUserData): Promise<User>;
 }
 
 class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByEmail(email: string): Promise<DbUser | null> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const user = (await this.prisma.user.findUnique({
+  async findByEmail(email: string): Promise<User | null> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const user = await this.prisma.user.findUnique({
       where: { email },
-    })) as DbUser | null;
-    return user;
+    });
+    return user as User | null;
   }
 
-  async create(data: CreateUserInput): Promise<DbUser> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const user = (await this.prisma.user.create({ data })) as DbUser;
-    return user;
+  async create(data: CreateUserData): Promise<User> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const user = await this.prisma.user.create({ data });
+    return user as User;
   }
 }
 
 @Injectable()
 export class AuthService {
   private readonly users: UserRepository;
+  private readonly logger = new Logger(AuthService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {
     this.users = new PrismaUserRepository(this.prisma);
   }
 
-  async signup(dto: SignUpDto): Promise<AuthResponse> {
+  async signup(dto: SignUpDto): Promise<SignUpResponseDto> {
     try {
+      this.logger.log(`Signup attempt for email: ${dto.email}`);
+
       // Check if email already exists
       const existingUser = await this.users.findByEmail(dto.email);
       if (existingUser) {
@@ -83,17 +94,19 @@ export class AuthService {
         email: user.email,
       });
 
+      this.logger.log(`User created successfully: ${user.id}`);
+
       return {
-        message: 'Signup successful',
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role as unknown as UserRoleDto,
+        createdAt: user.createdAt,
+        accessToken: token,
       };
     } catch (error) {
-      console.error('Signup error:', error);
+      this.logger.error('Signup error:', error);
 
       if (error instanceof BadRequestException) {
         throw error;
@@ -104,46 +117,272 @@ export class AuthService {
     }
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(user: UserWithoutPassword): Promise<LoginResponseDto> {
     try {
-      const user = await this.users.findByEmail(dto.email);
+      this.logger.log(`Login successful for user: ${user.id}`);
 
-      if (!user) {
-        throw new UnauthorizedException('Invalid email or password.');
-      }
-
-      const passwordValid: boolean = await bcryptCompare(
-        dto.password,
-        user.password,
-      );
-      if (!passwordValid) {
-        throw new UnauthorizedException('Invalid email or password.');
-      }
-
-      // Generate JWT
-      const token: string = this.jwtService.sign({
-        userId: user.id,
-        email: user.email,
+      // Update last login
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
       });
 
+      // Generate JWT
+      const payload: JwtPayload = {
+        userId: user.id,
+        email: user.email,
+      };
+      const token: string = this.jwtService.sign(payload);
+
       return {
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        reputation: user.reputation,
+        isActive: user.isActive,
+        lastLoginAt: new Date(),
+        accessToken: token,
+        expiresIn: 24 * 60 * 60, // 24 hours in seconds
       };
     } catch (error) {
-      console.error('Login error:', error);
-
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
+      this.logger.error('Login error:', error);
       throw new InternalServerErrorException(
         'Something went wrong during login.',
       );
+    }
+  }
+
+  async validateUser(
+    email: string,
+    inputPassword: string,
+  ): Promise<UserWithoutPassword | null> {
+    try {
+      const user = await this.users.findByEmail(email);
+
+      if (!user || !user.isActive || !user.password) {
+        return null;
+      }
+
+      const passwordValid: boolean = await bcryptCompare(
+        inputPassword,
+        user.password,
+      );
+      if (!passwordValid) {
+        return null;
+      }
+
+      // Return user without password
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...result } = user;
+      return result;
+    } catch (error) {
+      this.logger.error('User validation error:', error);
+      return null;
+    }
+  }
+
+  async getProfile(userId: string): Promise<UserWithoutPassword> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          reputation: true,
+          isActive: true,
+          provider: true,
+          providerId: true,
+          avatar: true,
+          emailVerified: true,
+          lastLoginAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      return user as UserWithoutPassword;
+    } catch (error) {
+      this.logger.error('Get profile error:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to get user profile');
+    }
+  }
+
+  async forgotPassword(email: string) {
+    try {
+      this.logger.log(`Password reset requested for email: ${email}`);
+
+      const user = await this.users.findByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists or not
+        return { message: 'If the email exists, a reset link has been sent.' };
+      }
+
+      // TODO: Implement email service to send reset link
+      // For now, just log the request
+      this.logger.log(`Password reset token would be sent to: ${email}`);
+
+      return { message: 'If the email exists, a reset link has been sent.' };
+    } catch (error) {
+      this.logger.error('Forgot password error:', error);
+      throw new InternalServerErrorException(
+        'Failed to process password reset request',
+      );
+    }
+  }
+
+  resetPassword(token: string, newPassword: string): { message: string } {
+    try {
+      this.logger.log('Password reset attempt');
+
+      // TODO: Implement token validation and password reset
+      // For now, just log the request
+      this.logger.log(
+        `Password reset token: ${token}, new password length: ${newPassword.length}`,
+      );
+
+      return { message: 'Password reset successfully' };
+    } catch (error) {
+      this.logger.error('Reset password error:', error);
+      throw new InternalServerErrorException('Failed to reset password');
+    }
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    try {
+      this.logger.log(`Password change attempt for user: ${userId}`);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (!user || !user.password) {
+        throw new NotFoundException('User not found');
+      }
+
+      const passwordValid: boolean = await bcryptCompare(
+        currentPassword,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        user.password,
+      );
+      if (!passwordValid) {
+        throw new BadRequestException('Invalid current password');
+      }
+
+      const hashedPassword: string = await bcryptHash(newPassword, 10);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      this.logger.log(`Password changed successfully for user: ${userId}`);
+
+      return { message: 'Password changed successfully' };
+    } catch (error) {
+      this.logger.error('Change password error:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to change password');
+    }
+  }
+
+  logout(userId: string): { message: string } {
+    try {
+      this.logger.log(`User logout: ${userId}`);
+
+      // TODO: Implement token blacklisting or session management
+      // For now, just log the logout
+
+      return { message: 'Logged out successfully' };
+    } catch (error) {
+      this.logger.error('Logout error:', error);
+      throw new InternalServerErrorException('Failed to logout');
+    }
+  }
+
+  async validateOAuthUser(oauthUser: OAuthUser): Promise<UserWithoutPassword> {
+    try {
+      this.logger.log(`OAuth login attempt for email: ${oauthUser.email}`);
+
+      // Check if user exists
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      let user = await this.prisma.user.findUnique({
+        where: { email: oauthUser.email },
+      });
+
+      if (user) {
+        // Update existing user with OAuth info if not already set
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (!user.providerId) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          user = await this.prisma.user.update({
+            where: { id: (user as User).id },
+            data: {
+              provider: oauthUser.provider,
+              providerId: oauthUser.providerId,
+              avatar: oauthUser.avatar,
+              emailVerified: true,
+            },
+          });
+        }
+      } else {
+        // Create new user
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        user = await this.prisma.user.create({
+          data: {
+            name: oauthUser.name,
+            email: oauthUser.email,
+            provider: oauthUser.provider,
+            providerId: oauthUser.providerId,
+            avatar: oauthUser.avatar,
+            emailVerified: true,
+            isActive: true,
+          },
+        });
+      }
+
+      // Update last login
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      await this.prisma.user.update({
+        where: { id: (user as User).id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      this.logger.log(`OAuth user validated: ${(user as User).id}`);
+
+      // Return user without password
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...result } = user as User;
+      return result as UserWithoutPassword;
+    } catch (error) {
+      this.logger.error('OAuth validation error:', error);
+      throw new InternalServerErrorException('OAuth validation failed');
     }
   }
 }

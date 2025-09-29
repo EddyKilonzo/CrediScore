@@ -3,3 +3,9 @@ export enum UserRoleDto {
   BUSINESS_OWNER = 'BUSINESS_OWNER',
   ADMIN = 'ADMIN',
 }
+
+export enum UserRole {
+  CUSTOMER = 'CUSTOMER',
+  BUSINESS_OWNER = 'BUSINESS_OWNER',
+  ADMIN = 'ADMIN',
+}
