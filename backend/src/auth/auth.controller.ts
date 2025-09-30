@@ -30,12 +30,14 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { UserWithoutPassword } from './interfaces/user.interface';
+import { Public } from './decorators/public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
@@ -58,6 +60,7 @@ export class AuthController {
     return this.authService.signup(signUpDto);
   }
 
+  @Public()
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -100,6 +103,7 @@ export class AuthController {
     return this.authService.getProfile(req.user.id);
   }
 
+  @Public()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Request password reset' })
@@ -117,6 +121,7 @@ export class AuthController {
     return this.authService.forgotPassword(forgotPasswordDto.email);
   }
 
+  @Public()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
@@ -128,9 +133,9 @@ export class AuthController {
     status: 400,
     description: 'Invalid or expired token',
   })
-  async resetPassword(
-    @Body(ValidationPipe) resetPasswordDto: ResetPasswordDto,
-  ): Promise<{ message: string }> {
+  resetPassword(@Body(ValidationPipe) resetPasswordDto: ResetPasswordDto): {
+    message: string;
+  } {
     return this.authService.resetPassword(
       resetPasswordDto.token,
       resetPasswordDto.newPassword,
@@ -172,12 +177,11 @@ export class AuthController {
     status: 200,
     description: 'User logged out successfully',
   })
-  async logout(
-    @Request() req: { user: UserWithoutPassword },
-  ): Promise<{ message: string }> {
+  logout(@Request() req: { user: UserWithoutPassword }): { message: string } {
     return this.authService.logout(req.user.id);
   }
 
+  @Public()
   @Get('google')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Initiate Google OAuth login' })
@@ -189,6 +193,7 @@ export class AuthController {
     // This endpoint will redirect to Google OAuth
   }
 
+  @Public()
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google OAuth callback' })

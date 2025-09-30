@@ -1,0 +1,27 @@
+<h1 style="font-size: 28px; font-weight: 400; color: #1a1a1a; margin: 0 0 30px 0;">Welcome to CrediScore!</h1>
+
+<p style="font-size: 15px; color: #666; margin: 0 0 25px 0;">
+    Dear user <a href="mailto:<%= email %>" style="color: #00a6ff; text-decoration: none;"><%= email %></a>:
+</p>
+
+<p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0 0 15px 0;">
+    Your account has been successfully created. We're excited to have you on board!
+</p>
+
+<p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0 0 15px 0;">
+    CrediScore helps you track, monitor, and improve your credit score with powerful insights and real-time updates.
+</p>
+
+<% if (verificationUrl) { %>
+<p style="font-size: 15px; color: #333; line-height: 1.8; margin: 25px 0 15px 0;">
+    Verification link expires at: <strong style="font-weight: 600;"><%= new Date(Date.now() + 86400000).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) %></strong>
+</p>
+
+<p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0 0 15px 0;">
+    For more details, please go to <a href="<%= verificationUrl %>" style="color: #00a6ff; text-decoration: none;">"Verify Email"</a>.
+</p>
+<% } else { %>
+<p style="font-size: 15px; color: #333; line-height: 1.8; margin: 0 0 15px 0;">
+    For more details, please go to <a href="<%= appUrl %>/dashboard" style="color: #00a6ff; text-decoration: none;">"My Dashboard"</a>.
+</p>
+<% } %>

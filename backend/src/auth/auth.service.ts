@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignUpDto, SignUpResponseDto } from './dto/signup.dto';
-import { UserRoleDto } from './dto/user-role.enum';
+import { UserRoleDto, UserRole } from './dto/user-role.enum';
 import { LoginResponseDto } from './dto/login.dto';
 import {
   User,
@@ -41,7 +41,6 @@ class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -49,7 +48,6 @@ class PrismaUserRepository implements UserRepository {
   }
 
   async create(data: CreateUserData): Promise<User> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const user = await this.prisma.user.create({ data });
     return user as User;
   }
@@ -81,11 +79,12 @@ export class AuthService {
       // Hash password
       const hashedPassword: string = await bcryptHash(dto.password, 10);
 
-      // Create user
+      // Create user with default CUSTOMER role
       const user = await this.users.create({
         name: dto.name,
         email: dto.email,
         password: hashedPassword,
+        role: UserRole.CUSTOMER,
       });
 
       // Generate JWT
@@ -122,7 +121,6 @@ export class AuthService {
       this.logger.log(`Login successful for user: ${user.id}`);
 
       // Update last login
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await this.prisma.user.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
@@ -186,7 +184,6 @@ export class AuthService {
 
   async getProfile(userId: string): Promise<UserWithoutPassword> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: {
@@ -269,19 +266,16 @@ export class AuthService {
     try {
       this.logger.log(`Password change attempt for user: ${userId}`);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (!user || !user.password) {
         throw new NotFoundException('User not found');
       }
 
       const passwordValid: boolean = await bcryptCompare(
         currentPassword,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         user.password,
       );
       if (!passwordValid) {
@@ -290,7 +284,6 @@ export class AuthService {
 
       const hashedPassword: string = await bcryptHash(newPassword, 10);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await this.prisma.user.update({
         where: { id: userId },
         data: { password: hashedPassword },
@@ -330,16 +323,13 @@ export class AuthService {
       this.logger.log(`OAuth login attempt for email: ${oauthUser.email}`);
 
       // Check if user exists
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       let user = await this.prisma.user.findUnique({
         where: { email: oauthUser.email },
       });
 
       if (user) {
         // Update existing user with OAuth info if not already set
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (!user.providerId) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           user = await this.prisma.user.update({
             where: { id: (user as User).id },
             data: {
@@ -352,7 +342,6 @@ export class AuthService {
         }
       } else {
         // Create new user
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         user = await this.prisma.user.create({
           data: {
             name: oauthUser.name,
@@ -367,7 +356,6 @@ export class AuthService {
       }
 
       // Update last login
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await this.prisma.user.update({
         where: { id: (user as User).id },
         data: { lastLoginAt: new Date() },

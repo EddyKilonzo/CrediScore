@@ -15,7 +15,6 @@ export class PrismaService
 
   async onModuleInit(): Promise<void> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await this.$connect();
       this.logger.log(
         'Successfully connected to PostgreSQL database via Prisma',
@@ -28,7 +27,6 @@ export class PrismaService
 
   async onModuleDestroy(): Promise<void> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await this.$disconnect();
       this.logger.log('Successfully disconnected from PostgreSQL database');
     } catch (error) {

@@ -4,7 +4,6 @@ import {
   IsString,
   MinLength,
   IsOptional,
-  IsEnum,
   Matches,
   MaxLength,
 } from 'class-validator';
@@ -56,18 +55,6 @@ export class SignUpDto {
     message: 'Please provide a valid phone number',
   })
   phone?: string;
-
-  @ApiProperty({
-    description: 'User role',
-    enum: UserRoleDto,
-    example: UserRoleDto.CUSTOMER,
-    default: UserRoleDto.CUSTOMER,
-  })
-  @IsEnum(UserRoleDto, {
-    message: 'Role must be either CUSTOMER, BUSINESS_OWNER, or ADMIN',
-  })
-  @IsOptional()
-  role?: UserRoleDto = UserRoleDto.CUSTOMER;
 }
 
 export class SignUpResponseDto {

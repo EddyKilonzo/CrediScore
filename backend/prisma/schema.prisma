@@ -30,6 +30,13 @@ model User {
   fraudReports FraudReport[]
   reputation  Int        @default(0) // Reviewer credibility score
   lastLoginAt DateTime?
+  // Fraud detection fields
+  isFlagged   Boolean    @default(false) // User flagged for suspicious activity
+  flagReason  String?    // Reason for flagging
+  flagCount   Int        @default(0) // Number of times flagged
+  unverifiedReviewCount Int @default(0) // Count of unverified reviews
+  lastFlaggedAt DateTime? // Last time user was flagged
+  reviewPattern Json?    // Store review pattern analysis data
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
@@ -81,6 +88,12 @@ model Review {
   credibility Int       @default(0) // AI/manual scoring of review
   isVerified  Boolean   @default(false)
   isActive    Boolean   @default(true)
+  // Receipt validation fields
+  receiptUrl  String?   // URL to uploaded receipt image
+  receiptData Json?     // Extracted receipt data from AI
+  validationResult Json? // AI validation result
+  amount      Float?    // Amount from receipt
+  reviewDate  DateTime? // Date of the reviewed transaction
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
