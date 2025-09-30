@@ -1,0 +1,45 @@
+<!-- Login Component Template -->
+<div class="login-container">
+  <h2>Login</h2>
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input 
+        type="email" 
+        id="email" 
+        formControlName="email"
+        placeholder="Enter your email">
+      <div class="error" *ngIf="getFieldError('email')">
+        {{ getFieldError('email') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        type="password" 
+        id="password" 
+        formControlName="password"
+        placeholder="Enter your password">
+      <div class="error" *ngIf="getFieldError('password')">
+        {{ getFieldError('password') }}
+      </div>
+    </div>
+
+    <div class="error" *ngIf="error()">
+      {{ error() }}
+    </div>
+
+    <button 
+      type="submit" 
+      [disabled]="isLoading()"
+      class="submit-btn">
+      {{ isLoading() ? 'Logging in...' : 'Login' }}
+    </button>
+  </form>
+
+  <div class="auth-links">
+    <p>Don't have an account? <a routerLink="/auth/register">Sign up</a></p>
+  </div>
+</div>
+

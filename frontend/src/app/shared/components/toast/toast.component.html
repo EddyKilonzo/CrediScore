@@ -1,0 +1,39 @@
+<!-- Toast Component Template -->
+<div class="toast-container">
+  @for (toast of toasts(); track toast.id) {
+    <div 
+      class="toast toast-{{ toast.type }}"
+      [@slideInOut]="toast.isVisible ? 'in' : 'out'"
+      (click)="remove(toast.id)">
+      
+      <!-- Progress Bar -->
+      @if (toast.duration && toast.duration > 0) {
+        <div class="toast-progress">
+          <div 
+            class="toast-progress-bar"
+            [style.width.%]="toast.progress || 100">
+          </div>
+        </div>
+      }
+      
+      <div class="toast-content">
+        <span class="toast-icon">
+          @switch (toast.type) {
+            @case ('success') { ✓ }
+            @case ('error') { ✗ }
+            @case ('warning') { ⚠ }
+            @case ('info') { ℹ }
+          }
+        </span>
+        <span class="toast-message">{{ toast.message }}</span>
+      </div>
+      
+      <button 
+        class="toast-close" 
+        (click)="remove(toast.id)"
+        type="button">
+        ×
+      </button>
+    </div>
+  }
+</div>

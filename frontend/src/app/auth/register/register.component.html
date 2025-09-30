@@ -1,0 +1,77 @@
+<!-- Register Component Template -->
+<div class="register-container">
+  <h2>Sign Up</h2>
+  <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label for="name">Full Name</label>
+      <input 
+        type="text" 
+        id="name" 
+        formControlName="name"
+        placeholder="Enter your full name">
+      <div class="error" *ngIf="getFieldError('name')">
+        {{ getFieldError('name') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input 
+        type="email" 
+        id="email" 
+        formControlName="email"
+        placeholder="Enter your email">
+      <div class="error" *ngIf="getFieldError('email')">
+        {{ getFieldError('email') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        type="password" 
+        id="password" 
+        formControlName="password"
+        placeholder="Enter your password">
+      <div class="error" *ngIf="getFieldError('password')">
+        {{ getFieldError('password') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="confirmPassword">Confirm Password</label>
+      <input 
+        type="password" 
+        id="confirmPassword" 
+        formControlName="confirmPassword"
+        placeholder="Confirm your password">
+      <div class="error" *ngIf="getFieldError('confirmPassword')">
+        {{ getFieldError('confirmPassword') }}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="role">Account Type</label>
+      <select id="role" formControlName="role">
+        <option value="user">Customer</option>
+        <option value="business">Business Owner</option>
+      </select>
+    </div>
+
+    <div class="error" *ngIf="error()">
+      {{ error() }}
+    </div>
+
+    <button 
+      type="submit" 
+      [disabled]="isLoading()"
+      class="submit-btn">
+      {{ isLoading() ? 'Creating Account...' : 'Sign Up' }}
+    </button>
+  </form>
+
+  <div class="auth-links">
+    <p>Already have an account? <a routerLink="/auth/login">Login</a></p>
+  </div>
+</div>
+
