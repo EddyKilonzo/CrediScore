@@ -1,7 +1,131 @@
-/* Home Component Styles */
-.home-container {
-  text-align: center;
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+/* Home Component Styles - Using Tailwind CSS */
+
+/* Enhanced parallax background for smooth scrolling */
+.parallax-bg {
+  will-change: transform;
+  transform: translateZ(0); /* Force hardware acceleration */
+  backface-visibility: hidden; /* Prevent flickering */
+  perspective: 1000px; /* Add depth */
+}
+
+/* Smooth scroll behavior */
+:host {
+  display: block;
+  scroll-behavior: smooth;
+}
+
+/* Additional optimization for parallax container */
+.parallax-container {
+  position: relative;
+  overflow: hidden;
+  perspective: 1px;
+  transform-style: preserve-3d;
+}
+
+/* Fade-in animation for FAQ answers */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Counter animation styles */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Pulse effect for numbers */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Gradient shimmer effect */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Smooth transitions for all elements */
+* {
+  transition-timing-function: ease-out;
+}
+
+/* Icon hover animation */
+@keyframes iconBounce {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(0deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(5deg);
+  }
+}
+
+/* Icon pulse animation for initial load */
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* Apply icon bounce on card hover */
+.group:hover i {
+  animation: iconBounce 0.8s ease-in-out;
+}
+
+/* Style for stat card icons */
+.group i[class*="uil-"] {
+  display: inline-block;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 400;
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+/* Ensure icons are visible */
+i[class*="uil-"] {
+  font-family: unicons-line !important;
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

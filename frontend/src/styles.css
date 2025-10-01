@@ -3,3 +3,178 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Global background layer with color */
+body {
+  background-color: #f0f2f5; /* Light gray-blue background */
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Background texture layer - enhanced for visibility */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.5;
+  /* CSS filters to enhance the subtle texture */
+  filter: contrast(1.4) brightness(0.95);
+  mix-blend-mode: overlay; /* Changed to overlay for better texture visibility */
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Ensure the html element also has proper height */
+html {
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+/* Make Angular app components transparent to show body background */
+app-root {
+  display: block;
+  background: transparent;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+router-outlet {
+  display: none;
+}
+
+/* Ensure all main sections are transparent by default */
+app-root > * {
+  background: transparent;
+}
+
+/* ============================================
+   FADE-IN-UP ANIMATIONS - Reusable System
+   ============================================ */
+
+/* Base animation classes - hidden by default */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered animation delays for sequential elements */
+.fade-in-up-delay-1 {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out 0.1s, transform 0.6s ease-out 0.1s;
+}
+
+.fade-in-up-delay-2 {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out 0.2s, transform 0.6s ease-out 0.2s;
+}
+
+.fade-in-up-delay-3 {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out 0.3s, transform 0.6s ease-out 0.3s;
+}
+
+.fade-in-up-delay-4 {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out 0.4s, transform 0.6s ease-out 0.4s;
+}
+
+.fade-in-up-delay-5 {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out 0.5s, transform 0.6s ease-out 0.5s;
+}
+
+.fade-in-up-delay-6 {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out 0.6s, transform 0.6s ease-out 0.6s;
+}
+
+/* Apply visible state to delayed animations */
+.fade-in-up-delay-1.visible,
+.fade-in-up-delay-2.visible,
+.fade-in-up-delay-3.visible,
+.fade-in-up-delay-4.visible,
+.fade-in-up-delay-5.visible,
+.fade-in-up-delay-6.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Faster fade-in for subtle elements */
+.fade-in-up-fast {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.fade-in-up-fast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Slower fade-in for hero sections */
+.fade-in-up-slow {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.fade-in-up-slow.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Scale animation variant */
+.fade-scale {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-scale.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Slide in from left */
+.slide-in-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.slide-in-left.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Slide in from right */
+.slide-in-right {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.slide-in-right.visible {
+  opacity: 1;
+  transform: translateX(0);
+}

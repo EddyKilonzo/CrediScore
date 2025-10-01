@@ -1,1 +1,37 @@
-<p>navbar works!</p>
+<nav class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <!-- Logo and Brand -->
+      <div class="flex items-center">
+        <a routerLink="/" class="flex items-center space-x-3 hover:opacity-90 transition-opacity">
+          <img 
+            src="/images/CrediScore.png" 
+            alt="CrediScore Logo" 
+            class="h-12 w-auto"
+          />
+          <div>
+            <h1 class="text-xl font-bold text-gray-900">CrediScore</h1>
+            <p class="text-xs text-gray-500">Business Trust Platform</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Auth Buttons -->
+      <div class="flex items-center space-x-4">
+        <a 
+          routerLink="/auth/login" 
+          class="inline-flex items-center px-4 py-2 text-sm font-medium text-primary hover:text-primary-700 transition-colors">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          Sign In
+        </a>
+        <a 
+          routerLink="/auth/register" 
+          class="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
+          Sign Up
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
