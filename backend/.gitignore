@@ -3,6 +3,16 @@
 /node_modules
 /build
 
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+ENV/
+
 # Logs
 logs
 *.log
