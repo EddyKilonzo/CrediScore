@@ -1,0 +1,86 @@
+/* Footer styles with smooth entrance animation */
+
+/* Hide footer initially and show with smooth animation */
+footer {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+/* Show footer after a delay to prevent flash on page load */
+footer.footer-loaded {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered animation for footer content */
+footer.footer-loaded > div {
+  animation: footerContentSlideIn 0.6s ease-out forwards;
+  animation-delay: 0.2s;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+footer.footer-loaded .grid > div {
+  animation: footerItemFadeIn 0.5s ease-out forwards;
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+footer.footer-loaded .grid > div:nth-child(1) {
+  animation-delay: 0.4s;
+}
+
+footer.footer-loaded .grid > div:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+footer.footer-loaded .grid > div:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+footer.footer-loaded > div:last-child {
+  animation: footerCopyrightSlideIn 0.6s ease-out forwards;
+  animation-delay: 0.8s;
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+/* Keyframe animations */
+@keyframes footerContentSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes footerItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes footerCopyrightSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth appearance delay to ensure content loads first */
+footer {
+  animation-delay: 2s; /* Wait for main content animations */
+}

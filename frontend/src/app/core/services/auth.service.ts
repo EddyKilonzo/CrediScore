@@ -17,10 +17,11 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
+  name: string;
   email: string;
   password: string;
-  name: string;
   role: 'business' | 'user';
+  phone?: string;
 }
 
 export interface AuthResponse {
@@ -59,6 +60,12 @@ export class AuthService {
         this.logout();
       }
     }
+  }
+
+  signInWithGoogle(): void {
+    // Redirect to Google OAuth endpoint on backend
+    const googleAuthUrl = 'http://localhost:3000/api/auth/google';
+    window.location.href = googleAuthUrl;
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {

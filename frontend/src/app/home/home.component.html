@@ -8,19 +8,19 @@
   </div>
   
   <!-- Hero Background Overlay -->
-  <div class="absolute inset-0 bg-black bg-opacity-40 z-0"></div>
+  <div class="absolute inset-0 bg-black bg-opacity-40 z-0 hero-overlay"></div>
 
   <!-- Integrated Navbar -->
   <nav class="relative z-20 bg-gradient-to-b from-black/30 to-transparent backdrop-blur-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-20">
         <!-- Logo and Brand -->
-        <div class="flex items-center">
+        <div class="flex items-center nav-element">
           <a routerLink="/" class="flex items-center space-x-3 hover:opacity-90 transition-opacity">
             <img 
               src="/images/CrediScore.png" 
               alt="CrediScore Logo" 
-              class="h-12 w-auto"
+              class="h-12 w-auto nav-logo"
             />
             <div>
               <h1 class="text-xl font-bold text-white">CrediScore</h1>
@@ -30,10 +30,10 @@
         </div>
 
         <!-- Auth Buttons -->
-        <div class="flex items-center space-x-4">
+        <div class="flex items-center space-x-4 nav-element">
           <a 
             routerLink="/auth/login" 
-            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white hover:text-primary hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm">
+            class="inline-flex items-center px-4 py-2 text-sm font-medium text-white hover:text-primary hover:bg-white/10 rounded-lg transition-all backdrop-blur-sm btn-hover-effect">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -41,7 +41,7 @@
           </a>
           <a 
             routerLink="/auth/register" 
-            class="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-700 transition-colors shadow-lg">
+            class="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-700 transition-colors shadow-lg btn-hover-effect">
             Sign Up
           </a>
         </div>
@@ -53,20 +53,20 @@
   <div class="relative z-10 flex-1 flex items-center justify-center p-8">
     <div class="max-w-7xl w-full text-center">
     <!-- Main Heading -->
-    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-      <span class="text-primary-100">Verify.</span>
-      <span class="text-primary-100 mx-2">Review.</span>
-      <span class="text-primary-100">Trust.</span>
+    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+      <span class="hero-word text-primary">Verify.</span>
+      <span class="hero-word text-accent mx-2">Review.</span>
+      <span class="hero-word text-secondary">Trust.</span>
     </h1>
 
     <!-- Subtitle -->
-    <p class="text-lg md:text-xl text-white max-w-4xl mx-auto mb-12 leading-relaxed">
+    <p class="text-lg md:text-xl text-white max-w-4xl mx-auto mb-12 leading-relaxed hero-subtitle">
       Kenya's trusted platform for business verification and reviews. Make informed
       decisions with AI-powered authenticity scoring and comprehensive business insights.
     </p>
 
     <!-- Search Section -->
-    <div class="max-w-3xl mx-auto mb-12">
+    <div class="max-w-3xl mx-auto mb-12 hero-search-section">
       <div class="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg shadow-2xl mb-6">
         <!-- Search Input -->
         <div class="relative flex-1 w-full flex items-center">
@@ -77,7 +77,7 @@
             type="text"
             [(ngModel)]="searchQuery"
             placeholder="Search by business name, registration number, or till number..."
-            class="w-full pl-10 pr-3 py-2 text-sm border-none outline-none text-gray-900 placeholder-gray-400"
+            class="search-input w-full pl-10 pr-3 py-2 text-sm border-none outline-none text-gray-900 placeholder-gray-400"
             (keyup.enter)="onSearch()"
           />
         </div>
@@ -88,7 +88,7 @@
           <button 
             type="button"
             (click)="toggleDropdown()"
-            class="flex items-center w-full text-left cursor-pointer outline-none">
+            class="dropdown-btn flex items-center w-full text-left cursor-pointer outline-none">
             <svg class="w-4 h-4 text-gray-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
@@ -120,11 +120,11 @@
         </div>
 
         <!-- Search Button -->
-        <button (click)="onSearch()" class="inline-flex items-center px-5 py-1.5 bg-primary text-white text-sm rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm whitespace-nowrap w-full lg:w-auto justify-center">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button (click)="onSearch()" class="hero-search-button inline-flex items-center px-5 py-1.5 bg-primary text-white text-sm rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm whitespace-nowrap w-full lg:w-auto justify-center">
+          <svg class="relative w-4 h-4 mr-2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          Search
+          <span class="relative z-10">Search</span>
         </button>
       </div>
 
@@ -135,7 +135,7 @@
           <button 
             *ngFor="let term of popularSearches" 
             (click)="searchPopular(term)"
-            class="px-4 py-1.5 bg-white text-gray-700 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition-all transform hover:-translate-y-0.5 whitespace-nowrap">
+            class="popular-search-item px-4 py-1.5 bg-white text-gray-700 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition-all transform hover:-translate-y-0.5 whitespace-nowrap">
             {{ term }}
           </button>
         </div>
@@ -144,14 +144,17 @@
 
     <!-- CTA Buttons -->
     <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-      <button routerLink="/auth/register" class="inline-flex items-center px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-primary/40">
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button routerLink="/auth/register" class="hero-cta-primary inline-flex items-center px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-primary/40">
+        <svg class="relative w-5 h-5 mr-2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        Verify Your Business
+        <span class="relative z-10">Verify Your Business</span>
       </button>
-      <button routerLink="/auth/login" class="inline-flex items-center px-8 py-4 bg-white text-gray-900 border-2 border-white rounded-lg font-semibold hover:bg-transparent hover:text-white transition-all transform hover:-translate-y-1">
-        Browse Businesses
+      <button routerLink="/auth/login" class="hero-cta-secondary inline-flex items-center px-8 py-4 bg-white text-gray-900 border-2 border-white rounded-lg font-semibold hover:bg-transparent hover:text-white transition-all transform hover:-translate-y-1">
+        <svg class="relative w-5 h-5 mr-2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <span class="relative z-10">Browse Businesses</span>
       </button>
     </div>
     </div>
@@ -178,7 +181,7 @@
       <div 
         *ngFor="let stat of statistics; let i = index" 
         #statCard
-        class="group relative bg-white rounded-3xl shadow-lg p-8 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden fade-in-up-delay-{{ i + 2 }}">
+        class="group relative bg-white rounded-3xl shadow-lg p-8 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100 overflow-hidden stat-card fade-in-up-delay-{{ i + 2 }}">
         
         <!-- Subtle Background Decoration -->
         <div class="absolute top-0 right-0 w-32 h-32 bg-primary opacity-5 rounded-full blur-3xl transform translate-x-8 -translate-y-8 group-hover:opacity-10 group-hover:scale-150 transition-all duration-700"></div>
@@ -509,7 +512,7 @@
     <!-- Business Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
       <!-- Business Card 1: Safaricom -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden fade-in-up-delay-3">
+      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-3">
         <!-- Gradient Background with Logo -->
         <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
           <!-- Top Verified Badge -->
@@ -564,7 +567,7 @@
       </div>
 
       <!-- Business Card 2: Equity Bank -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden fade-in-up-delay-4">
+      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-4">
         <!-- Gradient Background with Logo -->
         <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
           <!-- Top Verified Badge -->
@@ -622,7 +625,7 @@
       </div>
 
       <!-- Business Card 3: KCB Bank -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden fade-in-up-delay-5">
+      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-5">
         <!-- Gradient Background with Logo -->
         <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
           <!-- Top Verified Badge -->
@@ -677,7 +680,7 @@
       </div>
 
       <!-- Business Card 4: Naivas Supermarket -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden fade-in-up-delay-6">
+      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-6">
         <!-- Gradient Background with Logo -->
         <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
           <!-- Top Verified Badge -->
@@ -772,7 +775,7 @@
     <!-- FAQ Accordion -->
     <div class="space-y-4">
       <!-- FAQ Item 1 -->
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 fade-in-up-delay-3">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 faq-item fade-in-up-delay-3">
         <button 
           (click)="toggleFaq(0)"
           class="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-200">
@@ -799,7 +802,7 @@
       </div>
 
       <!-- FAQ Item 2 -->
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 faq-item">
         <button 
           (click)="toggleFaq(1)"
           class="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-200">
@@ -829,7 +832,7 @@
       </div>
 
       <!-- FAQ Item 3 -->
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 faq-item">
         <button 
           (click)="toggleFaq(2)"
           class="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-200">
@@ -856,7 +859,7 @@
       </div>
 
       <!-- FAQ Item 4 -->
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 faq-item">
         <button 
           (click)="toggleFaq(3)"
           class="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-200">
@@ -890,7 +893,7 @@
       </div>
 
       <!-- FAQ Item 5 -->
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 faq-item">
         <button 
           (click)="toggleFaq(4)"
           class="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-200">
@@ -923,7 +926,7 @@
       </div>
 
       <!-- FAQ Item 6 -->
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300 faq-item">
         <button 
           (click)="toggleFaq(5)"
           class="w-full px-8 py-6 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-200">
@@ -1461,4 +1464,15 @@
     </div>
   </div>
 </section>
+
+<!-- Back to Top Button -->
+<button 
+  class="back-to-top" 
+  (click)="scrollToTop()"
+  [class.show]="showBackToTop"
+  title="Back to Top">
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+  </svg>
+</button>
 
