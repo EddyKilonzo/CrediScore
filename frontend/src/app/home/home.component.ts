@@ -1,7 +1,9 @@
-import { Component, HostListener, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChildren, QueryList, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { AuthService, User } from '../core/services/auth.service';
+import { ToastService } from '../shared/components/toast/toast.service';
 
 interface Statistic {
   iconClass: string;
@@ -23,6 +25,14 @@ interface Statistic {
 })
 export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChildren('statCard') statCards!: QueryList<ElementRef>;
+
+  // Inject services
+  private authService = inject(AuthService);
+  private toastService = inject(ToastService);
+
+  // Authentication state
+  currentUser = this.authService.currentUser;
+  isAuthenticated = this.authService.isAuthenticated;
 
   searchQuery: string = '';
   searchCategory: string = 'all';
@@ -316,5 +326,29 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       top: 0,
       behavior: 'smooth'
     });
+  }
+
+  // Profile-related methods
+  getUserInitials(user: User): string {
+    if (!user || !user.name) return '';
+    const nameParts = user.name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts[1] || '';
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+  }
+
+  getProfileImageUrl(): string | null {
+    const user = this.currentUser();
+    if (user?.avatar) {
+      return user.avatar;
+    }
+    // Fallback to localStorage for backward compatibility
+    return localStorage.getItem('profileImage');
+  }
+
+  logout() {
+    const userName = this.currentUser()?.name || 'User';
+    this.authService.logout();
+    this.toastService.info(`Goodbye, ${userName}! You have been logged out successfully.`);
   }
 }

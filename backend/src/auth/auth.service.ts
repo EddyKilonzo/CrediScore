@@ -101,6 +101,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: user.role as unknown as UserRoleDto,
+        avatar: user.avatar,
         createdAt: user.createdAt,
         accessToken: token,
       };
@@ -139,6 +140,7 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        avatar: user.avatar,
         reputation: user.reputation,
         isActive: user.isActive,
         lastLoginAt: new Date(),

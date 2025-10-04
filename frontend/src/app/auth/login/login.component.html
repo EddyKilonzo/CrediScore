@@ -74,45 +74,45 @@
               <!-- Email -->
               <div>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input
+      <input 
                   formControlName="email"
-                  type="email"
-                  id="email"
+        type="email" 
+        id="email" 
                   placeholder="john.doe@example.com"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
                 
                 <!-- Error -->
                 <div *ngIf="getFieldError('email')" class="text-xs text-red-600 mt-1">
-                  {{ getFieldError('email') }}
-                </div>
-              </div>
+        {{ getFieldError('email') }}
+      </div>
+    </div>
 
               <!-- Password -->
               <div class="relative">
                 <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <input
+      <input 
                   formControlName="password"
-                  type="password"
-                  id="password"
+        type="password" 
+        id="password" 
                   placeholder="Enter your password"
                   class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
                 
                 <!-- Error -->
                 <div *ngIf="getFieldError('password')" class="text-xs text-red-600 mt-1">
-                  {{ getFieldError('password') }}
-                </div>
-              </div>
+        {{ getFieldError('password') }}
+      </div>
+    </div>
 
               <!-- Error Message -->
               <div *ngIf="error()" class="text-xs text-red-600 bg-red-50 p-2 rounded-lg">
-                {{ error() }}
-              </div>
+      {{ error() }}
+    </div>
 
               <!-- Submit Button -->
-              <button 
-                type="submit" 
+    <button 
+      type="submit" 
                 (click)="onSubmit()"
-                [disabled]="isLoading()"
+      [disabled]="isLoading()"
                 class="w-full px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 style="background-color: #2C5270;">
                 
@@ -127,8 +127,8 @@
                   Sign In
                   <i class="fas fa-arrow-right ml-2"></i>
                 </div>
-              </button>
-            </form>
+    </button>
+  </form>
           </div>
 
           <!-- Google SSO Section -->

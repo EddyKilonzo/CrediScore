@@ -12,7 +12,11 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:4200',
+      'http://localhost:4200', // Angular dev server
+      'http://localhost:5173', // Vite dev server (if used)
+    ],
     credentials: true,
   });
 

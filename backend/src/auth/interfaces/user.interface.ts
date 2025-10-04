@@ -12,6 +12,7 @@ export interface User {
   email: string;
   password?: string;
   phone?: string;
+  bio?: string;
   role: UserRole;
   isActive: boolean;
   provider: AuthProvider;
@@ -44,6 +45,7 @@ export interface CreateUserData {
   email: string;
   password?: string;
   phone?: string;
+  bio?: string;
   role?: UserRole;
   provider?: AuthProvider;
   providerId?: string;

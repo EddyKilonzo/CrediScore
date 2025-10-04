@@ -90,6 +90,12 @@ export class SignUpResponseDto {
   role: UserRoleDto;
 
   @ApiProperty({
+    description: 'User avatar URL',
+    example: 'https://example.com/avatar.jpg',
+  })
+  avatar?: string;
+
+  @ApiProperty({
     description: 'Account creation timestamp',
     example: '2024-01-01T00:00:00.000Z',
   })

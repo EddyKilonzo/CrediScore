@@ -52,6 +52,7 @@ export class UserService {
           name: true,
           email: true,
           phone: true,
+          bio: true,
           role: true,
           isActive: true,
           provider: true,

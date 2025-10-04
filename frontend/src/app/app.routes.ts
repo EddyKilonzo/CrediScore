@@ -35,6 +35,18 @@ export const routes: Routes = [
     ]
   },
 
+  // Profile Route
+  {
+    path: 'profile',
+    loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent)
+  },
+
+  // User Dashboard Route
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./user/dashboard/dashboard.component').then(m => m.DashboardComponent)
+  },
+
   // Wildcard route - must be last
   {
     path: '**',

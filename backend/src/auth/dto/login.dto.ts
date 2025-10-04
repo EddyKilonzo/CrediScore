@@ -68,6 +68,12 @@ export class LoginResponseDto {
   role: string;
 
   @ApiProperty({
+    description: 'User avatar URL',
+    example: 'https://example.com/avatar.jpg',
+  })
+  avatar?: string;
+
+  @ApiProperty({
     description: 'User reputation score',
     example: 85,
   })

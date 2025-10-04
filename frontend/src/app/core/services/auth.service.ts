@@ -9,6 +9,9 @@ export interface User {
   name: string;
   role: 'admin' | 'business' | 'user';
   isVerified: boolean;
+  avatar?: string; // Profile image URL from database
+  phone?: string; // Phone number
+  bio?: string; // User bio
 }
 
 export interface LoginRequest {
@@ -116,6 +119,12 @@ export class AuthService {
     this.setAuthDataInternal(response);
   }
 
+  updateUserData(user: User): void {
+    localStorage.setItem('user', JSON.stringify(user));
+    this.currentUserSubject.next(user);
+    this.currentUser.set(user);
+  }
+
   getToken(): string | null {
     return localStorage.getItem('token');
   }
@@ -135,5 +144,12 @@ export class AuthService {
 
   isUser(): boolean {
     return this.hasRole('user');
+  }
+
+  updateProfile(updateData: Partial<User>): Observable<User> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    return this.http.patch<User>(`${this.API_URL}/user/profile`, updateData, { headers });
   }
 }

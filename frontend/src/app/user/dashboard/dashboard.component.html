@@ -1,0 +1,305 @@
+<!-- Main Dashboard Content -->
+<main class="dashboard-main">
+  <div class="dashboard-container">
+    
+    <!-- Welcome Section -->
+    <div class="welcome-section">
+      <h1 class="welcome-title">
+        Dashboard
+      </h1>
+      <p class="welcome-subtitle">
+        Welcome back, {{ currentUser()?.name }}! Here's your CrediScore overview.
+      </p>
+      <!-- Customer Reputation Level -->
+      <div *ngIf="currentUser()?.role === 'user'" class="mt-4">
+        <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
+          <i class="uil uil-star mr-2"></i>
+          {{ getCustomerReputationLevel() }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <!-- Total Reviews Card -->
+      <div class="dashboard-card stats-card hover-lift">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="card-label">Total Reviews</p>
+            <p class="card-number">{{ dashboardStats.totalReviews }}</p>
+            <p class="card-growth">
+              <i class="uil uil-arrow-up text-xs"></i>
+              +{{ dashboardStats.monthlyGrowth }}% this month
+            </p>
+          </div>
+          <div class="card-icon">
+            <i class="uil uil-star text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Average Rating Card -->
+      <div class="dashboard-card stats-card hover-lift">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="card-label">Average Rating</p>
+            <p class="card-number">{{ dashboardStats.averageRating }}</p>
+            <p class="card-subtitle">Based on {{ dashboardStats.totalReviews }} reviews</p>
+          </div>
+          <div class="card-icon">
+            <i class="uil uil-star text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Businesses Card -->
+      <div class="dashboard-card stats-card hover-lift">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="card-label">Your Businesses</p>
+            <p class="card-number">{{ dashboardStats.totalBusinesses }}</p>
+            <p class="card-growth">
+              {{ dashboardStats.verifiedBusinesses }} verified
+            </p>
+          </div>
+          <div class="card-icon">
+            <i class="uil uil-building text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust Score Card (for business owners) -->
+      <div *ngIf="currentUser()?.role !== 'user'" class="dashboard-card stats-card hover-lift">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="card-label">Trust Score</p>
+            <p class="card-number trust-score" [class]="getTrustScoreColor(dashboardStats.trustScore)">
+              {{ dashboardStats.trustScore }}%
+            </p>
+            <p class="card-subtitle">Overall credibility</p>
+          </div>
+          <div class="card-icon">
+            <i class="uil uil-shield-check text-xl"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer Reputation Card -->
+      <div *ngIf="currentUser()?.role === 'user'" class="dashboard-card stats-card hover-lift">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="card-label">Reputation Level</p>
+            <p class="card-number" [class]="getReputationColor()">
+              {{ getCustomerReputationLevel() }}
+            </p>
+            <p class="card-subtitle">Your reviewer status</p>
+          </div>
+          <div class="card-icon">
+            <i class="uil uil-medal text-xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+      
+      <!-- Left Column -->
+      <div class="lg:col-span-2 space-y-8">
+        
+        <!-- Review Activity Chart -->
+        <div class="dashboard-card content-card smooth-fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="section-title">Review Activity</h3>
+            <select 
+              [(ngModel)]="selectedTimeframe" 
+              class="select-dropdown text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          
+          <!-- Simple Bar Chart -->
+          <div class="space-y-4">
+            <div class="flex items-end justify-between h-32">
+              <div 
+                *ngFor="let data of reviewTrendData" 
+                class="flex flex-col items-center space-y-2">
+                <div 
+                  class="w-8 bg-primary rounded-t-sm transition-all duration-300 hover:bg-primary-600"
+                  [style.height.%]="(data.reviews / 12) * 100"
+                  [title]="data.reviews + ' reviews'">
+                </div>
+                <span class="text-xs text-gray-500">{{ data.day }}</span>
+              </div>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-gray-600">
+                {{ getTimeframeLabel() }}: {{ getTotalReviews() }} total reviews
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="dashboard-card content-card smooth-fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="section-title">Recent Activity</h3>
+            <a routerLink="/activity" class="section-link text-sm text-primary hover:text-primary-600 font-medium">
+              See all
+            </a>
+          </div>
+          
+          <div class="space-y-4">
+            <div 
+              *ngFor="let activity of recentActivities; let i = index" 
+              class="activity-item flex items-start space-x-3 p-4 rounded-xl transition-all duration-300 ease-out cursor-pointer"
+              [style.animation-delay]="(i * 0.1) + 's'"
+              style="animation: fadeInUp 0.6s ease-out both;">
+              <div class="activity-icon w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200 shadow-sm">
+                <i [class]="getActivityIcon(activity.type) + ' text-sm text-primary'"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-medium text-black">{{ activity.title }}</p>
+                  <span *ngIf="activity.status" 
+                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                        [class]="getStatusColor(activity.status)">
+                    {{ activity.status }}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-500">{{ activity.description }}</p>
+                <div class="flex items-center space-x-2 mt-1">
+                  <span class="text-xs text-gray-500">{{ formatTimeAgo(activity.timestamp) }}</span>
+                  <span *ngIf="activity.businessName" class="text-xs text-gray-500">•</span>
+                  <span *ngIf="activity.businessName" class="text-xs text-gray-500">{{ activity.businessName }}</span>
+                  <span *ngIf="activity.rating" class="text-xs text-yellow-600">
+                    <i class="uil uil-star"></i> {{ activity.rating }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Your Businesses (for business owners) -->
+        <div *ngIf="currentUser()?.role === 'business'" class="dashboard-card content-card smooth-fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="section-title">Your Businesses</h3>
+            <a routerLink="/business" class="section-link text-sm text-primary hover:text-primary-600 font-medium">
+              Manage all
+            </a>
+          </div>
+          
+          <div class="space-y-4">
+            <div 
+              *ngFor="let business of userBusinesses" 
+              class="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-3">
+                  <h4 class="font-medium text-gray-900">{{ business.name }}</h4>
+                  <span *ngIf="business.isVerified" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <i class="uil uil-check-circle text-xs mr-1"></i>
+                    Verified
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white"
+                        [class]="getTrustGradeColor(business.grade)">
+                    {{ business.grade }}
+                  </span>
+                  <span class="text-sm font-medium" [class]="getTrustScoreColor(business.trustScore)">
+                    {{ business.trustScore }}%
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-sm text-gray-500">
+                <div class="flex items-center space-x-4">
+                  <span>{{ business.category }}</span>
+                  <span>{{ business.reviewCount }} reviews</span>
+                  <span class="flex items-center">
+                    <i class="uil uil-star text-yellow-400 text-xs mr-1"></i>
+                    {{ business.averageRating }}
+                  </span>
+                </div>
+                <span>{{ formatTimeAgo(business.lastActivity) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="space-y-8">
+        
+        <!-- Quick Actions -->
+        <div class="dashboard-card content-card smooth-fade-in">
+          <h3 class="section-title mb-4">Quick Actions</h3>
+          <div class="space-y-3">
+            <a 
+              *ngFor="let action of quickActions; let i = index" 
+              [routerLink]="action.route"
+              class="quick-action-item flex items-center space-x-3 p-3 rounded-lg transition-all duration-300"
+              [style.animation-delay]="(i * 0.1) + 's'"
+              style="animation: fadeInUp 0.6s ease-out both;">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary to-primary-600">
+                <i [class]="action.icon + ' text-lg text-gray-900'"></i>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900 group-hover:text-primary">{{ action.title }}</p>
+                <p class="text-sm text-gray-600">{{ action.description }}</p>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Business Categories -->
+        <div class="dashboard-card content-card smooth-fade-in">
+          <h3 class="section-title mb-4">Business Categories</h3>
+          <div class="space-y-3">
+            <div 
+              *ngFor="let category of businessCategories" 
+              class="business-category-item flex items-center justify-between p-3 rounded-lg transition-colors">
+              <div class="flex items-center space-x-3">
+                <div class="w-3 h-3 rounded-full" [class]="category.color"></div>
+                <span class="font-medium text-black">{{ category.name }}</span>
+              </div>
+              <span class="text-sm text-gray-500">{{ category.count }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trust Score Breakdown -->
+        <div class="dashboard-card content-card smooth-fade-in">
+          <h3 class="section-title mb-4">Trust Score Breakdown</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Review Quality</span>
+              <span class="text-sm font-medium text-gray-900">85%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 85%"></div>
+            </div>
+            
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Document Verification</span>
+              <span class="text-sm font-medium text-gray-900">92%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 92%"></div>
+            </div>
+            
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Response Rate</span>
+              <span class="text-sm font-medium text-gray-900">78%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 78%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>

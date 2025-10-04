@@ -1,12 +1,12 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { CommonModule, NgIf } from '@angular/common';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { ToastService } from '../toast/toast.service';
 
 @Component({
   selector: 'app-navbar',
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, RouterLinkActive, CommonModule, NgIf],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css'
 })
@@ -29,5 +29,14 @@ export class Navbar {
     const firstName = nameParts[0] || '';
     const lastName = nameParts[1] || '';
     return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+  }
+
+  getProfileImageUrl(): string | null {
+    const user = this.currentUser();
+    if (user?.avatar) {
+      return user.avatar;
+    }
+    // Fallback to localStorage for backward compatibility
+    return localStorage.getItem('profileImage');
   }
 }
