@@ -9,7 +9,9 @@ import {
   Get,
   Patch,
   ValidationPipe,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -198,9 +200,8 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({
-    status: 200,
-    description: 'OAuth login successful',
-    type: LoginResponseDto,
+    status: 302,
+    description: 'Redirects to frontend with authentication token',
   })
   @ApiResponse({
     status: 401,
@@ -208,7 +209,20 @@ export class AuthController {
   })
   async googleAuthRedirect(
     @Request() req: { user: UserWithoutPassword },
-  ): Promise<LoginResponseDto> {
-    return this.authService.login(req.user);
+    @Res() res: Response,
+  ) {
+    try {
+      const loginResponse = await this.authService.login(req.user);
+
+      // Redirect to frontend with token as query parameter
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      const redirectUrl = `${frontendUrl}/auth/callback?token=${loginResponse.accessToken}&user=${encodeURIComponent(JSON.stringify(loginResponse))}`;
+
+      res.redirect(redirectUrl);
+    } catch {
+      // Redirect to frontend with error
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      res.redirect(`${frontendUrl}/auth/login?error=oauth_failed`);
+    }
   }
 }

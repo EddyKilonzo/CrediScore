@@ -20,7 +20,6 @@ import {
   UpdateProfileDto,
 } from './dto/user.dto';
 
-
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
@@ -477,7 +476,9 @@ export class UserService {
         //     },
         //   },
         // });
-        this.logger.log(`User ${userId} unverified review count would be incremented`);
+        this.logger.log(
+          `User ${userId} unverified review count would be incremented`,
+        );
 
         // Check and penalize for spam behavior
         try {
@@ -490,13 +491,14 @@ export class UserService {
 
       // Check if user should be flagged for suspicious behavior
       try {
-        const flaggingResult = await this.fraudDetectionService.checkUserForFlagging(userId);
-        
+        const flaggingResult =
+          await this.fraudDetectionService.checkUserForFlagging(userId);
+
         if (flaggingResult.shouldFlag) {
           this.logger.warn(
             `User ${userId} flagged for suspicious behavior: ${flaggingResult.flagReason}`,
           );
-          
+
           await this.fraudDetectionService.flagUser(
             userId,
             flaggingResult.flagReason,

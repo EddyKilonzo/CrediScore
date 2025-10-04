@@ -494,9 +494,11 @@ export class AdminController {
     description: 'Unauthorized - Admin access required',
   })
   async getUserAnalysis(@Param('id') userId: string) {
-    const analysis = await this.fraudDetectionService.analyzeUserReviewPatterns(userId);
-    const flaggingResult = await this.fraudDetectionService.checkUserForFlagging(userId);
-    
+    const analysis =
+      await this.fraudDetectionService.analyzeUserReviewPatterns(userId);
+    const flaggingResult =
+      await this.fraudDetectionService.checkUserForFlagging(userId);
+
     return {
       analysis,
       flaggingResult,
