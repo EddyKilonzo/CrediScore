@@ -1,154 +1,143 @@
-import { Component, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { trigger, state, style, transition, animate } from '@angular/animations';
-
-export interface Toast {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  duration?: number;
-  progress?: number;
-  isVisible?: boolean;
-}
+import { ToastService, Toast } from './toast.service';
 
 @Component({
   selector: 'app-toast',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './toast.component.html',
-  styleUrl: './toast.component.css',
-  animations: [
-    trigger('slideInOut', [
-      state('in', style({
-        transform: 'translateX(0)',
-        opacity: 1
-      })),
-      state('out', style({
-        transform: 'translateX(100%)',
-        opacity: 0
-      })),
-      transition('in => out', animate('300ms ease-in')),
-      transition('void => in', animate('300ms ease-out'))
-    ]),
-    trigger('progressBar', [
-      state('start', style({
-        width: '100%'
-      })),
-      state('end', style({
-        width: '0%'
-      })),
-      transition('start => end', animate('3000ms linear'))
-    ])
-  ]
-})
-export class ToastComponent implements OnInit, OnDestroy {
-  toasts = signal<Toast[]>([]);
-  private timers = new Map<string, any>();
-  private progressTimers = new Map<string, any>();
-
-  ngOnInit(): void {
-    // Component initialization
-  }
-
-  ngOnDestroy(): void {
-    // Clean up all timers
-    this.timers.forEach(timer => clearTimeout(timer));
-    this.progressTimers.forEach(timer => clearInterval(timer));
-    this.timers.clear();
-    this.progressTimers.clear();
-  }
-
-  show(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', duration: number = 3000): void {
-    const id = this.generateId();
-    const toast: Toast = { 
-      id, 
-      message, 
-      type, 
-      duration, 
-      progress: 100, 
-      isVisible: true 
-    };
-    
-    this.toasts.update(toasts => [...toasts, toast]);
-
-    if (duration > 0) {
-      // Start progress animation
-      this.startProgressAnimation(id, duration);
-      
-      // Set removal timer
-      const timer = setTimeout(() => {
-        this.remove(id);
-      }, duration);
-      
-      this.timers.set(id, timer);
-    }
-  }
-
-  success(message: string, duration: number = 3000): void {
-    this.show(message, 'success', duration);
-  }
-
-  error(message: string, duration: number = 5000): void {
-    this.show(message, 'error', duration);
-  }
-
-  warning(message: string, duration: number = 4000): void {
-    this.show(message, 'warning', duration);
-  }
-
-  info(message: string, duration: number = 3000): void {
-    this.show(message, 'info', duration);
-  }
-
-  remove(id: string): void {
-    // Clear timers
-    const timer = this.timers.get(id);
-    const progressTimer = this.progressTimers.get(id);
-    
-    if (timer) {
-      clearTimeout(timer);
-      this.timers.delete(id);
+  template: `
+    <div class="fixed top-20 right-4 z-50 space-y-2">
+      <div 
+        *ngFor="let toast of toasts()" 
+        class="toast-item animate-slideInRight"
+        [ngClass]="getToastClass(toast.type)"
+        [style.opacity]="toast.isVisible ? 1 : 0"
+        [style.transform]="toast.isVisible ? 'translateX(0)' : 'translateX(100%)'">
+        
+        <div class="flex items-center">
+          <!-- Icon -->
+          <div class="flex-shrink-0 mr-3">
+            <i [ngClass]="getIconClass(toast.type)" class="text-lg"></i>
+          </div>
+          
+          <!-- Message -->
+          <div class="flex-1">
+            <p class="text-sm font-medium">{{ toast.message }}</p>
+          </div>
+          
+          <!-- Close Button -->
+          <button 
+            (click)="removeToast(toast.id)"
+            class="flex-shrink-0 ml-3 text-gray-400 hover:text-gray-600 transition-colors">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div *ngIf="toast.duration && toast.duration > 0" class="progress-bar">
+          <div 
+            class="progress-fill" 
+            [ngClass]="getToastClass(toast.type)"
+            [style.width.%]="toast.progress">
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .toast-item {
+      @apply max-w-sm w-full bg-white rounded-lg shadow-lg border-l-4 p-4;
+      animation: slideInRight 0.3s ease-out;
     }
     
-    if (progressTimer) {
-      clearInterval(progressTimer);
-      this.progressTimers.delete(id);
+    .toast-item.success {
+      @apply border-green-500;
     }
-
-    // Update toast to trigger exit animation
-    this.toasts.update(toasts => 
-      toasts.map(t => t.id === id ? { ...t, isVisible: false } : t)
-    );
-
-    // Remove from array after animation completes
-    setTimeout(() => {
-      this.toasts.update(toasts => toasts.filter(t => t.id !== id));
-    }, 300);
-  }
-
-  private startProgressAnimation(id: string, duration: number): void {
-    const startTime = Date.now();
-    const interval = 50; // Update every 50ms for smooth animation
     
-    const progressTimer = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, duration - elapsed);
-      const progress = (remaining / duration) * 100;
-      
-      this.toasts.update(toasts => 
-        toasts.map(t => t.id === id ? { ...t, progress } : t)
-      );
-      
-      if (progress <= 0) {
-        clearInterval(progressTimer);
-        this.progressTimers.delete(id);
+    .toast-item.error {
+      @apply border-red-500;
+    }
+    
+    .toast-item.warning {
+      @apply border-yellow-500;
+    }
+    
+    .toast-item.info {
+      @apply border-blue-500;
+    }
+    
+    .progress-bar {
+      @apply absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden;
+    }
+    
+    .progress-fill {
+      @apply h-full bg-gray-400;
+      animation: progressBar linear;
+    }
+    
+    .progress-fill.success {
+      @apply bg-green-500;
+    }
+    
+    .progress-fill.error {
+      @apply bg-red-500;
+    }
+    
+    .progress-fill.warning {
+      @apply bg-yellow-500;
+    }
+    
+    .progress-fill.info {
+      @apply bg-blue-500;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
       }
-    }, interval);
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
     
-    this.progressTimers.set(id, progressTimer);
+    @keyframes progressBar {
+      from {
+        width: 100%;
+      }
+      to {
+        width: 0%;
+      }
+    }
+  `]
+})
+export class ToastComponent {
+  private toastService = inject(ToastService);
+  
+  toasts = this.toastService.toasts;
+
+  getToastClass(type: Toast['type']): string {
+    return type;
   }
 
-  private generateId(): string {
-    return `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  getIconClass(type: Toast['type']): string {
+    switch (type) {
+      case 'success':
+        return 'fas fa-check-circle text-green-500';
+      case 'error':
+        return 'fas fa-exclamation-circle text-red-500';
+      case 'warning':
+        return 'fas fa-exclamation-triangle text-yellow-500';
+      case 'info':
+        return 'fas fa-info-circle text-blue-500';
+      default:
+        return 'fas fa-info-circle text-blue-500';
+    }
+  }
+
+  removeToast(id: string) {
+    this.toastService.remove(id);
   }
 }

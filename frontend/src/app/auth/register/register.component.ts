@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, RouterModule } from '@angular/router';
 import { AuthService, RegisterRequest } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
+import { ToastService } from '../../shared/components/toast/toast.service';
 
 // Interfaces for multi-step signup
 interface SignupStep {
@@ -53,23 +54,23 @@ export class RegisterComponent implements OnInit {
   steps: SignupStep[] = [
     {
       id: 1,
-      title: 'Search & Discover',
-      description: 'Find businesses by name, registration number, or till number. Browse verified profiles and trust scores.',
-      icon: 'search',
-      completed: false
-    },
-    {
-      id: 2,
       title: 'Account Setup',
       description: 'Create your account with basic information and choose your role in the platform.',
       icon: 'person',
       completed: false
     },
     {
-      id: 3,
+      id: 2,
       title: 'Verification',
       description: 'Complete your profile verification for enhanced trust and credibility.',
       icon: 'verified',
+      completed: false
+    },
+    {
+      id: 3,
+      title: 'Review',
+      description: 'Review your information before completing registration.',
+      icon: 'check',
       completed: false
     }
   ];
@@ -83,12 +84,15 @@ export class RegisterComponent implements OnInit {
   isLoading = signal(false);
   error = signal<string | null>(null);
   isGoogleLoading = signal(false);
+  showPassword = signal(false);
+  showConfirmPassword = signal(false);
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private toastService: ToastService
   ) {
     // Step 1: Discovery/Interest Form
     this.discoveryForm = this.fb.group({
@@ -97,13 +101,18 @@ export class RegisterComponent implements OnInit {
       businessNeeds: ['', [Validators.minLength(10)]]
     });
 
-    // Step 2: Account Creation Form
+    // Step 1: Account Creation Form
     this.accountForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(2)]],
+      firstName: ['', [Validators.required, Validators.minLength(2)]],
+      lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [
+        Validators.required, 
+        Validators.minLength(8),
+        Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+      ]],
       confirmPassword: ['', [Validators.required]],
-      phone: ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
+      phone: ['', [Validators.pattern(/^[\+]?[0-9\s\-\(\)]{7,15}$/)]],
       acceptTerms: [false, [Validators.requiredTrue]],
       role: ['customer', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
@@ -113,12 +122,15 @@ export class RegisterComponent implements OnInit {
       businessName: [''],
       businessCategory: [''],
       businessLocation: [''],
+      businessDescription: [''],
       verificationMethod: ['email', [Validators.required]]
     });
   }
 
   ngOnInit() {
     // Initialize when component loads
+    // Scroll to top when component loads
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // Step navigation methods
@@ -150,11 +162,11 @@ export class RegisterComponent implements OnInit {
   validateCurrentStep(): boolean {
     switch (this.currentStep) {
       case 1:
-        return this.discoveryForm.valid;
-      case 2:
         return this.accountForm.valid;
-      case 3:
+      case 2:
         return this.verificationForm.valid;
+      case 3:
+        return true; // Review step doesn't need validation
       default:
         return false;
     }
@@ -181,7 +193,7 @@ export class RegisterComponent implements OnInit {
       this.error.set(null);
 
       const registerData: RegisterRequest = {
-        name: this.accountForm.value.name,
+        name: `${this.accountForm.value.firstName} ${this.accountForm.value.lastName}`,
         email: this.accountForm.value.email,
         password: this.accountForm.value.password,
         role: this.accountForm.value.role === 'business' ? 'business' : 'user',
@@ -191,6 +203,7 @@ export class RegisterComponent implements OnInit {
       this.authService.register(registerData).subscribe({
         next: (response) => {
           this.isLoading.set(false);
+          this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Your account has been created successfully.`);
           // Complete the final step
           this.steps[this.currentStep - 1].completed = true;
           // Redirect based on user role
@@ -198,7 +211,17 @@ export class RegisterComponent implements OnInit {
         },
         error: (error) => {
           this.isLoading.set(false);
-          this.error.set(error.error?.message || 'Registration failed. Please try again.');
+          const errorMessage = error.error?.message || 'Registration failed. Please try again.';
+          this.error.set(errorMessage);
+          
+          // Check if user already exists
+          if (errorMessage.toLowerCase().includes('already exists') || 
+              errorMessage.toLowerCase().includes('email already') ||
+              errorMessage.toLowerCase().includes('user already')) {
+            this.toastService.warning('An account with this email already exists. Please sign in instead.');
+          } else {
+            this.toastService.error(errorMessage);
+          }
         }
       });
     } else {
@@ -248,9 +271,9 @@ export class RegisterComponent implements OnInit {
 
   getCurrentForm(): FormGroup {
     switch (this.currentStep) {
-      case 1: return this.discoveryForm;
-      case 2: return this.accountForm;
-      case 3: return this.verificationForm;
+      case 1: return this.accountForm;
+      case 2: return this.verificationForm;
+      case 3: return this.accountForm; // Review step uses account form for display
       default: return this.accountForm;
     }
   }
@@ -267,19 +290,28 @@ export class RegisterComponent implements OnInit {
         return 'Please enter a valid email address';
       }
       if (field.errors['minlength']) {
-        if (fieldName === 'name') {
+        if (fieldName === 'firstName' || fieldName === 'lastName') {
           return 'Name must be at least 2 characters long';
         }
-        if (fieldName === 'businessNeeds') {
+        if (fieldName === 'businessDescription') {
           return 'Please provide more details (at least 10 characters)';
         }
-        return 'Password must be at least 8 characters long';
+        if (fieldName === 'password') {
+          return 'Password must be at least 8 characters long';
+        }
+        return 'Field must be at least 8 characters long';
       }
       if (field.errors['passwordMismatch']) {
         return 'Passwords do not match';
       }
       if (field.errors['pattern']) {
-        return 'Please enter a valid phone number';
+        if (fieldName === 'phone') {
+          return 'Please enter a valid phone number (e.g., 0768163367, +254 768 163 367)';
+        }
+        if (fieldName === 'password') {
+          return 'Password does not meet security requirements';
+        }
+        return 'Please enter a valid format';
       }
       if (field.errors['requiredTrue']) {
         return 'You must accept the terms and conditions';
@@ -307,6 +339,82 @@ export class RegisterComponent implements OnInit {
 
   get stepDescription(): string {
     return this.steps[this.currentStep - 1]?.description || '';
+  }
+
+  // Password visibility toggle methods
+  togglePasswordVisibility(): void {
+    this.showPassword.set(!this.showPassword());
+  }
+
+  toggleConfirmPasswordVisibility(): void {
+    this.showConfirmPassword.set(!this.showConfirmPassword());
+  }
+
+  // Password strength validation
+  getPasswordStrength(): { strength: string; message: string; color: string; progress: number } {
+    const password = this.accountForm.get('password')?.value || '';
+    
+    if (!password) {
+      return { strength: '', message: '', color: '', progress: 0 };
+    }
+    
+    if (password.length < 8) {
+      return { strength: 'Poor', message: 'At least 8 characters required', color: 'bg-red-500', progress: 20 };
+    }
+    
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[@$!%*?&]/.test(password);
+    
+    const requirements = [hasLower, hasUpper, hasNumber, hasSpecial];
+    const metRequirements = requirements.filter(Boolean).length;
+    
+    if (metRequirements === 4) {
+      return { strength: 'Strong', message: 'Excellent password security', color: 'bg-green-500', progress: 100 };
+    } else if (metRequirements >= 3) {
+      return { strength: 'Medium', message: 'Good password security', color: 'bg-yellow-500', progress: 75 };
+    } else if (metRequirements >= 2) {
+      return { strength: 'Poor', message: 'Weak password security', color: 'bg-orange-500', progress: 50 };
+    } else {
+      return { strength: 'Poor', message: 'Very weak password', color: 'bg-red-500', progress: 25 };
+    }
+  }
+
+  // Check if password meets all requirements
+  isPasswordValid(): boolean {
+    const password = this.accountForm.get('password')?.value || '';
+    return password.length >= 8 && 
+           /[a-z]/.test(password) && 
+           /[A-Z]/.test(password) && 
+           /\d/.test(password) && 
+           /[@$!%*?&]/.test(password);
+  }
+
+  // Password requirement checkers for template
+  hasMinLength(): boolean {
+    const password = this.accountForm.get('password')?.value || '';
+    return password.length >= 8;
+  }
+
+  hasLowerCase(): boolean {
+    const password = this.accountForm.get('password')?.value || '';
+    return /[a-z]/.test(password);
+  }
+
+  hasUpperCase(): boolean {
+    const password = this.accountForm.get('password')?.value || '';
+    return /[A-Z]/.test(password);
+  }
+
+  hasNumber(): boolean {
+    const password = this.accountForm.get('password')?.value || '';
+    return /\d/.test(password);
+  }
+
+  hasSpecialChar(): boolean {
+    const password = this.accountForm.get('password')?.value || '';
+    return /[@$!%*?&]/.test(password);
   }
 }
 

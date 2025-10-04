@@ -64,8 +64,12 @@ export class AuthService {
 
   signInWithGoogle(): void {
     // Redirect to Google OAuth endpoint on backend
-    const googleAuthUrl = 'http://localhost:3000/api/auth/google';
-    window.location.href = googleAuthUrl;
+    try {
+      const googleAuthUrl = 'http://localhost:3000/api/auth/google';
+      window.location.href = googleAuthUrl;
+    } catch (error) {
+      console.error('Failed to redirect to Google OAuth:', error);
+    }
   }
 
   login(credentials: LoginRequest): Observable<AuthResponse> {
@@ -74,7 +78,7 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials)
       .pipe(
         tap(response => {
-          this.setAuthData(response);
+          this.setAuthDataInternal(response);
           this.isLoading.set(false);
         })
       );
@@ -86,7 +90,7 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.API_URL}/auth/register`, userData)
       .pipe(
         tap(response => {
-          this.setAuthData(response);
+          this.setAuthDataInternal(response);
           this.isLoading.set(false);
         })
       );
@@ -100,12 +104,16 @@ export class AuthService {
     this.isAuthenticated.set(false);
   }
 
-  private setAuthData(response: AuthResponse): void {
+  private setAuthDataInternal(response: AuthResponse): void {
     localStorage.setItem('token', response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
     this.currentUserSubject.next(response.user);
     this.currentUser.set(response.user);
     this.isAuthenticated.set(true);
+  }
+
+  setAuthData(response: AuthResponse): void {
+    this.setAuthDataInternal(response);
   }
 
   getToken(): string | null {

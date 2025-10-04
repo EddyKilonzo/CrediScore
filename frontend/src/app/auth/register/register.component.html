@@ -1,22 +1,22 @@
 <!-- Signup Page -->
-<div class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4 pt-24">
   
   <!-- Signup Container -->
-  <div class="w-full max-w-4xl mx-auto">
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+  <div class="w-full max-w-5xl mx-auto">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden min-h-[500px] max-h-[90vh] flex flex-col animate-fadeInUp hover:shadow-xl transition-all duration-300" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;">
       
       <!-- Two Column Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 min-h-[500px]">
+      <div class="grid grid-cols-1 lg:grid-cols-2 flex-1 min-h-0">
         
         <!-- Left Column: Form Content -->
-        <div class="p-6">
+        <div class="p-4 sm:p-6 flex flex-col overflow-hidden">
           
           <!-- Header Section -->
-          <div class="text-center mb-4">
+          <div class="text-center mb-3 sm:mb-4 flex-shrink-0">
             <!-- Logo and Brand -->
             <div class="flex items-center justify-center mb-2">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center mr-2" style="background-color: #2C5270;">
-                <i class="fas fa-shield-alt text-white text-sm"></i>
+              <div class="w-10 h-10 mr-3 flex items-center justify-center">
+                <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain">
               </div>
               <h1 class="text-xl font-bold text-gray-900">CrediScore</h1>
             </div>
@@ -30,7 +30,7 @@
           </div>
 
           <!-- Multi-Step Indicator -->
-          <div class="mb-3">
+          <div class="mb-3 sm:mb-4 flex-shrink-0">
             <div class="flex items-center justify-center">
               <div class="flex items-center space-x-1">
                 <div 
@@ -65,124 +65,13 @@
             </div>
           </div>
 
-          <!-- Google SSO Section -->
-          <div class="mb-3">
-            <button
-              type="button"
-              (click)="signInWithGoogle()"
-              [disabled]="isGoogleLoading()"
-              class="w-full flex items-center justify-center px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-              style="border-color: #2C5270; --tw-ring-color: #2C5270;">
-              
-              <!-- Google Icon -->
-              <svg 
-                *ngIf="!isGoogleLoading()"
-                class="w-4 h-4 mr-2" 
-                viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              
-              <!-- Loading Spinner -->
-              <div 
-                *ngIf="isGoogleLoading()"
-                class="animate-spin rounded-full h-4 w-4 border-b-2 mr-2"
-                style="border-color: #2C5270;"></div>
-              
-              <span class="text-xs">{{ isGoogleLoading() ? 'Signing in...' : 'Continue with Google' }}</span>
-            </button>
-
-            <div class="relative my-2">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-gray-300"></div>
-              </div>
-              <div class="relative flex justify-center text-xs">
-                <span class="px-2 bg-white text-gray-500">Or continue with email</span>
-              </div>
-            </div>
-          </div>
-
           <!-- Form Content Based on Current Step -->
-          <div class="space-y-3">
+          <div class="flex-1 overflow-y-auto space-y-3 pr-1 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             
-            <!-- Step 1: Discovery -->
-            <div *ngIf="currentStep === 1">
-              <div class="text-center mb-3">
-                <div class="w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center" style="background-color: rgba(44, 82, 112, 0.1);">
-                  <i class="fas fa-search text-gray-600 text-sm"></i>
-                </div>
-                    <h3 class="text-base font-semibold text-gray-900 mb-1">Tell us about yourself</h3>
-                <p class="text-gray-600 text-xs">Help us customize your experience</p>
-              </div>
-
-              <form [formGroup]="discoveryForm" class="space-y-3">
-                <!-- User Type Selection -->
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">I am a...</label>
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="relative cursor-pointer">
-                      <input 
-                        type="radio" 
-                        formControlName="userType" 
-                        value="customer"
-                        class="sr-only peer">
-                      <div class="p-2 border border-gray-200 rounded-lg peer-checked:border-gray-400 peer-checked:bg-gray-100 transition-all duration-200 hover:border-gray-300">
-                        <div class="flex items-center">
-                          <i class="fas fa-user text-gray-500 mr-2 peer-checked:text-gray-700"></i>
-                          <span class="text-xs font-medium text-gray-700">Customer</span>
-                        </div>
-                      </div>
-                    </label>
-                    
-                    <label class="relative cursor-pointer">
-                      <input 
-                        type="radio" 
-                        formControlName="userType" 
-                        value="business"
-                        class="sr-only peer">
-                      <div class="p-2 border border-gray-200 rounded-lg peer-checked:border-gray-400 peer-checked:bg-gray-100 transition-all duration-200 hover:border-gray-300">
-                        <div class="flex items-center">
-                          <i class="fas fa-building text-gray-500 mr-2 peer-checked:text-gray-700"></i>
-                          <span class="text-xs font-medium text-gray-700">Business Owner</span>
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Description Section -->
-                <div>
-                  <label for="businessNeeds" class="block text-xs font-medium text-gray-700 mb-1">
-                    {{ discoveryForm.get('userType')?.value === 'customer' ? 'What are you looking for?' : 'Tell us about your business' }}
-                  </label>
-                  <textarea
-                    formControlName="description"
-                    id="businessNeeds"
-                    placeholder="{{ discoveryForm.get('userType')?.value === 'customer' ? 'Describe what services or businesses you need...' : 'Describe your business and services...' }}"
-                    class="w-full px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent resize-none"
-                    rows="2"></textarea>
-                  
-                  <!-- Error -->
-                  <div *ngIf="getFieldError('description')" class="text-xs text-red-600 mt-1">
-                    {{ getFieldError('description') }}
-                  </div>
-                </div>
-              </form>
-            </div>
-
             <!-- Step 2: Account Creation -->
-            <div *ngIf="currentStep === 2">
-              <div class="text-center mb-4">
-                <div class="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center" style="background-color: rgba(44, 82, 112, 0.1);">
-                  <i class="fas fa-user-plus text-gray-600 text-lg"></i>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-1">Create your account</h3>
-                <p class="text-gray-600 text-sm">Set up your profile information</p>
-              </div>
+            <div *ngIf="currentStep === 1">
 
-              <form [formGroup]="accountForm" class="space-y-4">
+              <form [formGroup]="accountForm" class="space-y-3 sm:space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                   <!-- First Name -->
                   <div>
@@ -233,8 +122,8 @@
       </div>
     </div>
 
-                <!-- Phone (for Business) -->
-                <div *ngIf="discoveryForm.get('userType')?.value === 'business'">
+                <!-- Phone -->
+                <div>
                   <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                   <input
                     formControlName="phone"
@@ -247,46 +136,123 @@
                   <div *ngIf="getFieldError('phone')" class="text-xs text-red-600 mt-1">
                     {{ getFieldError('phone') }}
                   </div>
-    </div>
+                </div>
+
+                <!-- Role Selection -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">I am a...</label>
+                  <div class="grid grid-cols-2 gap-3">
+                    <label class="relative cursor-pointer">
+                      <input 
+                        type="radio" 
+                        formControlName="role" 
+                        value="customer"
+                        class="sr-only peer">
+                      <div class="p-3 border border-gray-200 rounded-lg peer-checked:border-gray-400 peer-checked:bg-gray-100 transition-all duration-200 hover:border-gray-300">
+                        <div class="flex items-center">
+                          <i class="fas fa-user text-gray-500 mr-2 peer-checked:text-gray-700"></i>
+                          <span class="text-sm font-medium text-gray-700">Customer</span>
+                        </div>
+                      </div>
+                    </label>
+                    
+                    <label class="relative cursor-pointer">
+                      <input 
+                        type="radio" 
+                        formControlName="role" 
+                        value="business"
+                        class="sr-only peer">
+                      <div class="p-3 border border-gray-200 rounded-lg peer-checked:border-gray-400 peer-checked:bg-gray-100 transition-all duration-200 hover:border-gray-300">
+                        <div class="flex items-center">
+                          <i class="fas fa-building text-gray-500 mr-2 peer-checked:text-gray-700"></i>
+                          <span class="text-sm font-medium text-gray-700">Business Owner</span>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                  
+                  <!-- Error -->
+                  <div *ngIf="getFieldError('role')" class="text-xs text-red-600 mt-1">
+                    {{ getFieldError('role') }}
+                  </div>
+                </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <!-- Password -->
-                  <div>
+                  <div class="relative">
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-      <input 
+                    <input 
                       formControlName="password"
-        type="password" 
-        id="password" 
+                      [type]="showPassword() ? 'text' : 'password'" 
+                      id="password" 
                       placeholder="Create password"
                       class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
                     
+                    <!-- Eye Icon -->
+                    <button 
+                      type="button"
+                      (click)="togglePasswordVisibility()"
+                      class="password-toggle-btn-flex"
+                      [attr.aria-pressed]="showPassword()"
+                      [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                      tabindex="0">
+                      <i class="fas" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
+                    </button>
+                    
+                    <!-- Password Strength Progress Bar -->
+                    <div *ngIf="accountForm.get('password')?.value" class="mt-2">
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-medium text-gray-700">Password Strength:</span>
+                        <span class="text-xs font-medium" [ngClass]="getPasswordStrength().strength === 'Strong' ? 'text-green-600' : getPasswordStrength().strength === 'Medium' ? 'text-yellow-600' : 'text-red-600'">
+                          {{ getPasswordStrength().strength }}
+                        </span>
+                      </div>
+                      <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full transition-all duration-300" 
+                             [ngClass]="getPasswordStrength().color"
+                             [style.width.%]="getPasswordStrength().progress">
+                        </div>
+                      </div>
+                    </div>
+                    
                     <!-- Error -->
                     <div *ngIf="getFieldError('password')" class="text-xs text-red-600 mt-1">
-        {{ getFieldError('password') }}
-      </div>
-    </div>
+                      {{ getFieldError('password') }}
+                    </div>
+                  </div>
 
                   <!-- Confirm Password -->
-                  <div>
+                  <div class="relative">
                     <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-      <input 
+                    <input 
                       formControlName="confirmPassword"
-        type="password" 
-        id="confirmPassword" 
+                      [type]="showConfirmPassword() ? 'text' : 'password'" 
+                      id="confirmPassword" 
                       placeholder="Confirm password"
                       class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
                     
+                    <!-- Eye Icon -->
+                    <button 
+                      type="button"
+                      (click)="toggleConfirmPasswordVisibility()"
+                      class="password-toggle-btn-flex"
+                      [attr.aria-pressed]="showConfirmPassword()"
+                      [attr.aria-label]="showConfirmPassword() ? 'Hide confirm password' : 'Show confirm password'"
+                      tabindex="0">
+                      <i class="fas" [class.fa-eye]="!showConfirmPassword()" [class.fa-eye-slash]="showConfirmPassword()"></i>
+                    </button>
+                    
                     <!-- Error -->
                     <div *ngIf="getFieldError('confirmPassword')" class="text-xs text-red-600 mt-1">
-        {{ getFieldError('confirmPassword') }}
-      </div>
+                      {{ getFieldError('confirmPassword') }}
+                    </div>
                   </div>
                 </div>
               </form>
             </div>
 
             <!-- Step 3: Company Details (Business only) -->
-            <div *ngIf="currentStep === 3 && discoveryForm.get('userType')?.value === 'business'">
+            <div *ngIf="currentStep === 2 && accountForm.get('role')?.value === 'business'">
               <div class="text-center mb-4">
                 <div class="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center" style="background-color: rgba(44, 82, 112, 0.1);">
                   <i class="fas fa-building text-gray-600 text-lg"></i>
@@ -295,7 +261,7 @@
                 <p class="text-gray-600 text-sm">Complete your business profile</p>
               </div>
 
-              <form [formGroup]="verificationForm" class="space-y-4">
+              <form [formGroup]="verificationForm" class="space-y-3 sm:space-y-4">
                 <div>
                   <label for="businessName" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                   <input
@@ -362,7 +328,7 @@
             </div>
 
             <!-- Step 4: Review and Complete -->
-            <div *ngIf="currentStep === 4">
+            <div *ngIf="currentStep === 3">
               <div class="text-center mb-4">
                 <div class="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center" style="background-color: rgba(44, 82, 112, 0.1);">
                   <i class="fas fa-check-circle text-gray-600 text-lg"></i>
@@ -373,16 +339,16 @@
 
               <div class="space-y-4">
                 <div class="bg-gray-50 p-4 rounded-lg">
-                  <h4 class="text-sm font-medium text-gray-900 mb-2">{{ discoveryForm.get('userType')?.value === 'business' ? 'Business Owner' : 'Customer' }}</h4>
-                  <p class="text-sm text-gray-600">{{ discoveryForm.get('description')?.value }}</p>
-    </div>
+                  <h4 class="text-sm font-medium text-gray-900 mb-2">{{ accountForm.get('role')?.value === 'business' ? 'Business Owner' : 'Customer' }}</h4>
+                  <p class="text-sm text-gray-600">Account type: {{ accountForm.get('role')?.value === 'business' ? 'Business Account' : 'Customer Account' }}</p>
+                </div>
 
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h4 class="text-sm font-medium text-gray-900 mb-2">Account Details</h4>
                   <p class="text-xs text-gray-600 mb-1"><strong>Name:</strong> {{ accountForm.get('firstName')?.value }} {{ accountForm.get('lastName')?.value }}</p>
                   <p class="text-xs text-gray-600 mb-1"><strong>Email:</strong> {{ accountForm.get('email')?.value }}</p>
                   <p *ngIf="accountForm.get('phone')?.value" class="text-xs text-gray-600"><strong>Phone:</strong> {{ accountForm.get('phone')?.value }}</p>
-    </div>
+                </div>
 
                 <div *ngIf="verificationForm.get('businessName')?.value" class="bg-gray-50 p-4 rounded-lg">
                   <h4 class="text-sm font-medium text-gray-900 mb-2">Business Information</h4>
@@ -394,7 +360,7 @@
     </div>
 
             <!-- Success Message -->
-            <div *ngIf="currentStep === 5" class="text-center py-8">
+            <div *ngIf="currentStep === 4" class="text-center py-8">
               <div class="w-16 h-16 bg-green-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <i class="fas fa-check text-green-600 text-2xl"></i>
               </div>
@@ -409,200 +375,228 @@
     </button>
             </div>
           </div>
+
+          <!-- Google SSO Section -->
+          <div class="mt-3 sm:mt-4 mb-3 sm:mb-4 flex-shrink-0">
+            <div class="relative my-2">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+              </div>
+              <div class="relative flex justify-center text-xs">
+                <span class="px-2 bg-white text-gray-500">Or continue with Google</span>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              (click)="signInWithGoogle()"
+              [disabled]="isGoogleLoading()"
+              class="w-full flex items-center justify-center px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              style="border-color: #2C5270; --tw-ring-color: #2C5270;">
+              
+              <!-- Google Icon -->
+              <svg 
+                *ngIf="!isGoogleLoading()"
+                class="w-4 h-4 mr-2" 
+                viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              
+              <!-- Loading Spinner -->
+              <div 
+                *ngIf="isGoogleLoading()"
+                class="animate-spin rounded-full h-4 w-4 border-b-2 mr-2"
+                style="border-color: #2C5270;"></div>
+              
+              <span class="text-xs">{{ isGoogleLoading() ? 'Signing in...' : 'Continue with Google' }}</span>
+            </button>
+          </div>
+
+          <!-- Navigation Buttons -->
+          <div class="mt-3 sm:mt-4 flex items-center justify-between flex-shrink-0">
+            <!-- Back Button -->
+            <button 
+              *ngIf="!isFirstStep && currentStep < 4"
+              type="button"
+              (click)="prevStep()"
+              class="flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
+              <i class="fas fa-arrow-left mr-2"></i>
+              Back
+            </button>
+            
+            <div *ngIf="isFirstStep || currentStep === 4"></div>
+
+            <!-- Next/Complete Button -->
+            <button 
+              *ngIf="!isLastStep && currentStep < 4"
+              type="button"
+              (click)="nextStep()"
+              [disabled]="!getCurrentForm().valid"
+              class="px-6 py-2 rounded-lg text-sm font-medium text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              style="background-color: #2C5270;">
+              
+              <!-- Loading State -->
+              <div *ngIf="isLoading()" class="flex items-center">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Processing...
+              </div>
+              
+              <!-- Default State -->
+              <div *ngIf="!isLoading()" class="flex items-center">
+                Next
+                <i class="fas fa-arrow-right ml-2"></i>
+              </div>
+            </button>
+
+            <!-- Complete Button -->
+            <button 
+              *ngIf="isLastStep && currentStep < 4"
+              type="button"
+              (click)="completeSignup()"
+              [disabled]="!getCurrentForm().valid || isLoading()"
+              class="px-6 py-2 rounded-lg text-sm font-medium text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+              style="background-color: #2C5270;">
+              
+              <!-- Loading State -->
+              <div *ngIf="isLoading()" class="flex items-center">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating Account...
+              </div>
+              
+              <!-- Default State -->
+              <div *ngIf="!isLoading()" class="flex items-center">
+                Complete Signup
+                <i class="fas fa-check ml-2"></i>
+              </div>
+            </button>
+
+            <!-- Login Link -->
+            <div class="text-sm text-gray-600 text-center">
+              Already have an account? 
+              <a routerLink="/auth/login" class="text-gray-700 font-medium hover:text-gray-900 underline">
+                Sign in here
+              </a>
+            </div>
+          </div>
         </div>
 
         <!-- Right Column: Information/Visual -->
-        <div class="lg:p-6 p-4" style="background: linear-gradient(135deg, rgba(44, 82, 112, 0.05) 0%, rgba(44, 82, 112, 0.1) 100%);">
-          <div class="flex flex-col justify-center h-full">
+        <div class="lg:p-6 p-4 relative overflow-hidden flex-col min-h-[300px] sm:min-h-[400px] hidden lg:flex" style="background: linear-gradient(135deg, rgba(44, 82, 112, 0.05) 0%, rgba(44, 82, 112, 0.1) 100%);">
+          <!-- Background Image -->
+          <div class="absolute inset-0">
+            <img src="/images/sigup.jpg" alt="Signup Background" class="w-full h-full object-cover filter brightness-75">
+          </div>
+          
+          <!-- Gradient Overlay -->
+          <div class="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/50"></div>
+          
+          <!-- Content Overlay -->
+          <div class="relative z-10 flex flex-col justify-center h-full text-white p-6">
             
             <!-- Step-specific Content -->
             <div *ngIf="currentStep === 1" class="text-center">
-              <div class="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <i class="fas fa-search text-gray-400 text-2xl"></i>
+              <!-- CrediScore Logo -->
+              <div class="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+                <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain filter drop-shadow-lg">
               </div>
-              <h3 class="text-lg font-semibold text-gray-800 mb-2">Find Trusted Businesses</h3>
-              <p class="text-gray-600 text-xs mb-4">Discover verified businesses with authentic reviews and ratings from your community.</p>
+              <h3 class="text-2xl font-bold text-white mb-4 drop-shadow-lg">Secure Account Creation</h3>
+              <p class="text-white/90 text-base mb-8 leading-relaxed drop-shadow-md">Create a secure account that protects your privacy and data with enterprise-grade security.</p>
               
               <!-- Features List -->
-              <div class="space-y-2">
-                <div class="flex items-center text-xs text-gray-600">
-                  <i class="fas fa-shield-alt text-gray-400 mr-2"></i>
-                  <span>Verified Business Profiles</span>
+              <div class="space-y-4">
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-lock text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Secure Password Protection</span>
                 </div>
-                <div class="flex items-center text-xs text-gray-600">
-                  <i class="fas fa-star text-gray-400 mr-2"></i>
-                  <span>Authentic Customer Reviews</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-envelope text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Email Verification</span>
                 </div>
-                <div class="flex items-center text-xs text-gray-600">
-                  <i class="fas fa-chart-line text-gray-400 mr-2"></i>
-                  <span>Trust Scores & Analytics</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-shield-alt text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Privacy Compliant</span>
                 </div>
               </div>
             </div>
 
             <div *ngIf="currentStep === 2" class="text-center">
-              <div class="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <i class="fas fa-user-circle text-gray-400 text-3xl"></i>
+              <!-- CrediScore Logo -->
+              <div class="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+                <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain filter drop-shadow-lg">
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 mb-3">Secure Account Creation</h3>
-              <p class="text-gray-600 text-sm mb-6">Create a secure account that protects your privacy and data.</p>
+              <h3 class="text-2xl font-bold text-white mb-4 drop-shadow-lg">Build Your Business Profile</h3>
+              <p class="text-white/90 text-base mb-8 leading-relaxed drop-shadow-md">Create a comprehensive business profile to attract customers and build trust in the marketplace.</p>
               
               <!-- Features List -->
-              <div class="space-y-3">
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-lock text-gray-400 mr-3"></i>
-                  <span>Secure Password Protection</span>
+              <div class="space-y-4">
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-shield-alt text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Business Verification</span>
                 </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-envelope text-gray-400 mr-3"></i>
-                  <span>Email Verification</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-users text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Customer Attraction</span>
                 </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-privacy text-gray-400 mr-3"></i>
-                  <span>Privacy Compliant</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-chart-bar text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Analytics & Insights</span>
                 </div>
               </div>
             </div>
 
             <div *ngIf="currentStep === 3" class="text-center">
-              <div class="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <i class="fas fa-building text-gray-400 text-3xl"></i>
+              <!-- CrediScore Logo -->
+              <div class="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+                <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain filter drop-shadow-lg">
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 mb-3">Build Your Business Profile</h3>
-              <p class="text-gray-600 text-sm mb-6">Create a comprehensive business profile to attract customers and build trust.</p>
+              <h3 class="text-2xl font-bold text-white mb-4 drop-shadow-lg">Almost There!</h3>
+              <p class="text-white/90 text-base mb-8 leading-relaxed drop-shadow-md">Review your information to ensure everything is accurate before creating your account.</p>
               
               <!-- Features List -->
-              <div class="space-y-3">
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-shield-alt text-gray-400 mr-3"></i>
-                  <span>Business Verification</span>
+              <div class="space-y-4">
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-check-circle text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Double-check Information</span>
                 </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-users text-gray-400 mr-3"></i>
-                  <span>Customer Attraction</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-thumbs-up text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Ready to Launch</span>
                 </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-chart-bar text-gray-400 mr-3"></i>
-                  <span>Analytics & Insights</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-rocket text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Start Your Journey</span>
                 </div>
               </div>
             </div>
 
             <div *ngIf="currentStep === 4" class="text-center">
-              <div class="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <i class="fas fa-clipboard-check text-gray-400 text-3xl"></i>
+              <!-- CrediScore Logo -->
+              <div class="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+                <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain filter drop-shadow-lg">
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 mb-3">Almost There!</h3>
-              <p class="text-gray-600 text-sm mb-6">Review your information to ensure everything is accurate before creating your account.</p>
+              <h3 class="text-2xl font-bold text-white mb-4 drop-shadow-lg">Successfully Created!</h3>
+              <p class="text-white/90 text-base mb-8 leading-relaxed drop-shadow-md">Your CrediScore account is ready. Welcome to the trusted business ecosystem!</p>
               
               <!-- Features List -->
-              <div class="space-y-3">
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-check-circle text-gray-400 mr-3"></i>
-                  <span>Double-check Information</span>
+              <div class="space-y-4">
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-user-check text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Account Active</span>
                 </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-thumbs-up text-gray-400 mr-3"></i>
-                  <span>Ready to Launch</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-search text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Start Browsing</span>
                 </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-rocket text-gray-400 mr-3"></i>
-                  <span>Start Your Journey</span>
-                </div>
-              </div>
-            </div>
-
-            <div *ngIf="currentStep === 5" class="text-center">
-              <div class="w-20 h-20 bg-green-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <i class="fas fa-check-circle text-green-600 text-3xl"></i>
-              </div>
-              <h3 class="text-xl font-semibold text-gray-800 mb-3">Successfully Created!</h3>
-              <p class="text-gray-600 text-sm mb-6">Your CrediScore account is ready. Welcome to the trusted business ecosystem!</p>
-              
-              <!-- Features List -->
-              <div class="space-y-3">
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-user-check text-gray-400 mr-3"></i>
-                  <span>Account Active</span>
-                </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-search text-gray-400 mr-3"></i>
-                  <span>Start Browsing</span>
-                </div>
-                <div class="flex items-center text-sm text-gray-600">
-                  <i class="fas fa-heart text-gray-400 mr-3"></i>
-                  <span>Build Trust</span>
+                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                  <i class="fas fa-heart text-white/80 mr-3 text-lg"></i>
+                  <span class="font-medium">Build Trust</span>
                 </div>
               </div>
             </div>
           </div>
-  </div>
-</div>
-
-      <!-- Navigation Footer -->
-      <div class="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-        <!-- Back Button -->
-        <button 
-          *ngIf="!isFirstStep && currentStep < 5"
-          type="button"
-          (click)="prevStep()"
-          class="flex items-center px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors duration-200">
-          <i class="fas fa-arrow-left mr-1"></i>
-          Back
-        </button>
-        
-        <div *ngIf="isFirstStep || currentStep === 5"></div>
-
-        <!-- Next/Complete Button -->
-        <button 
-          *ngIf="!isLastStep && currentStep < 5"
-          type="button"
-          (click)="nextStep()"
-          [disabled]="!getCurrentForm().valid"
-          class="px-4 py-1.5 rounded-lg text-xs font-medium text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-          style="background-color: #2C5270;">
-          
-          <!-- Loading State -->
-          <div *ngIf="isLoading()" class="flex items-center">
-            <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-            Processing...
-          </div>
-          
-          <!-- Default State -->
-          <div *ngIf="!isLoading()" class="flex items-center">
-            Next
-            <i class="fas fa-arrow-right ml-1"></i>
-          </div>
-        </button>
-
-        <!-- Complete Button -->
-        <button 
-          *ngIf="isLastStep && currentStep < 5"
-          type="button"
-          (click)="completeSignup()"
-          [disabled]="!getCurrentForm().valid || isLoading()"
-          class="px-4 py-1.5 rounded-lg text-xs font-medium text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-          style="background-color: #2C5270;">
-          
-          <!-- Loading State -->
-          <div *ngIf="isLoading()" class="flex items-center">
-            <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-            Creating Account...
-          </div>
-          
-          <!-- Default State -->
-          <div *ngIf="!isLoading()" class="flex items-center">
-            Complete Signup
-            <i class="fas fa-check ml-1"></i>
-          </div>
-        </button>
-
-        <!-- Login Link -->
-        <div *ngIf="currentStep === 5" class="text-xs text-gray-600">
-          Already have an account? 
-          <a routerLink="/auth/login" class="text-gray-700 font-medium hover:text-gray-900 underline">
-            Sign in here
-          </a>
         </div>
       </div>
     </div>

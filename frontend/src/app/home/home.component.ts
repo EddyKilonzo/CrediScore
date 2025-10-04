@@ -31,7 +31,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   faqOpen: boolean[] = [false, false, false, false, false, false];
   private hasAnimated = false;
   showBackToTop = false;
-  private fadeObserver?: IntersectionObserver;
   
   // Testimonial slider properties
   currentTestimonialIndex = 0;
@@ -111,29 +110,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.sliderInterval) {
       clearInterval(this.sliderInterval);
     }
-    
-    // Clean up intersection observer
-    if (this.fadeObserver) {
-      this.fadeObserver.disconnect();
-      this.fadeObserver = undefined;
-    }
   }
 
   ngAfterViewInit() {
     // Use setTimeout to ensure DOM is fully rendered
     setTimeout(() => {
       this.initScrollAnimations();
-      // Force immediate animation for critical elements
-      this.forceAnimationOnVisible();
-      
-      // Re-run animation initialization if elements were added
-      setTimeout(() => {
-        this.recheckAnimatedElements();
-        // Additional check for any missed elements
-        setTimeout(() => {
-          this.initializeVisibleElements();
-        }, 300);
-      }, 500);
     }, 100);
 
     // Set up intersection observer for counter animation
@@ -156,42 +138,25 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   initScrollAnimations() {
-    // Clean up any existing observer
-    if (this.fadeObserver) {
-      this.fadeObserver.disconnect();
-    }
-
-    // Persistent state tracking to prevent re-animation issues
-    const animationStates = new Map<string, boolean>();
-
     // Create intersection observer for fade-in animations
-    this.fadeObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach(entry => {
-        const el = entry.target as HTMLElement;
-        // Create a unique identifier for this element
-        const elementId = el.className + el.id || Math.random().toString(36);
-        
-        // Only animate if not already animated
-        if (entry.isIntersecting && !animationStates.get(elementId) && !el.dataset['animated']) {
-          // Add animated class and mark as animated permanently
-          el.classList.add('animated');
-          el.dataset['animated'] = 'true';
-          animationStates.set(elementId, true);
-          
-          // DO NOT unobserve to prevent future visibility issues
-          // fadeObserver.unobserve(el);
-        } else if (!entry.isIntersecting && animationStates.get(elementId)) {
-          // If element goes out of view but was animated, ensure it stays visible
-          el.classList.add('animated');
-          el.dataset['animated'] = 'true';
-        }
-      });
-    },
-    {
-      threshold: 0.2, // Trigger when 20% of element is visible
-      rootMargin: '50px 0px 50px 0px' // Start animation slightly before element enters viewport
-    });
+    const fadeObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          const el = entry.target as HTMLElement;
+          if (entry.isIntersecting && !el.dataset['animated']) {
+            // Add animated class and mark as animated
+            el.classList.add('animated');
+            el.dataset['animated'] = 'true';
+            // Unobserve element after animation to prevent re-triggering
+            fadeObserver.unobserve(el);
+          }
+        });
+      },
+      {
+        threshold: 0.2, // Trigger when 20% of element is visible
+        rootMargin: '50px 0px 50px 0px' // Start animation slightly before element enters viewport
+      }
+    );
 
     // Observe all elements with animation classes
     const animatedElements = document.querySelectorAll(
@@ -203,140 +168,22 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     // Check initial state and observe all elements
     animatedElements.forEach(element => {
       const el = element as HTMLElement;
-      const elementId = el.className + el.id || Math.random().toString(36);
-      
-      // If already animated, keep visible and track state
+      // If already animated, keep visible
       if (el.dataset['animated'] === 'true') {
         el.classList.add('animated');
-        animationStates.set(elementId, true);
         return;
       }
-      
       const rect = el.getBoundingClientRect();
       const isInViewport = rect.top < window.innerHeight && rect.bottom > 0;
-      
-      if (isInViewport && rect.top < window.innerHeight * 0.8) {
+      if (isInViewport && rect.top < window.innerHeight * 0.7) {
         // Element is already in viewport, animate it immediately and mark as animated
-        // Use small delay to ensure smooth sequencing
-        const animationDelay = el.classList.contains('fade-in-up-delay-1') ? 50 :
-                             el.classList.contains('fade-in-up-delay-2') ? 100 :
-                             el.classList.contains('fade-in-up-delay-3') ? 150 :
-                             el.classList.contains('fade-in-up-delay-4') ? 200 :
-                             el.classList.contains('fade-in-up-delay-5') ? 250 :
-                             el.classList.contains('fade-in-up-delay-6') ? 300 : 0;
-        
         setTimeout(() => {
           el.classList.add('animated');
           el.dataset['animated'] = 'true';
-          animationStates.set(elementId, true);
-        }, animationDelay);
+        }, 200);
       } else {
         // Element is below viewport, observe it for scroll animation
-        this.fadeObserver!.observe(el);
-      }
-    });
-  }
-
-  recheckAnimatedElements() {
-    // Re-check all animated elements to ensure they have the proper state
-    const allAnimatedElements = document.querySelectorAll(
-      '.fade-in-up, .fade-in-up-delay-1, .fade-in-up-delay-2, .fade-in-up-delay-3, ' +
-      '.fade-in-up-delay-4, .fade-in-up-delay-5, .fade-in-up-delay-6, ' +
-      '.stat-card, .business-card, .faq-item'
-    );
-
-    allAnimatedElements.forEach(element => {
-      const el = element as HTMLElement;
-      if (el.dataset['animated'] === 'true') {
-        // Ensure animated class is still present
-        el.classList.add('animated');
-      }
-    });
-  }
-
-  initializeVisibleElements() {
-    // Ensure all visible elements are animated immediately
-    const allAnimatedElements = document.querySelectorAll(
-      '.fade-in-up, .fade-in-up-delay-1, .fade-in-up-delay-2, .fade-in-up-delay-3, ' +
-      '.fade-in-up-delay-4, .fade-in-up-delay-5, .fade-in-up-delay-6, ' +
-      '.stat-card, .business-card, .faq-item, .relative.group'
-    );
-    
-    // Debug: Log elements found (commented out for production)
-    // console.log('Found animated elements:', allAnimatedElements.length);
-    
-    const viewportHeight = window.innerHeight;
-    const viewportTop = window.pageYOffset;
-    
-    allAnimatedElements.forEach((element, index) => {
-      const el = element as HTMLElement;
-      
-      // Skip if already animated
-      if (el.dataset['animated'] === 'true') {
-        return;
-      }
-      
-      const rect = el.getBoundingClientRect();
-      const elementTop = rect.top + viewportTop;
-      const elementBottom = elementTop + rect.height;
-      const currentViewportTop = viewportTop;
-      const currentViewportBottom = viewportTop + viewportHeight;
-      
-      // Check if element is in or above viewport
-      const isVisible = (
-        (elementTop < currentViewportBottom && elementBottom > currentViewportTop) ||
-        elementTop < currentViewportTop
-      );
-      
-      if (isVisible) {
-        // Animate immediate with staggered delay for headings
-        const delay = el.classList.contains('fade-in-up-delay-1') ? 100 :
-                     el.classList.contains('fade-in-up-delay-2') ? 200 :
-                     el.classList.contains('fade-in-up-delay-3') ? 300 :
-                     el.classList.contains('fade-in-up-delay-4') ? 400 :
-                     el.classList.contains('fade-in-up-delay-5') ? 500 :
-                     el.classList.contains('fade-in-up-delay-6') ? 600 : 0;
-        
-        setTimeout(() => {
-          el.classList.add('animated');
-          el.dataset['animated'] = 'true';
-        }, delay);
-      }
-    });
-  }
-
-  forceAnimationOnVisible() {
-    // Force animation on all elements with delay classes
-    const elements = document.querySelectorAll('.fade-in-up-delay-3');
-    elements.forEach((el) => {
-      const element = el as HTMLElement;
-      if (element.getBoundingClientRect().top < window.innerHeight * 0.9) {
-        setTimeout(() => {
-          element.classList.add('animated');
-          element.dataset['animated'] = 'true';
-        }, 200);
-      }
-    });
-  }
-
-  checkVerticalElements() {
-    // Quick check for any elements that might need animation during scroll
-    const animatedElements = document.querySelectorAll(
-      '.fade-in-up:not(.animated), .fade-in-up-delay-1:not(.animated), ' +
-      '.fade-in-up-delay-2:not(.animated), .fade-in-up-delay-3:not(.animated), ' +
-      '.stat-card:not(.animated), .business-card:not(.animated), .faq-item:not(.animated)'
-    );
-
-    const windowHeight = window.innerHeight;
-    
-    animatedElements.forEach((element) => {
-      const el = element as HTMLElement;
-      const rect = el.getBoundingClientRect();
-      
-      // Check if element is visible in viewport
-      if (rect.top < windowHeight * 0.8 && rect.bottom > 0 && !el.dataset['animated']) {
-        el.classList.add('animated');
-        el.dataset['animated'] = 'true';
+        fadeObserver.observe(el);
       }
     });
   }
@@ -385,9 +232,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       
       // Show button when user has scrolled past 2x viewport height
       this.showBackToTop = scrollPosition > (windowHeight * 2);
-      
-      // Trigger any visible elements that might have been missed
-      this.checkVerticalElements();
     });
   }
 

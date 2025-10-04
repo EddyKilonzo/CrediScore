@@ -1,8 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService, LoginRequest } from '../../core/services/auth.service';
+import { ToastService } from '../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -11,7 +12,7 @@ import { AuthService, LoginRequest } from '../../core/services/auth.service';
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   isLoading = signal(false);
   error = signal<string | null>(null);
@@ -19,12 +20,18 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+  }
+
+  ngOnInit(): void {
+    // Scroll to top when component loads
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onSubmit(): void {
@@ -40,12 +47,15 @@ export class LoginComponent {
       this.authService.login(loginData).subscribe({
         next: (response) => {
           this.isLoading.set(false);
+          this.toastService.success(`Welcome back, ${response.user.name.split(' ')[0]}!`);
           // Redirect based on user role
           this.redirectBasedOnRole(response.user.role);
         },
         error: (error) => {
           this.isLoading.set(false);
-          this.error.set(error.error?.message || 'Login failed. Please try again.');
+          const errorMessage = error.error?.message || 'Login failed. Please try again.';
+          this.error.set(errorMessage);
+          this.toastService.error(errorMessage);
         }
       });
     } else {
@@ -90,6 +100,10 @@ export class LoginComponent {
       }
     }
     return '';
+  }
+
+  signInWithGoogle(): void {
+    this.authService.signInWithGoogle();
   }
 }
 

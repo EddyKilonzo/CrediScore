@@ -24,6 +24,10 @@ export const routes: Routes = [
         loadComponent: () => import('./auth/register/register.component').then(m => m.RegisterComponent)
       },
       {
+        path: 'callback',
+        loadComponent: () => import('./auth/callback/auth-callback.component').then(m => m.AuthCallbackComponent)
+      },
+      {
         path: '',
         redirectTo: 'login',
         pathMatch: 'full'

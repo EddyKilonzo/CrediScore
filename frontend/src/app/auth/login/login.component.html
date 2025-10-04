@@ -1,45 +1,185 @@
-<!-- Login Component Template -->
-<div class="login-container">
-  <h2>Login</h2>
-  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-    <div class="form-group">
-      <label for="email">Email</label>
-      <input 
-        type="email" 
-        id="email" 
-        formControlName="email"
-        placeholder="Enter your email">
-      <div class="error" *ngIf="getFieldError('email')">
-        {{ getFieldError('email') }}
+<!-- Login Page -->
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4 pt-24">
+  
+  <!-- Login Container -->
+  <div class="w-full max-w-5xl mx-auto">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden min-h-[500px] max-h-[90vh] flex flex-col animate-fadeInUp hover:shadow-xl transition-all duration-300" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;">
+      
+      <!-- Two Column Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 flex-1 min-h-0">
+        
+        <!-- Left Column: Information/Visual -->
+        <div class="lg:p-6 p-4 relative overflow-hidden flex-col min-h-[300px] sm:min-h-[400px] hidden lg:flex" style="background: linear-gradient(135deg, rgba(44, 82, 112, 0.05) 0%, rgba(44, 82, 112, 0.1) 100%);">
+          <!-- Background Image -->
+          <div class="absolute inset-0">
+            <img src="/images/sigup.jpg" alt="Login Background" class="w-full h-full object-cover filter brightness-75">
+          </div>
+          
+          <!-- Gradient Overlay -->
+          <div class="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/50"></div>
+          
+          <!-- Content Overlay -->
+          <div class="relative z-10 flex flex-col justify-center h-full text-white p-6">
+            
+            <!-- CrediScore Logo -->
+            <div class="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+              <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain filter drop-shadow-lg">
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-4 drop-shadow-lg text-center">Welcome Back!</h3>
+            <p class="text-white/90 text-base mb-8 leading-relaxed drop-shadow-md text-center">Sign in to continue your journey in the trusted business ecosystem.</p>
+            
+            <!-- Features List -->
+            <div class="space-y-4">
+              <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                <i class="fas fa-shield-alt text-white/80 mr-3 text-lg"></i>
+                <span class="font-medium">Secure Authentication</span>
+              </div>
+              <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                <i class="fas fa-users text-white/80 mr-3 text-lg"></i>
+                <span class="font-medium">Trusted Community</span>
+              </div>
+              <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
+                <i class="fas fa-chart-bar text-white/80 mr-3 text-lg"></i>
+                <span class="font-medium">Business Insights</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Form Content -->
+        <div class="p-4 sm:p-6 flex flex-col overflow-hidden">
+          
+          <!-- Header Section -->
+          <div class="text-center mb-3 sm:mb-4 flex-shrink-0">
+            <!-- Logo and Brand -->
+            <div class="flex items-center justify-center mb-2">
+              <div class="w-10 h-10 mr-3 flex items-center justify-center">
+                <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain">
+              </div>
+              <h1 class="text-xl font-bold text-gray-900">CrediScore</h1>
+            </div>
+            
+            <h2 class="text-lg font-bold text-gray-800 mb-1">
+              Welcome Back
+            </h2>
+            <p class="text-gray-600 text-xs">
+              Sign in to your account to continue
+            </p>
+          </div>
+
+          <!-- Form Content -->
+          <div class="flex-1 overflow-y-auto space-y-3 pr-1 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            
+            <form [formGroup]="loginForm" class="space-y-3 sm:space-y-4">
+              <!-- Email -->
+              <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  formControlName="email"
+                  type="email"
+                  id="email"
+                  placeholder="john.doe@example.com"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
+                
+                <!-- Error -->
+                <div *ngIf="getFieldError('email')" class="text-xs text-red-600 mt-1">
+                  {{ getFieldError('email') }}
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div class="relative">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  formControlName="password"
+                  type="password"
+                  id="password"
+                  placeholder="Enter your password"
+                  class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
+                
+                <!-- Error -->
+                <div *ngIf="getFieldError('password')" class="text-xs text-red-600 mt-1">
+                  {{ getFieldError('password') }}
+                </div>
+              </div>
+
+              <!-- Error Message -->
+              <div *ngIf="error()" class="text-xs text-red-600 bg-red-50 p-2 rounded-lg">
+                {{ error() }}
+              </div>
+
+              <!-- Submit Button -->
+              <button 
+                type="submit" 
+                (click)="onSubmit()"
+                [disabled]="isLoading()"
+                class="w-full px-4 py-2 rounded-lg font-medium text-white transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                style="background-color: #2C5270;">
+                
+                <!-- Loading State -->
+                <div *ngIf="isLoading()" class="flex items-center justify-center">
+                  <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Signing in...
+                </div>
+                
+                <!-- Default State -->
+                <div *ngIf="!isLoading()" class="flex items-center justify-center">
+                  Sign In
+                  <i class="fas fa-arrow-right ml-2"></i>
+                </div>
+              </button>
+            </form>
+          </div>
+
+          <!-- Google SSO Section -->
+          <div class="mt-3 sm:mt-4 mb-3 sm:mb-4 flex-shrink-0">
+            <div class="relative my-2">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+              </div>
+              <div class="relative flex justify-center text-xs">
+                <span class="px-2 bg-white text-gray-500">Or continue with Google</span>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              (click)="signInWithGoogle()"
+              [disabled]="isLoading()"
+              class="w-full flex items-center justify-center px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              style="border-color: #2C5270; --tw-ring-color: #2C5270;">
+              
+              <!-- Google Icon -->
+              <svg 
+                *ngIf="!isLoading()"
+                class="w-4 h-4 mr-2" 
+                viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              
+              <!-- Loading Spinner -->
+              <div 
+                *ngIf="isLoading()"
+                class="animate-spin rounded-full h-4 w-4 border-b-2 mr-2"
+                style="border-color: #2C5270;"></div>
+              
+              <span class="text-xs">{{ isLoading() ? 'Signing in...' : 'Continue with Google' }}</span>
+            </button>
+          </div>
+
+          <!-- Sign Up Link -->
+          <div class="text-sm text-gray-600 text-center">
+            Don't have an account? 
+            <a routerLink="/auth/register" class="text-gray-700 font-medium hover:text-gray-900 underline">
+              Sign up here
+            </a>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="form-group">
-      <label for="password">Password</label>
-      <input 
-        type="password" 
-        id="password" 
-        formControlName="password"
-        placeholder="Enter your password">
-      <div class="error" *ngIf="getFieldError('password')">
-        {{ getFieldError('password') }}
-      </div>
-    </div>
-
-    <div class="error" *ngIf="error()">
-      {{ error() }}
-    </div>
-
-    <button 
-      type="submit" 
-      [disabled]="isLoading()"
-      class="submit-btn">
-      {{ isLoading() ? 'Logging in...' : 'Login' }}
-    </button>
-  </form>
-
-  <div class="auth-links">
-    <p>Don't have an account? <a routerLink="/auth/register">Sign up</a></p>
   </div>
 </div>
 
