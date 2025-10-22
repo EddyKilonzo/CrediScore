@@ -21,13 +21,18 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
     });
   }
 
-  // Add common headers
-  authReq = authReq.clone({
-    setHeaders: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
-  });
+  // Add common headers (skip Content-Type for FormData requests)
+  // FormData requests should not have Content-Type set manually - browser sets it with boundary
+  const isFormData = authReq.body instanceof FormData;
+  
+  if (!isFormData) {
+    authReq = authReq.clone({
+      setHeaders: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+  }
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -49,8 +54,8 @@ function handleError(error: HttpErrorResponse, toastService: ToastService, authS
         errorMessage = error.error?.message || 'Bad Request';
         break;
       case 401:
-        errorMessage = 'Unauthorized. Please login again.';
-        authService.logout();
+        errorMessage = 'Session expired. Please login again.';
+        authService.logout(true); // Redirect to home
         break;
       case 403:
         errorMessage = 'Access denied. You do not have permission to perform this action.';
@@ -60,6 +65,9 @@ function handleError(error: HttpErrorResponse, toastService: ToastService, authS
         break;
       case 422:
         errorMessage = error.error?.message || 'Validation error';
+        break;
+      case 431:
+        errorMessage = 'Request data too large. Please try again with smaller data.';
         break;
       case 500:
         errorMessage = 'Internal server error. Please try again later.';

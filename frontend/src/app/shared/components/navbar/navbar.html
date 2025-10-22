@@ -54,13 +54,13 @@
         <!-- Business Owner Links -->
         <ng-container *ngIf="currentUser()?.role === 'business'">
           <a 
-            routerLink="/business" 
+            routerLink="/business/my-business" 
             routerLinkActive="text-blue-400"
             class="inline-flex items-center px-3 py-2 text-sm font-medium text-white hover:text-blue-400 transition-colors">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            My Businesses
+            My Business
           </a>
           <a 
             routerLink="/business/analytics" 
@@ -124,7 +124,7 @@
               <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium overflow-hidden">
                 <img 
                   *ngIf="getProfileImageUrl()" 
-                  [src]="getProfileImageUrl()" 
+                  [src]="imageService.getOptimizedProfileImageUrl(getProfileImageUrl()!, 'small')" 
                   alt="Profile" 
                   class="w-full h-full object-cover">
                 <span *ngIf="!getProfileImageUrl()">{{ getUserInitials(currentUser()!) }}</span>
@@ -149,7 +149,9 @@
             <!-- Dropdown Menu -->
             <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               <div class="py-1">
+                <!-- Customer Dashboard -->
                 <a 
+                  *ngIf="currentUser()?.role === 'user'"
                   routerLink="/dashboard" 
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,6 +159,29 @@
                   </svg>
                   Dashboard
                 </a>
+                
+                <!-- Business Dashboard -->
+                <a 
+                  *ngIf="currentUser()?.role === 'business'"
+                  routerLink="/business/dashboard" 
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                  <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                  Dashboard
+                </a>
+                
+                <!-- Business My Business -->
+                <a 
+                  *ngIf="currentUser()?.role === 'business'"
+                  routerLink="/business/my-business" 
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                  <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  My Business
+                </a>
+                
                 <a 
                   routerLink="/profile" 
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">

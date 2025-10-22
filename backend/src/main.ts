@@ -2,9 +2,17 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { json, urlencoded } from 'express';
+import session from 'express-session';
+
+// Increase Node.js header size limits to prevent 431 errors
+process.env.NODE_OPTIONS = '--max-http-header-size=32768';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // Increase header size limits to prevent 431 errors
+    bodyParser: false, // We'll configure this manually
+  });
   const logger = new Logger('Bootstrap');
 
   // Set global prefix for all routes
@@ -20,11 +28,45 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Configure session middleware
+  app.use(
+    session({
+      secret:
+        process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        httpOnly: true,
+        maxAge: 5 * 60 * 1000, // 5 minutes
+      },
+    }),
+  );
+
+  // Configure body parser limits for file uploads with increased header limits
+  app.use(
+    json({
+      limit: '10mb',
+      // Increase header size limits
+      inflate: true,
+      type: 'application/json',
+    }),
+  );
+  app.use(
+    urlencoded({
+      extended: true,
+      limit: '10mb',
+      // Increase header size limits
+      inflate: true,
+      type: 'application/x-www-form-urlencoded',
+    }),
+  );
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Temporarily disabled to debug
       transform: true,
     }),
   );

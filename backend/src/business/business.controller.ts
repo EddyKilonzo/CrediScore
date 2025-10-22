@@ -30,6 +30,10 @@ import {
   AddPaymentMethodDto,
   CreateBusinessCategoryDto,
   UpdateBusinessCategoryDto,
+  SubmitForReviewDto,
+  UpdateBusinessStatusDto,
+  UpdateOnboardingStepDto,
+  VerifyDocumentDto,
 } from './dto/business.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -276,6 +280,19 @@ export class BusinessController {
     return this.businessService.getBusinessDocuments(req.user.id, businessId);
   }
 
+  @Get(':id/documents/:documentId/processing-status')
+  @ApiOperation({ summary: 'Get document AI processing status' })
+  @ApiResponse({ status: 200, description: 'Processing status retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getDocumentProcessingStatus(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+    @Param('documentId') documentId: string,
+  ) {
+    return this.businessService.getDocumentProcessingStatus(req.user.id, businessId, documentId);
+  }
+
   @Delete('documents/:documentId')
   @ApiOperation({ summary: 'Delete business document' })
   @ApiParam({ name: 'documentId', description: 'Document ID' })
@@ -453,6 +470,106 @@ export class BusinessController {
     @Param('id') businessId: string,
   ) {
     return this.businessService.getBusinessAnalytics(req.user.id, businessId);
+  }
+
+  // Onboarding Workflow Endpoints
+  @Get(':id/onboarding-status')
+  @ApiOperation({ summary: 'Get business onboarding status and progress' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Onboarding status retrieved successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only view your own businesses',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getOnboardingStatus(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+  ) {
+    return this.businessService.getOnboardingStatus(req.user.id, businessId);
+  }
+
+  @Patch(':id/onboarding-step')
+  @ApiOperation({ summary: 'Update business onboarding step' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiBody({ type: UpdateOnboardingStepDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Onboarding step updated successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid step number',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only update your own businesses',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async updateOnboardingStep(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+    @Body(ValidationPipe) updateStepDto: UpdateOnboardingStepDto,
+  ) {
+    return this.businessService.updateOnboardingStep(
+      req.user.id,
+      businessId,
+      updateStepDto.step,
+    );
+  }
+
+  @Post(':id/submit-for-review')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Submit business for admin review' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiBody({ type: SubmitForReviewDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Business submitted for review successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Missing required documents or payment methods',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only submit your own businesses',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async submitForReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+    @Body(ValidationPipe) submitData: SubmitForReviewDto,
+  ) {
+    return this.businessService.submitForReview(
+      req.user.id,
+      businessId,
+      submitData,
+    );
   }
 }
 

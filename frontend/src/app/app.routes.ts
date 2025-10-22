@@ -47,6 +47,26 @@ export const routes: Routes = [
     loadComponent: () => import('./user/dashboard/dashboard.component').then(m => m.DashboardComponent)
   },
 
+  // Business Routes
+  {
+    path: 'business',
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./business/business-dashboard/business-dashboard.component').then(m => m.BusinessDashboardComponent)
+      },
+      {
+        path: 'my-business',
+        loadComponent: () => import('./business/my-business/my-business.component').then(m => m.MyBusinessComponent)
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      }
+    ]
+  },
+
   // Wildcard route - must be last
   {
     path: '**',

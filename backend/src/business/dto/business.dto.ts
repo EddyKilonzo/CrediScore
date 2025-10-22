@@ -1,5 +1,32 @@
-import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+export enum BusinessStatus {
+  PENDING = 'PENDING',
+  DOCUMENTS_REQUIRED = 'DOCUMENTS_REQUIRED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  VERIFIED = 'VERIFIED',
+  REJECTED = 'REJECTED',
+  SUSPENDED = 'SUSPENDED',
+}
+
+export enum DocumentType {
+  BUSINESS_DOCUMENT = 'BUSINESS_DOCUMENT',
+  BUSINESS_REGISTRATION = 'BUSINESS_REGISTRATION',
+  TAX_CERTIFICATE = 'TAX_CERTIFICATE',
+  TRADE_LICENSE = 'TRADE_LICENSE',
+  BANK_STATEMENT = 'BANK_STATEMENT',
+  UTILITY_BILL = 'UTILITY_BILL',
+  ID_COPY = 'ID_COPY',
+  PROOF_OF_ADDRESS = 'PROOF_OF_ADDRESS',
+  OTHER = 'OTHER',
+}
 
 export class CreateBusinessDto {
   @ApiProperty({ description: 'Business name' })
@@ -105,13 +132,28 @@ export class UpdateBusinessDto {
 }
 
 export class UploadDocumentDto {
-  @ApiProperty({ description: 'Document type' })
-  @IsString()
-  type: string;
+  @ApiProperty({ description: 'Document type', enum: DocumentType })
+  @IsEnum(DocumentType)
+  type: DocumentType;
 
   @ApiProperty({ description: 'Document URL' })
   @IsString()
   url: string;
+
+  @ApiProperty({ description: 'Original filename', required: false })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ description: 'File size in bytes', required: false })
+  @IsOptional()
+  @IsNumber()
+  size?: number;
+
+  @ApiProperty({ description: 'MIME type', required: false })
+  @IsOptional()
+  @IsString()
+  mimeType?: string;
 }
 
 export class AddPaymentMethodDto {
@@ -148,4 +190,45 @@ export class UpdateBusinessCategoryDto {
   @IsOptional()
   @IsString()
   description?: string;
+}
+
+// Onboarding workflow DTOs
+export class SubmitForReviewDto {
+  @ApiProperty({ description: 'Additional notes for review', required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class UpdateBusinessStatusDto {
+  @ApiProperty({ description: 'New business status', enum: BusinessStatus })
+  @IsEnum(BusinessStatus)
+  status: BusinessStatus;
+
+  @ApiProperty({ description: 'Review notes', required: false })
+  @IsOptional()
+  @IsString()
+  reviewNotes?: string;
+
+  @ApiProperty({ description: 'Rejection reason', required: false })
+  @IsOptional()
+  @IsString()
+  rejectionReason?: string;
+}
+
+export class UpdateOnboardingStepDto {
+  @ApiProperty({ description: 'Onboarding step number (1-4)' })
+  @IsNumber()
+  step: number;
+}
+
+export class VerifyDocumentDto {
+  @ApiProperty({ description: 'Verification status' })
+  @IsBoolean()
+  verified: boolean;
+
+  @ApiProperty({ description: 'Verification notes', required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }

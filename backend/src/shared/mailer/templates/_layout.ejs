@@ -35,7 +35,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         .email-header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%);
             padding: 40px 30px;
             text-align: left;
             position: relative;
@@ -67,7 +67,7 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            color: #4facfe;
+            color: #2C5270;
             font-size: 20px;
         }
         .logo-text {
@@ -95,7 +95,7 @@
             margin-bottom: 25px;
         }
         .user-greeting a {
-            color: #4facfe;
+            color: #2C5270;
             text-decoration: none;
         }
         .email-content p {
@@ -105,7 +105,7 @@
             display: inline-block;
             padding: 12px 30px;
             margin: 20px 0;
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%);
             color: #ffffff;
             text-decoration: none;
             border-radius: 6px;
@@ -114,7 +114,7 @@
         }
         .info-box {
             background-color: #f8f9fa;
-            border-left: 4px solid #4facfe;
+            border-left: 4px solid #2C5270;
             padding: 18px 20px;
             margin: 25px 0;
             border-radius: 4px;
@@ -230,9 +230,14 @@
             font-size: 12px;
             margin-top: 15px;
         }
+        /* Mobile Responsive Styles */
         @media only screen and (max-width: 600px) {
+            .email-wrapper {
+                margin: 10px;
+                border-radius: 12px;
+            }
             .email-body {
-                padding: 30px 20px;
+                padding: 25px 20px;
             }
             .email-footer {
                 padding: 25px 20px 15px;
@@ -243,11 +248,155 @@
             .button {
                 display: block;
                 text-align: center;
+                width: 100%;
+                box-sizing: border-box;
             }
             .app-links {
                 flex-direction: column;
                 gap: 15px;
             }
+            .feature-grid td {
+                width: 100% !important;
+                display: block;
+                padding: 10px !important;
+            }
+            .header-padding {
+                padding: 30px 20px !important;
+            }
+            .content-padding {
+                padding: 25px 20px !important;
+            }
+            .footer-padding {
+                padding: 20px !important;
+            }
+        }
+
+        /* Card Styling */
+        .email-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%);
+            padding: 40px 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-body {
+            padding: 40px 35px;
+            background: #ffffff;
+        }
+
+        .card-footer {
+            background: #f8f9fa;
+            padding: 30px 35px 25px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        /* Enhanced Button Styles */
+        .btn-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 16px rgba(44, 82, 112, 0.3);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .btn-secondary {
+            display: inline-block;
+            background: #f8f9fa;
+            color: #2C5270;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        /* Enhanced Info Boxes */
+        .info-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 4px solid #2C5270;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .warning-card {
+            background: linear-gradient(135deg, #fff8e6 0%, #ffeaa7 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 4px solid #ffc107;
+            box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+        }
+
+        .success-card {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 4px solid #28a745;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+        }
+
+        /* Feature Grid */
+        .feature-grid {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+
+        .feature-grid .feature-cell {
+            display: table-cell;
+            width: 50%;
+            padding: 15px;
+            vertical-align: top;
+        }
+
+        .feature-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            height: 100%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            background: #2C5270;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(44, 82, 112, 0.3);
         }
     </style>
 </head>
@@ -255,20 +404,26 @@
     <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f7fa;" cellpadding="0" cellspacing="0">
         <tr>
             <td align="center" style="padding: 20px 10px;">
-                <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #f5f7fa; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border-radius: 8px; overflow: hidden;" cellpadding="0" cellspacing="0">
+                <!-- Main Email Card -->
+                <div style="background: #ffffff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06); overflow: hidden; margin: 0 auto; max-width: 600px;">
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;" cellpadding="0" cellspacing="0">
                     <!-- Header -->
                     <tr>
-                        <td style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 40px 30px; position: relative;">
-                            <table role="presentation" style="width: 100%;" cellpadding="0" cellspacing="0">
+                        <td style="background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%); padding: 40px 30px; position: relative; overflow: hidden;">
+                            <!-- Background Pattern -->
+                            <!-- Background Pattern -->
+                            <div style="position: absolute; top: 0; right: 0; width: 200px; height: 100%; background: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 200 200\'%3E%3Ccircle cx=\'150\' cy=\'50\' r=\'80\' fill=\'rgba(255,255,255,0.1)\'/%3E%3Ccircle cx=\'170\' cy=\'80\' r=\'40\' fill=\'rgba(255,255,255,0.15)\'/%3E%3C/svg%3E') no-repeat center; opacity: 0.6;"></div>
+                            
+                            <table role="presentation" style="width: 100%; position: relative; z-index: 1;" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td>
                                         <table role="presentation" cellpadding="0" cellspacing="0">
                                             <tr>
-                                                <td style="padding-right: 10px; vertical-align: middle;">
-                                                    <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.9); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; color: #4facfe; font-size: 20px; text-align: center; line-height: 40px;">CS</div>
+                                                <td style="padding-right: 12px; vertical-align: middle;">
+                                                    <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.95); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; color: #2C5270; font-size: 22px; text-align: center; line-height: 44px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">CS</div>
                                                 </td>
                                                 <td style="vertical-align: middle;">
-                                                    <span style="color: #ffffff; font-size: 28px; font-weight: 700;">CrediScore</span>
+                                                    <span style="color: #ffffff; font-size: 32px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">CrediScore</span>
                                                 </td>
                                             </tr>
                                         </table>
@@ -280,23 +435,16 @@
                     
                     <!-- Body -->
                     <tr>
-                        <td style="padding: 30px; background-color: #f5f7fa;">
-                            <!-- Content Card -->
-                            <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td style="padding: 35px;">
-                                        <div style="font-size: 15px; color: #333; line-height: 1.8;">
-                                            <%- body %>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
+                        <td style="padding: 40px 35px; background-color: #ffffff;">
+                            <div style="font-size: 15px; color: #333; line-height: 1.8;">
+                                <%- body %>
+                            </div>
                         </td>
                     </tr>
                     
                     <!-- Footer -->
                     <tr>
-                        <td style="background-color: #f5f7fa; padding: 30px 35px 25px;">
+                        <td style="background-color: #f8f9fa; padding: 30px 35px 25px; border-top: 1px solid #e9ecef;">
                             <table role="presentation" style="width: 100%;" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td>
@@ -304,23 +452,23 @@
                                         <div style="color: #999; font-size: 12px; margin-bottom: 20px;"><%= new Date().getFullYear() %> / <%= new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) %></div>
                                         
                                         <div style="margin: 20px 0; color: #666; font-size: 13px; line-height: 1.8;">
-                                            If you have any questions, please <a href="mailto:support@crediscore.com" style="color: #00a6ff; text-decoration: none;">submit a ticket</a> or contact our support <a href="mailto:support@crediscore.com" style="color: #00a6ff; text-decoration: none;">Support@crediscore.com</a>
+                                            If you have any questions, please <a href="mailto:support@crediscore.com" style="color: #2C5270; text-decoration: none;">submit a ticket</a> or contact our support <a href="mailto:support@crediscore.com" style="color: #2C5270; text-decoration: none;">Support@crediscore.com</a>
                                         </div>
 
                                         <!-- Social Links -->
                                         <table role="presentation" align="center" style="margin: 25px auto;" cellpadding="0" cellspacing="0">
                                             <tr>
                                                 <td style="padding: 0 8px;">
-                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center;">𝕏</a>
+                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center; font-weight: bold;">X</a>
                                                 </td>
                                                 <td style="padding: 0 8px;">
-                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center;">f</a>
+                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center; font-weight: bold;">f</a>
                                                 </td>
                                                 <td style="padding: 0 8px;">
-                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center;">in</a>
+                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center; font-weight: bold;">in</a>
                                                 </td>
                                                 <td style="padding: 0 8px;">
-                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center;">📷</a>
+                                                    <a href="#" style="display: inline-block; width: 36px; height: 36px; line-height: 36px; background-color: #f0f0f0; border-radius: 50%; color: #666; text-decoration: none; font-size: 16px; text-align: center; font-weight: bold;">IG</a>
                                                 </td>
                                             </tr>
                                         </table>
@@ -330,13 +478,13 @@
                                             <tr>
                                                 <td style="padding: 0 10px; text-align: center;">
                                                     <a href="#" style="text-decoration: none; color: #666; font-size: 12px;">
-                                                        <div style="width: 40px; height: 40px; margin: 0 auto 5px; background-color: #f5f5f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🍎</div>
+                                                        <div style="width: 40px; height: 40px; margin: 0 auto 5px; background-color: #f5f5f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold;">iOS</div>
                                                         <div>App Store</div>
                                                     </a>
                                                 </td>
                                                 <td style="padding: 0 10px; text-align: center;">
                                                     <a href="#" style="text-decoration: none; color: #666; font-size: 12px;">
-                                                        <div style="width: 40px; height: 40px; margin: 0 auto 5px; background-color: #f5f5f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px;">▶️</div>
+                                                        <div style="width: 40px; height: 40px; margin: 0 auto 5px; background-color: #f5f5f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold;">GP</div>
                                                         <div>Google Play</div>
                                                     </a>
                                                 </td>
@@ -364,7 +512,8 @@
                             </table>
                         </td>
                     </tr>
-                </table>
+                    </table>
+                </div>
             </td>
         </tr>
     </table>

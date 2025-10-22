@@ -7,9 +7,10 @@ import {
 import { BusinessService } from './business.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { FraudDetectionModule } from '../shared/fraud-detection/fraud-detection.module';
+import { OCRModule } from '../shared/ocr/ocr.module';
 
 @Module({
-  imports: [PrismaModule, FraudDetectionModule],
+  imports: [PrismaModule, FraudDetectionModule, OCRModule],
   controllers: [
     BusinessController,
     BusinessCategoryController,

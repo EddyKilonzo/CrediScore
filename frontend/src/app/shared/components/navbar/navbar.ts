@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule, NgIf } from '@angular/common';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { ToastService } from '../toast/toast.service';
+import { ImageService } from '../../services/image.service';
 
 @Component({
   selector: 'app-navbar',
@@ -13,30 +14,22 @@ import { ToastService } from '../toast/toast.service';
 export class Navbar {
   private authService = inject(AuthService) as AuthService;
   private toastService = inject(ToastService) as ToastService;
+  public imageService = inject(ImageService) as ImageService;
   
   currentUser = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
 
   logout() {
     const userName = this.currentUser()?.name || 'User';
-    this.authService.logout();
+    this.authService.logout(true); // Redirect to home
     this.toastService.info(`Goodbye, ${userName}! You have been logged out successfully.`);
   }
 
   getUserInitials(user: User): string {
-    if (!user || !user.name) return '';
-    const nameParts = user.name.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts[1] || '';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    return this.imageService.getUserInitials(user);
   }
 
   getProfileImageUrl(): string | null {
-    const user = this.currentUser();
-    if (user?.avatar) {
-      return user.avatar;
-    }
-    // Fallback to localStorage for backward compatibility
-    return localStorage.getItem('profileImage');
+    return this.imageService.getProfileImageUrl(this.currentUser());
   }
 }

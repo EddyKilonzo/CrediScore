@@ -14,3 +14,5 @@ export * from './circuit-breaker/circuit-breaker.service';
 export * from './metrics/metrics.module';
 export * from './metrics/metrics.service';
 export * from './metrics/metrics.controller';
+export * from './ocr/ocr.module';
+export * from './ocr/ocr.service';

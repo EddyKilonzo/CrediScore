@@ -8,6 +8,40 @@
   perspective: 1000px;
 }
 
+/* Animation Classes */
+.stat-card {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.stat-card.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.business-card {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.business-card.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.faq-item {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.faq-item.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 :host {
   display: block;
   scroll-behavior: smooth;
@@ -196,8 +230,197 @@
   }
 }
 
+/* Back to Top Button */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 3rem;
+  height: 3rem;
+  background: linear-gradient(135deg, #3E6A8A, #2C5270);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(44, 82, 112, 0.3);
+}
+
+.back-to-top.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(44, 82, 112, 0.4);
+}
+
+.back-to-top svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Hero Section Enhancements */
+.hero-title {
+  opacity: 1;
+  transform: translateY(0);
+  animation: slideInDown 1s ease-out;
+}
+
+.hero-subtitle {
+  opacity: 1;
+  transform: translateY(0);
+  animation: fadeInUp 1.2s ease-out 0.3s both;
+}
+
+.hero-search-section {
+  opacity: 1;
+  transform: translateY(0);
+  animation: fadeInUp 1.4s ease-out 0.6s both;
+}
+
+.hero-search-input {
+  opacity: 1;
+  transform: translateX(0);
+  animation: slideInLeft 1s ease-out 0.8s both;
+}
+
+.search-icon {
+  animation: pulse 2s infinite 1s;
+}
+
+.hero-search-button {
+  opacity: 1;
+  transform: translateX(0);
+  animation: slideInRight 1s ease-out 1s both;
+}
+
+.search-button-icon {
+  transition: transform 0.3s ease;
+}
+
+.hero-search-button:hover .search-button-icon {
+  transform: rotate(10deg) scale(1.1);
+}
+
+.hero-cta-buttons {
+  opacity: 1;
+  transform: translateY(0);
+  animation: fadeInUp 1.6s ease-out 1.2s both;
+}
+
+.cta-icon {
+  transition: transform 0.3s ease;
+}
+
+.hero-cta-primary:hover .cta-icon,
+.hero-cta-secondary:hover .cta-icon {
+  transform: scale(1.2) rotate(5deg);
+}
+
+.hero-word {
+  display: inline-block;
+  opacity: 1;
+  transform: translateY(0);
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.hero-word:nth-child(1) { animation-delay: 0.2s; }
+.hero-word:nth-child(2) { animation-delay: 0.4s; }
+.hero-word:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Testimonial Slider Enhancements */
+.testimonial-slider {
+  transition: transform 0.7s ease-out;
+}
+
+/* Button Hover Effects */
+.btn-hover-effect {
+  transition: all 0.3s ease;
+}
+
+.btn-hover-effect:hover {
+  transform: translateY(-2px);
+}
+
+/* Search Input Enhancements */
+.search-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(62, 106, 138, 0.1);
+}
+
+/* Dropdown Enhancements */
+.dropdown-btn:focus {
+  outline: none;
+}
+
 @media (max-width: 640px) {
   .stats-counter {
     font-size: 2rem;
+  }
+  
+  .back-to-top {
+    bottom: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .back-to-top svg {
+    width: 1.25rem;
+    height: 1.25rem;
   }
 }

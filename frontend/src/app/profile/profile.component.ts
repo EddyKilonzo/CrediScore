@@ -1,8 +1,10 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
+import { CloudinaryService } from '../core/services/cloudinary.service';
+import { ImageService } from '../shared/services/image.service';
 
 interface Tab {
   id: string;
@@ -11,186 +13,329 @@ interface Tab {
   active: boolean;
 }
 
+interface Business {
+  name: string;
+  status: string;
+  rating: number;
+  category: string;
+  trustScore: number;
+}
+
+interface Activity {
+  action: string;
+  date: string;
+  time: string;
+  business: string;
+}
+
+interface MockData {
+  businesses: Business[];
+  recentActivity: Activity[];
+  trustScore: number;
+  reputation: number;
+  reviewsCount: number;
+}
+
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css'
 })
 export class ProfileComponent implements OnInit {
-  private authService = inject(AuthService);
-  private toastService = inject(ToastService) as ToastService;
-  private fb = inject(FormBuilder);
+  // Mock data for display
+  mockData: MockData = {
+    businesses: [
+      { name: 'Sample Business 1', status: 'Verified', rating: 4.5, category: 'Restaurant', trustScore: 85 },
+      { name: 'Sample Business 2', status: 'Pending', rating: 4.2, category: 'Retail', trustScore: 78 }
+    ],
+    recentActivity: [
+      { action: 'Updated profile', date: '2024-01-15', time: '10:30 AM', business: 'Sample Business 1' },
+      { action: 'Added business', date: '2024-01-14', time: '2:15 PM', business: 'Sample Business 2' }
+    ],
+    trustScore: 85,
+    reputation: 4.3,
+    reviewsCount: 12
+  };
 
-  currentUser = this.authService.currentUser;
-  isLoading = signal(false);
-  profileImageUrl = signal<string | null>(null);
+  profileForm: FormGroup;
   activeTab = signal('overview');
-
-  // Settings signals
-  currentTheme = signal<'light' | 'dark'>('light');
+  isLoading = signal(false);
+  currentUser = signal<User | null>(null);
+  
+  // Settings state
+  currentTheme = signal('light');
   emailNotifications = signal(true);
-  pushNotifications = signal(false);
+  pushNotifications = signal(true);
   reviewReminders = signal(true);
   publicProfile = signal(true);
   selectedLanguage = signal('en');
 
-  profileForm: FormGroup;
-
-  tabs: Tab[] = [
-    { id: 'overview', label: 'Overview', icon: 'fas fa-user', active: true },
-    { id: 'business', label: 'Business Info', icon: 'fas fa-building', active: false },
+  // Available tabs
+  allTabs: Tab[] = [
+    { id: 'overview', label: 'Overview', icon: 'fas fa-chart-pie', active: true },
+    { id: 'business', label: 'Business', icon: 'fas fa-building', active: false },
     { id: 'reviews', label: 'Reviews', icon: 'fas fa-star', active: false },
-    { id: 'trust', label: 'Trust Score', icon: 'fas fa-shield-alt', active: false }
+    { id: 'trust', label: 'Trust Score', icon: 'fas fa-shield-alt', active: false },
+    { id: 'settings', label: 'Settings', icon: 'fas fa-cog', active: false }
   ];
 
-  getVisibleTabs(): Tab[] {
+  // Computed property for visible tabs based on user role
+  visibleTabs = computed(() => {
     const user = this.currentUser();
-    if (user?.role === 'user') {
-      // For customers, hide business-related tabs
-      return this.tabs.filter(tab => tab.id !== 'business');
-    }
-    return this.tabs;
-  }
+    if (!user) return this.allTabs.filter(tab => tab.id === 'overview');
 
-  // Mock data for demonstration
-  mockData = {
-    trustScore: 87,
-    reviewsCount: 24,
-    businessesCount: 2,
-    reputation: 4.8,
-    recentActivity: [
-      { action: 'Posted a review', business: 'Safaricom Limited', date: '2 days ago' },
-      { action: 'Updated business profile', business: 'My Tech Solutions', date: '1 week ago' },
-      { action: 'Verified document', business: 'My Tech Solutions', date: '2 weeks ago' }
-    ],
-    businesses: [
-      { name: 'My Tech Solutions', category: 'Technology', trustScore: 92, status: 'Verified' },
-      { name: 'Digital Marketing Pro', category: 'Marketing', trustScore: 78, status: 'Pending' }
-    ]
-  };
+    return this.allTabs.filter(tab => {
+      if (tab.id === 'business') {
+        return user.role === 'business' || user.role === 'admin';
+      }
+      return true;
+    });
+  });
 
-  constructor() {
+  constructor(
+    private fb: FormBuilder,
+    private authService: AuthService,
+    private toastService: ToastService,
+    private cloudinaryService: CloudinaryService,
+    public imageService: ImageService
+  ) {
     this.profileForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.pattern(/^[\+]?[0-9\s\-\(\)]{7,15}$/)]],
+      email: [{ value: '', disabled: true }],
+      phone: ['', [Validators.pattern(/^[\+]?[1-9][\d]{0,15}$/)]],
       bio: ['', [Validators.maxLength(500)]]
     });
   }
 
   ngOnInit(): void {
-    this.loadUserData();
+    // Get current user
+    this.currentUser.set(this.authService.currentUser());
+    
+    // Subscribe to user changes
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser.set(user);
+      if (user) {
+        this.populateForm(user);
+      }
+    });
+
+    // Initialize form with current user data
+    const user = this.authService.currentUser();
+    if (user) {
+      this.populateForm(user);
+    }
+
+    // Load settings from localStorage
     this.loadSettings();
   }
 
-  private loadUserData(): void {
-    const user = this.currentUser();
-    if (user) {
-      const nameParts = user.name.split(' ');
-      this.profileForm.patchValue({
-        firstName: nameParts[0] || '',
-        lastName: nameParts.slice(1).join(' ') || '',
-        email: user.email,
-        phone: user.phone || '',
-        bio: user.bio || ''
-      });
+  private populateForm(user: User): void {
+    const nameParts = user.name.split(' ');
+    this.profileForm.patchValue({
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      email: user.email,
+      phone: user.phone || '',
+      bio: user.bio || ''
+    });
+  }
 
-      // Load profile image from database or localStorage
-      if (user.avatar) {
-        this.profileImageUrl.set(user.avatar);
-      } else {
-        const savedImage = localStorage.getItem('profileImage');
-        if (savedImage) {
-          this.profileImageUrl.set(savedImage);
-        }
-      }
-    }
+  private loadSettings(): void {
+    // Load theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    this.currentTheme.set(savedTheme);
+    
+    // Load notification settings
+    this.emailNotifications.set(
+      localStorage.getItem('emailNotifications') !== 'false'
+    );
+    this.pushNotifications.set(
+      localStorage.getItem('pushNotifications') !== 'false'
+    );
+    this.reviewReminders.set(
+      localStorage.getItem('reviewReminders') !== 'false'
+    );
+    this.publicProfile.set(
+      localStorage.getItem('publicProfile') !== 'false'
+    );
+    
+    // Load language
+    const savedLanguage = localStorage.getItem('language') || 'en';
+    this.selectedLanguage.set(savedLanguage);
+  }
+
+  getVisibleTabs(): Tab[] {
+    return this.visibleTabs();
   }
 
   setActiveTab(tabId: string): void {
     this.activeTab.set(tabId);
-    this.tabs.forEach(tab => {
+    
+    // Update tab active states
+    this.allTabs.forEach(tab => {
       tab.active = tab.id === tabId;
     });
+  }
+
+  getProfileImageUrl(): string | null {
+    return this.imageService.getProfileImageUrl(this.currentUser());
+  }
+
+  getUserInitials(user: User): string {
+    return this.imageService.getUserInitials(user);
+  }
+
+  getUserAddress(): string {
+    // Mock address - in real app, this would come from user data
+    return '123 Main Street, Nairobi';
+  }
+
+  getUserCity(): string {
+    // Mock city - in real app, this would come from user data
+    return 'Nairobi, Kenya';
+  }
+
+  getUserPostalCode(): string {
+    // Mock postal code - in real app, this would come from user data
+    return '00100';
+  }
+
+  getJoinDate(): string {
+    const user = this.currentUser();
+    if (!user) return 'Unknown';
+    
+    // Mock join date - in real app, this would come from user data
+    return 'January 2024';
+  }
+
+  triggerFileUpload(): void {
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      console.log('File selected:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      
+      // Validate file
+      const validation = this.cloudinaryService.validateFile(file);
+      if (!validation.isValid) {
+        console.error('File validation failed:', validation.error);
+        this.toastService.error(validation.error || 'Invalid file');
+        return;
+      }
+      
+      console.log('File validation passed');
+      
+      // Show loading state
+      this.isLoading.set(true);
+      this.toastService.success('Uploading image...');
+      
+      // Create upload options for profile images
+      const user = this.currentUser();
+      console.log('Current user:', user);
+      const options = this.cloudinaryService.createProfileImageOptions(user?.id);
+      console.log('Upload options:', options);
+      
+      // Upload to Cloudinary
+      this.cloudinaryService.uploadFile(file, options).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Update user profile with new avatar URL
+            const updateData = {
+              avatar: response.data.url
+            };
+            
+            this.authService.updateProfile(updateData).subscribe({
+              next: (updatedUser) => {
+                this.isLoading.set(false);
+                this.authService.updateUserData(updatedUser);
+                this.toastService.success('Profile picture updated successfully!');
+                
+                // Clear the file input
+                if (input) {
+                  input.value = '';
+                }
+              },
+              error: (error) => {
+                this.isLoading.set(false);
+                this.toastService.error('Failed to update profile. Please try again.');
+                console.error('Profile update error:', error);
+              }
+            });
+          } else {
+            this.isLoading.set(false);
+            this.toastService.error('Upload failed. Please try again.');
+          }
+        },
+        error: (error) => {
+          this.isLoading.set(false);
+          let errorMessage = 'Upload failed. Please try again.';
+          
+          console.error('=== UPLOAD ERROR ===');
+          console.error('Full error object:', error);
+          console.error('Error status:', error.status);
+          console.error('Error statusText:', error.statusText);
+          console.error('Error message:', error.message);
+          console.error('Error error:', error.error);
+          console.error('Error url:', error.url);
+          console.error('Error headers:', error.headers);
+          
+          if (error.status === 400) {
+            errorMessage = 'Invalid file or server configuration issue. Please check if Cloudinary is properly configured.';
+            console.error('400 Bad Request - likely file format or server issue');
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+            console.error('Server error message:', error.error.message);
+          }
+          
+          this.toastService.error(errorMessage);
+        }
+      });
+    }
   }
 
   onSubmit(): void {
     if (this.profileForm.valid) {
       this.isLoading.set(true);
-
-      const formData = this.profileForm.value;
-      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       
-      // Prepare update data for API call
-      const updateData: any = {
-        name: fullName,
-        phone: formData.phone || '',
-        bio: formData.bio || ''
+      const formValue = this.profileForm.value;
+      const user = this.currentUser();
+      const updateData = {
+        name: `${formValue.firstName} ${formValue.lastName}`.trim(),
+        phone: formValue.phone,
+        bio: formValue.bio,
+        // Include current avatar if no new image was uploaded
+        avatar: user?.avatar
       };
-
-      // Add avatar if changed
-      if (this.profileImageUrl()) {
-        updateData.avatar = this.profileImageUrl()!;
-      }
-
-      // Make API call to update profile
+      
       this.authService.updateProfile(updateData).subscribe({
         next: (updatedUser) => {
-          // Update auth service current user
-          this.authService.updateUserData(updatedUser);
           this.isLoading.set(false);
-          this.toastService.success('Profile updated successfully!');
+          this.toastService.success('Profile updated successfully');
+          this.authService.updateUserData(updatedUser);
         },
         error: (error) => {
-          console.error('Error updating profile:', error);
           this.isLoading.set(false);
           this.toastService.error('Failed to update profile. Please try again.');
+          console.error('Profile update error:', error);
         }
       });
     } else {
       this.markFormGroupTouched();
-      this.toastService.error('Please fill in all required fields correctly.');
-    }
-  }
-
-  triggerFileUpload(): void {
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    fileInput?.click();
-  }
-
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        this.toastService.error('File size must be less than 2MB');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        this.profileImageUrl.set(result);
-        
-        // Update user data with new avatar
-        const user = this.currentUser();
-        if (user) {
-          const updatedUser = {
-            ...user,
-            avatar: result
-          };
-          
-          localStorage.setItem('profileImage', result);
-          this.authService.updateUserData(updatedUser);
-        }
-        
-        this.toastService.success('Profile picture updated successfully!');
-      };
-      reader.readAsDataURL(file);
     }
   }
 
@@ -207,73 +352,28 @@ export class ProfileComponent implements OnInit {
       if (field.errors['required']) {
         return `${fieldName} is required`;
       }
-      if (field.errors['email']) {
-        return 'Please enter a valid email address';
-      }
       if (field.errors['minlength']) {
-        return `${fieldName} must be at least 2 characters long`;
-      }
-      if (field.errors['pattern']) {
-        return 'Please enter a valid phone number';
+        return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
       }
       if (field.errors['maxlength']) {
-        return `${fieldName} must be less than 500 characters`;
+        return `${fieldName} must be less than ${field.errors['maxlength'].requiredLength} characters`;
+      }
+      if (field.errors['pattern']) {
+        return `Please enter a valid ${fieldName}`;
       }
     }
     return '';
   }
 
-  getUserInitials(user: User): string {
-    if (!user || !user.name) return '';
-    const nameParts = user.name.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts[1] || '';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
-  }
-
-  getProfileImageUrl(): string | null {
-    const user = this.currentUser();
-    if (user?.avatar) {
-      return user.avatar;
-    }
-    return localStorage.getItem('profileImage');
-  }
-
   // Settings methods
-  private loadSettings(): void {
-    // Load settings from localStorage
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' || 'light';
-    const savedEmailNotifications = localStorage.getItem('emailNotifications') !== 'false';
-    const savedPushNotifications = localStorage.getItem('pushNotifications') === 'true';
-    const savedReviewReminders = localStorage.getItem('reviewReminders') !== 'false';
-    const savedPublicProfile = localStorage.getItem('publicProfile') !== 'false';
-    const savedLanguage = localStorage.getItem('language') || 'en';
-
-    this.currentTheme.set(savedTheme);
-    this.emailNotifications.set(savedEmailNotifications);
-    this.pushNotifications.set(savedPushNotifications);
-    this.reviewReminders.set(savedReviewReminders);
-    this.publicProfile.set(savedPublicProfile);
-    this.selectedLanguage.set(savedLanguage);
-
-    // Apply theme to document
-    this.applyTheme(savedTheme);
-  }
-
-  setTheme(theme: 'light' | 'dark'): void {
+  setTheme(theme: string): void {
     this.currentTheme.set(theme);
     localStorage.setItem('theme', theme);
-    this.applyTheme(theme);
-    this.toastService.success(`Theme changed to ${theme} mode`);
-  }
-
-  private applyTheme(theme: 'light' | 'dark'): void {
-    const html = document.documentElement;
-    if (theme === 'dark') {
-      html.classList.add('dark');
-    } else {
-      html.classList.remove('dark');
-    }
+    
+    // Apply theme to document
+    document.documentElement.setAttribute('data-theme', theme);
+    
+    this.toastService.success(`Theme changed to ${theme}`);
   }
 
   toggleEmailNotifications(event: Event): void {
@@ -287,27 +387,7 @@ export class ProfileComponent implements OnInit {
     const checked = (event.target as HTMLInputElement).checked;
     this.pushNotifications.set(checked);
     localStorage.setItem('pushNotifications', checked.toString());
-    
-    if (checked) {
-      // Request notification permission
-      if ('Notification' in window) {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            this.toastService.success('Push notifications enabled');
-          } else {
-            this.pushNotifications.set(false);
-            localStorage.setItem('pushNotifications', 'false');
-            this.toastService.error('Push notifications permission denied');
-          }
-        });
-      } else {
-        this.pushNotifications.set(false);
-        localStorage.setItem('pushNotifications', 'false');
-        this.toastService.error('Push notifications not supported in this browser');
-      }
-    } else {
-      this.toastService.success('Push notifications disabled');
-    }
+    this.toastService.success(`Push notifications ${checked ? 'enabled' : 'disabled'}`);
   }
 
   toggleReviewReminders(event: Event): void {
@@ -325,34 +405,9 @@ export class ProfileComponent implements OnInit {
   }
 
   onLanguageChange(event: Event): void {
-    const selectedValue = (event.target as HTMLSelectElement).value;
-    this.selectedLanguage.set(selectedValue);
-    localStorage.setItem('language', selectedValue);
-    this.toastService.success(`Language changed to ${selectedValue.toUpperCase()}`);
-  }
-
-  // Helper methods for displaying user data
-  getUserAddress(): string {
-    // For now, return a default address. In a real app, this would come from user profile
-    // TODO: Add address field to User interface when backend supports it
-    return '123 Business Street';
-  }
-
-  getUserCity(): string {
-    // For now, return a default city. In a real app, this would come from user profile
-    // TODO: Add city field to User interface when backend supports it
-    return 'Nairobi, Kenya';
-  }
-
-  getUserPostalCode(): string {
-    // For now, return a default postal code. In a real app, this would come from user profile
-    // TODO: Add postalCode field to User interface when backend supports it
-    return '00100';
-  }
-
-  getJoinDate(): string {
-    // For now, return a default date. In a real app, this would come from user profile
-    // TODO: Add createdAt field to User interface when backend supports it
-    return 'Jan 15, 2024';
+    const language = (event.target as HTMLSelectElement).value;
+    this.selectedLanguage.set(language);
+    localStorage.setItem('language', language);
+    this.toastService.success(`Language changed to ${language}`);
   }
 }

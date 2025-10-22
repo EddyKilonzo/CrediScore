@@ -6,6 +6,7 @@ import {
   IsOptional,
   Matches,
   MaxLength,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRoleDto } from './user-role.enum';
@@ -55,6 +56,17 @@ export class SignUpDto {
     message: 'Please provide a valid phone number',
   })
   phone?: string;
+
+  @ApiProperty({
+    description: 'User role',
+    enum: ['user', 'business'],
+    example: 'user',
+  })
+  @IsEnum(['user', 'business'], {
+    message: 'Role must be either "user" or "business"',
+  })
+  @IsNotEmpty()
+  role: 'user' | 'business';
 }
 
 export class SignUpResponseDto {

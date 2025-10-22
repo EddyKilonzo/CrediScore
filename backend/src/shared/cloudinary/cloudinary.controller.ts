@@ -10,6 +10,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import { Public } from '../../auth/decorators/public.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   CloudinaryService,
@@ -25,17 +26,118 @@ export class CloudinaryController {
   ) {}
 
   /**
+   * Health check endpoint to verify Cloudinary configuration
+   */
+  @Public()
+  @Get('health')
+  async healthCheck() {
+    try {
+      // Try to get account info to verify credentials
+      await this.cloudinaryService
+        .getFileInfo('test', 'image')
+        .catch(() => null);
+      return {
+        success: true,
+        message: 'Cloudinary service is configured and ready',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Cloudinary service is not properly configured',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
    * Upload a single file with real-time scanning
    */
+  @Public()
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+      fileFilter: (req, file, callback) => {
+        console.log('File filter check:', {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          fieldname: file.fieldname,
+          size: file.size
+        });
+        
+        // Allow images and documents
+        if (
+          file.mimetype.startsWith('image/') ||
+          file.mimetype === 'application/pdf' ||
+          file.mimetype === 'application/msword' ||
+          file.mimetype ===
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ) {
+          console.log('File type accepted:', file.mimetype);
+          callback(null, true);
+        } else {
+          console.log('File type rejected:', file.mimetype);
+          callback(new BadRequestException('File type not supported'), false);
+        }
+      },
+    }),
+  )
   async uploadFile(
     @UploadedFile()
     file: { buffer: Buffer; originalname: string; mimetype: string },
-    @Body() options: CloudinaryUploadOptions & { scanDocument?: boolean },
+    @Body() body: Record<string, unknown>,
   ) {
+    console.log('=== UPLOAD REQUEST START ===');
+    console.log('Request body keys:', Object.keys(body || {}));
+    console.log('File received:', {
+      fileName: file?.originalname,
+      fileSize: file?.buffer?.length,
+      mimeType: file?.mimetype,
+      hasBuffer: !!file?.buffer,
+      bufferLength: file?.buffer?.length
+    });
+
+    // Parse options from the request body
+    let options: CloudinaryUploadOptions & { scanDocument?: boolean } = {};
+    try {
+      if (body && typeof body === 'object' && 'options' in body) {
+        const bodyOptions = body.options;
+        console.log('Raw options from body:', bodyOptions);
+        if (typeof bodyOptions === 'string') {
+          options = JSON.parse(bodyOptions) as CloudinaryUploadOptions & {
+            scanDocument?: boolean;
+          };
+        } else if (bodyOptions && typeof bodyOptions === 'object') {
+          options = bodyOptions as CloudinaryUploadOptions & {
+            scanDocument?: boolean;
+          };
+        }
+        console.log('Parsed options:', options);
+      }
+    } catch (error) {
+      console.warn('Failed to parse options:', error);
+      options = {};
+    }
+
+    console.log('Final upload configuration:', {
+      fileName: file?.originalname,
+      fileSize: file?.buffer?.length,
+      mimeType: file?.mimetype,
+      options,
+    });
+
     if (!file) {
+      console.error('No file provided in request');
       throw new BadRequestException('No file provided');
+    }
+
+    if (!file.buffer || file.buffer.length === 0) {
+      console.error('File buffer is empty or missing');
+      throw new BadRequestException('File buffer is empty');
     }
 
     try {
@@ -68,8 +170,23 @@ export class CloudinaryController {
           scanResult, // Include scanning results
         },
       };
-    } catch {
-      throw new BadRequestException('Failed to upload file');
+    } catch (error) {
+      console.error('=== CLOUDINARY UPLOAD ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        fileName: file?.originalname,
+        fileSize: file?.buffer?.length,
+        mimeType: file?.mimetype,
+        hasBuffer: !!file?.buffer
+      });
+      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      
+      console.error('Throwing BadRequestException with message:', errorMessage);
+      throw new BadRequestException(`Failed to upload file: ${errorMessage}`);
     }
   }
 

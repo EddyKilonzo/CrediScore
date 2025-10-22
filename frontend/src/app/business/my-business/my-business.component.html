@@ -1,0 +1,904 @@
+<!-- My Business Page -->
+<div class="min-h-screen bg-gray-50">
+  
+  <!-- Header -->
+  <div class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <img src="/images/CrediScore.png" alt="CrediScore" class="h-8 w-8">
+          </div>
+          <div class="ml-4">
+            <h1 class="text-2xl font-bold text-gray-900" style="font-family: 'Inter', 'Segoe UI', sans-serif; letter-spacing: -0.025em;">My Business</h1>
+            <p class="text-sm text-gray-600 mt-1">Manage your business profile and settings</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+          <!-- User Profile -->
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+              <span class="text-sm font-medium text-gray-700">{{ getUserInitials(currentUser()!) }}</span>
+            </div>
+            <div class="hidden md:block">
+              <p class="text-sm font-medium text-gray-900">{{ currentUser()?.name }}</p>
+              <p class="text-xs text-gray-500">Business Owner</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Welcome Section -->
+    <div class="welcome-section mb-8">
+      <h1 class="welcome-title" style="font-family: 'Brush Script MT', cursive; font-size: 3rem; color: #2D5A87; font-weight: 400;">
+        My Business Profile
+      </h1>
+      
+      <!-- Separator Line -->
+      <div class="welcome-separator" style="width: 100%; height: 1px; background-color: #E5E7EB; margin: 1rem 0;"></div>
+      
+      <p class="welcome-subtitle" style="color: #6B7280; font-size: 1.1rem; margin-bottom: 1.5rem;">
+        Welcome back, {{ currentUser()?.name }}! Manage your business information, verification documents, and settings to build trust with customers.
+      </p>
+      
+      <!-- Business Status Badge -->
+      <div *ngIf="currentUser()?.role === 'business'" class="mt-4">
+        <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300" 
+              style="background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%); border: 1px solid #D1D5DB; color: #374151;">
+          <i class="fas fa-building mr-2" style="color: #374151;"></i>
+          {{ getBusinessReputationLevel() }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    @if (isLoading) {
+      <div class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <span class="ml-2 text-gray-600">Loading your business dashboard...</span>
+    </div>
+    }
+
+    <!-- Dashboard Content -->
+    <ng-container *ngIf="!isLoading">
+      <div class="space-y-8">
+      
+      <!-- Business Verification Progress - Moved to Top -->
+      <div class="dashboard-card">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Business Verification Progress</h2>
+          <p class="text-sm text-gray-600">Complete these steps to get your business verified</p>
+        </div>
+        
+        <div class="p-6">
+          <!-- Progress Bar -->
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-700">Overall Progress</span>
+              <span class="text-sm text-gray-500">{{ getCompletedStepsCount() }}/{{ getTotalStepsCount() }} completed</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                   [style.width.%]="getOnboardingProgress()"></div>
+            </div>
+          </div>
+
+          <!-- Onboarding Steps -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div *ngFor="let step of onboardingSteps" 
+                 class="border rounded-lg p-4"
+                 [class.bg-green-50]="step.completed"
+                 [class.border-green-200]="step.completed"
+                 [class.bg-gray-50]="!step.completed"
+                 [class.border-gray-200]="!step.completed">
+              
+              <div class="flex items-center mb-3">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                       [class.bg-green-500]="step.completed"
+                       [class.bg-gray-300]="!step.completed">
+                    <i class="fas fa-check text-white text-sm" *ngIf="step.completed"></i>
+                    <i [class]="step.icon + ' text-gray-600 text-sm'" *ngIf="!step.completed"></i>
+                  </div>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-gray-900">{{ step.title }}</h3>
+                </div>
+              </div>
+              
+              <p class="text-xs text-gray-600 mb-3">{{ step.description }}</p>
+              
+              <div class="flex items-center">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      [class]="getStatusColor(step.completed ? 'completed' : 'pending')">
+                  {{ step.completed ? 'Completed' : 'Pending' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Business Profile -->
+      <div class="dashboard-card mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Business Profile</h2>
+          <p class="text-sm text-gray-600">Manage your business information and branding</p>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Logo Upload -->
+            <div class="lg:col-span-1">
+              <div class="text-center">
+                <div class="relative inline-block">
+                  <div class="w-32 h-32 mx-auto mb-4 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden transition-all duration-300 hover:border-blue-500 hover:bg-blue-50"
+                       [class.border-blue-500]="businessProfile.logo"
+                       [class.bg-blue-50]="businessProfile.logo"
+                       [class.uploading]="isLogoUploading">
+                    
+                    <!-- Logo Image -->
+                    <img *ngIf="businessProfile.logo && !isLogoUploading" 
+                         [src]="businessProfile.logo" 
+                         alt="Business Logo" 
+                         class="w-full h-full object-cover rounded-lg">
+                    
+                    <!-- Upload Animation -->
+                    <div *ngIf="isLogoUploading" class="text-center">
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                      <p class="text-sm text-blue-600 font-medium">Uploading...</p>
+                      <div class="w-full bg-blue-200 rounded-full h-1 mt-2">
+                        <div class="bg-blue-600 h-1 rounded-full transition-all duration-500" 
+                             [style.width.%]="logoUploadProgress"></div>
+                      </div>
+                    </div>
+                    
+                    <!-- Default State -->
+                    <div *ngIf="!businessProfile.logo && !isLogoUploading" class="text-center">
+                      <i class="fas fa-image text-4xl text-gray-400 mb-2"></i>
+                      <p class="text-sm text-gray-600">Upload Logo</p>
+                    </div>
+                  </div>
+                  <input type="file" 
+                         (change)="uploadLogo($event)"
+                         accept="image/*"
+                         [disabled]="isLogoUploading"
+                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed">
+                </div>
+                <p class="text-xs text-gray-500">Click to upload logo (JPG, PNG, max 10MB)</p>
+              </div>
+            </div>
+
+            <!-- Business Information -->
+            <div class="lg:col-span-2">
+              <div class="space-y-6">
+                <!-- Business Name and Catchphrase -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="fas fa-building mr-2 text-blue-500"></i>
+                      Business Name
+                      <span class="required-indicator">*</span>
+                    </label>
+                    <div class="relative">
+                      <input type="text" 
+                             [(ngModel)]="businessProfile.name" 
+                             (blur)="onFieldBlur('name')"
+                             (input)="onFieldInput('name')"
+                             placeholder="Enter your business name"
+                             class="form-input"
+                             [class.error]="!businessProfile.name && fieldTouched.name"
+                             required>
+                      <div class="form-input-icon">
+                        <i class="fas fa-building text-gray-400"></i>
+                      </div>
+                    </div>
+                    <div *ngIf="!businessProfile.name && fieldTouched.name" class="form-error">
+                      <i class="fas fa-exclamation-circle mr-1"></i>
+                      Business name is required
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="fas fa-quote-left mr-2 text-purple-500"></i>
+                      Catchphrase
+                    </label>
+                    <div class="relative">
+                      <input type="text" 
+                             [(ngModel)]="businessProfile.catchphrase" 
+                             placeholder="e.g., 'Quality First, Always'"
+                             class="form-input">
+                      <div class="form-input-icon">
+                        <i class="fas fa-quote-left text-gray-400"></i>
+                      </div>
+                    </div>
+                    <div class="form-help">A memorable tagline for your business</div>
+                  </div>
+                </div>
+
+                <!-- Business Description -->
+                <div class="form-group">
+                  <label class="form-label">
+                    <i class="fas fa-align-left mr-2 text-green-500"></i>
+                    Business Description
+                  </label>
+                  <div class="relative">
+                    <textarea [(ngModel)]="businessProfile.description" 
+                              placeholder="Describe your business, what you do, and what makes you unique..."
+                              rows="4"
+                              class="form-textarea"></textarea>
+                    <div class="form-textarea-icon">
+                      <i class="fas fa-align-left text-gray-400"></i>
+                    </div>
+                  </div>
+                  <div class="form-help">Help customers understand your business better</div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="fas fa-globe mr-2 text-blue-600"></i>
+                      Website
+                    </label>
+                    <div class="relative">
+                      <input type="url" 
+                             [(ngModel)]="businessProfile.website" 
+                             placeholder="https://example.com"
+                             class="form-input">
+                      <div class="form-input-icon">
+                        <i class="fas fa-globe text-gray-400"></i>
+                      </div>
+                    </div>
+                    <div class="form-help">Your business website URL</div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="fas fa-phone mr-2 text-green-600"></i>
+                      Phone Number
+                      <span class="required-indicator">*</span>
+                    </label>
+                    <div class="relative">
+                      <input type="tel" 
+                             [(ngModel)]="businessProfile.phone" 
+                             (blur)="onFieldBlur('phone')"
+                             (input)="onFieldInput('phone')"
+                             placeholder="+254 700 000 000"
+                             class="form-input"
+                             [class.error]="!businessProfile.phone && fieldTouched.phone"
+                             required>
+                      <div class="form-input-icon">
+                        <i class="fas fa-phone text-gray-400"></i>
+                      </div>
+                    </div>
+                    <div *ngIf="!businessProfile.phone && fieldTouched.phone" class="form-error">
+                      <i class="fas fa-exclamation-circle mr-1"></i>
+                      Phone number is required
+                    </div>
+                    <div *ngIf="businessProfile.phone && fieldTouched.phone" class="form-help">Primary contact number</div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="fas fa-envelope mr-2 text-red-500"></i>
+                      Email Address
+                      <span class="required-indicator">*</span>
+                    </label>
+                    <div class="relative">
+                      <input type="email" 
+                             [(ngModel)]="businessProfile.email" 
+                             (blur)="onFieldBlur('email')"
+                             (input)="onFieldInput('email')"
+                             placeholder="contact@business.com"
+                             class="form-input"
+                             [class.error]="(!businessProfile.email || !isValidEmail(businessProfile.email)) && fieldTouched.email"
+                             required>
+                      <div class="form-input-icon">
+                        <i class="fas fa-envelope text-gray-400"></i>
+                      </div>
+                    </div>
+                    <div *ngIf="!businessProfile.email && fieldTouched.email" class="form-error">
+                      <i class="fas fa-exclamation-circle mr-1"></i>
+                      Email address is required
+                    </div>
+                    <div *ngIf="businessProfile.email && !isValidEmail(businessProfile.email) && fieldTouched.email" class="form-error">
+                      <i class="fas fa-exclamation-circle mr-1"></i>
+                      Please enter a valid email address
+                    </div>
+                    <div *ngIf="businessProfile.email && isValidEmail(businessProfile.email) && fieldTouched.email" class="form-help">Business email for inquiries</div>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <button type="button"
+                          (click)="resetProfileForm()" 
+                          class="btn-secondary">
+                    <i class="fas fa-undo mr-2"></i>
+                    Reset
+                  </button>
+                  <button type="button"
+                          (click)="updateBusinessProfile()" 
+                          [disabled]="isUpdatingProfile || !isFormValid()"
+                          class="btn-primary"
+                          [class.btn-disabled]="!isFormValid()">
+                    <i class="fas fa-spinner fa-spin mr-2" *ngIf="isUpdatingProfile"></i>
+                    <i class="fas fa-save mr-2" *ngIf="!isUpdatingProfile"></i>
+                    {{ isUpdatingProfile ? 'Saving...' : 'Save Profile' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Methods -->
+      <div class="dashboard-card mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">Payment Methods</h2>
+              <p class="text-sm text-gray-600">Manage your business payment options</p>
+            </div>
+            <button (click)="openAddPaymentModal()" 
+                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+              <i class="fas fa-plus mr-2"></i>
+              Add Payment Method
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <div *ngIf="paymentMethods.length === 0" class="text-center py-8">
+            <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-credit-card text-2xl text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No Payment Methods</h3>
+            <p class="text-gray-600 mb-4">Add payment methods to accept payments from customers</p>
+            <button (click)="openAddPaymentModal()" 
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              <i class="fas fa-plus mr-2"></i>
+              Add Your First Payment Method
+            </button>
+          </div>
+
+          <div *ngIf="paymentMethods.length > 0" class="space-y-4">
+            <div *ngFor="let payment of paymentMethods" 
+                 class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                     [class]="getPaymentTypeColor(payment.type)">
+                  <i [class]="getPaymentTypeIcon(payment.type)"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-medium text-gray-900">{{ payment.type }}</h3>
+                  <p class="text-sm text-gray-600">{{ payment.number }}</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                      [class]="payment.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+                  <i [class]="payment.verified ? 'fas fa-check mr-1' : 'fas fa-clock mr-1'"></i>
+                  {{ payment.verified ? 'Verified' : 'Pending' }}
+                </span>
+                <button (click)="removePaymentMethod(payment.id)" 
+                        class="text-red-600 hover:text-red-800">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Upload Section -->
+      <div class="dashboard-card">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Required Documents</h2>
+          <p class="text-sm text-gray-600">Upload these documents to verify your business</p>
+        </div>
+        
+        <div class="p-6">
+          <!-- Document Stats -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-50 rounded-lg p-4">
+              <div class="flex items-center">
+                <i class="fas fa-file-upload text-blue-500 text-lg"></i>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-blue-900">Uploaded</p>
+                  <p class="text-2xl font-bold text-blue-600">{{ getUploadedDocumentsCount() }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-purple-50 rounded-lg p-4">
+              <div class="flex items-center">
+                <i class="fas fa-robot text-purple-500 text-lg"></i>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-purple-900">Scanning</p>
+                  <p class="text-2xl font-bold text-purple-600">{{ getScanningDocumentsCount() }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-green-50 rounded-lg p-4">
+              <div class="flex items-center">
+                <i class="fas fa-check-circle text-green-500 text-lg"></i>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-green-900">Verified</p>
+                  <p class="text-2xl font-bold text-green-600">{{ getVerifiedDocumentsCount() }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-yellow-50 rounded-lg p-4">
+              <div class="flex items-center">
+                <i class="fas fa-clock text-yellow-500 text-lg"></i>
+                <div class="ml-3">
+                  <p class="text-sm font-medium text-yellow-900">Required</p>
+                  <p class="text-2xl font-bold text-yellow-600">{{ getRequiredDocumentsCount() }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document List -->
+          <div class="space-y-4">
+            <div *ngFor="let document of requiredDocuments" 
+                 class="document-card border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all duration-300 cursor-pointer">
+              
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                      <i class="fas fa-file-alt text-gray-400 text-lg"></i>
+                    </div>
+                    <div class="ml-3">
+                      <h3 class="text-sm font-medium text-gray-900">{{ document.name }}</h3>
+                      <p class="text-xs text-gray-600">{{ document.description }}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                        [class]="getDocumentStatusColor(document)">
+                    <i *ngIf="document.scanning" class="fas fa-spinner fa-spin mr-1"></i>
+                    <i *ngIf="document.verified" class="fas fa-check mr-1"></i>
+                    <i *ngIf="document.uploaded && !document.scanning && !document.verified" class="fas fa-clock mr-1"></i>
+                    {{ getDocumentStatusText(document) }}
+                  </span>
+                  
+                  <button *ngIf="!document.uploaded" 
+                          type="button"
+                          (click)="openUploadModal(document)"
+                          class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-upload mr-1"></i>
+                    Upload
+                  </button>
+                  
+                  <button *ngIf="document.uploaded && !document.scanning" 
+                          type="button"
+                          class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-eye mr-1"></i>
+                    View
+                  </button>
+                </div>
+              </div>
+
+              <!-- Scanning Animation -->
+              <div *ngIf="document.scanning" class="mt-4 p-3 bg-blue-50 rounded-lg scanning-pulse">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center space-x-2">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span class="text-sm text-blue-700 font-medium">AI Scanning in Progress</span>
+                  </div>
+                  <span class="text-sm text-blue-600 font-bold">{{ scanningProgress }}%</span>
+                </div>
+                <div class="w-full bg-blue-200 rounded-full h-2">
+                  <div class="bg-blue-600 h-2 rounded-full transition-all duration-500 progress-bar-animated" 
+                       [style.width.%]="scanningProgress"></div>
+                </div>
+                <div class="mt-2 text-xs text-blue-600">
+                  <i class="fas fa-robot mr-1"></i>
+                  OCR + AI Verification
+                </div>
+              </div>
+
+              <!-- Scan Results -->
+              <div *ngIf="document.scanResult && !document.scanning" class="mt-4 p-3 rounded-lg scan-result-enter"
+                   [class.bg-green-50]="document.scanResult.aiVerified"
+                   [class.bg-red-50]="!document.scanResult.aiVerified">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center space-x-2">
+                    <i [class]="document.scanResult.aiVerified ? 'fas fa-check-circle text-green-600' : 'fas fa-exclamation-triangle text-red-600'"></i>
+                    <span class="text-sm font-medium"
+                          [class]="document.scanResult.aiVerified ? 'text-green-800' : 'text-red-800'">
+                      {{ document.scanResult.aiVerified ? 'Verification Successful' : 'Verification Failed' }}
+                    </span>
+                  </div>
+                  <span class="text-sm font-bold"
+                        [class]="document.scanResult.aiVerified ? 'text-green-600' : 'text-red-600'">
+                    {{ document.scanResult.authenticityScore }}%
+                  </span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">OCR Confidence:</span>
+                    <span class="font-medium">{{ document.scanResult.ocrConfidence }}%</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">AI Verified:</span>
+                    <span class="font-medium"
+                          [class]="document.scanResult.aiVerified ? 'text-green-600' : 'text-red-600'">
+                      {{ document.scanResult.aiVerified ? 'Yes' : 'No' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Extracted Data -->
+                <div *ngIf="document.scanResult.extractedData" class="mt-2 pt-2 border-t border-gray-200">
+                  <div class="text-xs text-gray-600">
+                    <div class="flex justify-between">
+                      <span>Issue Date:</span>
+                      <span class="font-medium">{{ document.scanResult.extractedData.issueDate }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>Expiry Date:</span>
+                      <span class="font-medium">{{ document.scanResult.extractedData.expiryDate }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span>Issuer:</span>
+                      <span class="font-medium">{{ document.scanResult.extractedData.issuer }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit for Review Button -->
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-medium text-gray-900">Ready to submit for verification?</h3>
+                <p class="text-xs text-gray-600">Make sure all required documents are uploaded</p>
+              </div>
+              
+              <button type="button"
+                      (click)="submitForReview()"
+                      [disabled]="!canSubmitForReview()"
+                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-check-circle mr-2"></i>
+                Submit for Review
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Picker and Social Media -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Location Picker -->
+        <div class="dashboard-card">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Business Location</h2>
+            <p class="text-sm text-gray-600">Manage your business location</p>
+          </div>
+          <div class="p-6">
+            <div class="space-y-4">
+              <!-- Location Input -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Business Address</label>
+                <div class="relative">
+                  <input type="text" 
+                         [(ngModel)]="businessLocation" 
+                         placeholder="Enter your business address"
+                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <button (click)="openLocationPicker()" 
+                          class="absolute right-2 top-2 p-1 text-gray-400 hover:text-blue-600">
+                    <i class="fas fa-map-marker-alt"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Map Preview -->
+              <div class="h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div class="text-center">
+                  <i class="fas fa-map text-2xl text-gray-400 mb-2"></i>
+                  <p class="text-sm text-gray-600">Interactive map view</p>
+                </div>
+              </div>
+              
+              <!-- Location Actions -->
+              <div class="flex space-x-2">
+                <button (click)="updateLocation()" 
+                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  <i class="fas fa-save mr-2"></i>
+                  Update Location
+                </button>
+                <button (click)="viewOnMap()" 
+                        class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                  <i class="fas fa-external-link-alt mr-2"></i>
+                  View on Map
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Media Links -->
+        <div class="dashboard-card">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Social Media</h2>
+            <p class="text-sm text-gray-600">Connect your social accounts</p>
+          </div>
+          <div class="p-6">
+            <div class="space-y-4">
+              <!-- Social Media Inputs -->
+              <div class="space-y-3">
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                    <i class="fab fa-facebook-f text-white text-sm"></i>
+                  </div>
+                  <input type="text" 
+                         [(ngModel)]="socialLinks.facebook" 
+                         placeholder="Facebook page URL"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center">
+                    <i class="fab fa-twitter text-white text-sm"></i>
+                  </div>
+                  <input type="text" 
+                         [(ngModel)]="socialLinks.twitter" 
+                         placeholder="Twitter handle"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center">
+                    <i class="fab fa-instagram text-white text-sm"></i>
+                  </div>
+                  <input type="text" 
+                         [(ngModel)]="socialLinks.instagram" 
+                         placeholder="Instagram handle"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-blue-800 rounded-full flex items-center justify-center">
+                    <i class="fab fa-linkedin-in text-white text-sm"></i>
+                  </div>
+                  <input type="text" 
+                         [(ngModel)]="socialLinks.linkedin" 
+                         placeholder="LinkedIn company page"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+                    <i class="fab fa-youtube text-white text-sm"></i>
+                  </div>
+                  <input type="text" 
+                         [(ngModel)]="socialLinks.youtube" 
+                         placeholder="YouTube channel"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 bg-black rounded-full flex items-center justify-center">
+                    <i class="fab fa-tiktok text-white text-sm"></i>
+                  </div>
+                  <input type="text" 
+                         [(ngModel)]="socialLinks.tiktok" 
+                         placeholder="TikTok handle"
+                         class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+              </div>
+              
+              <!-- Social Media Actions -->
+              <div class="flex space-x-2 pt-4">
+                <button (click)="updateSocialLinks()" 
+                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  <i class="fas fa-save mr-2"></i>
+                  Save Social Links
+                </button>
+                <button (click)="previewSocialLinks()" 
+                        class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                  <i class="fas fa-eye mr-2"></i>
+                  Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="dashboard-card">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+        </div>
+        
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a routerLink="/business/dashboard" 
+               class="quick-action-card flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer">
+              <div class="flex-shrink-0">
+                <i class="fas fa-chart-line text-blue-500 text-xl"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-gray-900">Dashboard</h3>
+                <p class="text-xs text-gray-600">View business analytics</p>
+              </div>
+            </a>
+            
+            <a routerLink="/business/analytics" 
+               class="quick-action-card flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer">
+              <div class="flex-shrink-0">
+                <i class="fas fa-chart-bar text-green-500 text-xl"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-gray-900">Analytics</h3>
+                <p class="text-xs text-gray-600">Detailed performance metrics</p>
+              </div>
+            </a>
+            
+            <a routerLink="/business/reviews" 
+               class="quick-action-card flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer">
+              <div class="flex-shrink-0">
+                <i class="fas fa-comment-dots text-purple-500 text-xl"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-gray-900">Reviews</h3>
+                <p class="text-xs text-gray-600">Manage customer reviews</p>
+              </div>
+            </a>
+            
+            <a routerLink="/profile" 
+               class="quick-action-card flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer">
+              <div class="flex-shrink-0">
+                <i class="fas fa-user-cog text-orange-500 text-xl"></i>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-gray-900">Profile</h3>
+                <p class="text-xs text-gray-600">Manage your account</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+      <!-- End main business panel content -->
+      <!-- Document Upload Modal -->
+      <div *ngIf="showUploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-2xl rounded-md bg-white">
+          <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Upload Document</h3>
+        <button (click)="closeUploadModal()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="mb-4">
+        <h4 class="text-sm font-medium text-gray-900">{{ selectedDocumentType?.name }}</h4>
+        <p class="text-xs text-gray-600">{{ selectedDocumentType?.description }}</p>
+      </div>
+      
+      <!-- File Upload Area -->
+      <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors"
+           [class.border-blue-500]="isDocumentUploading"
+           [class.bg-blue-50]="isDocumentUploading">
+        
+        <!-- Upload Animation -->
+        <div *ngIf="isDocumentUploading" class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p class="text-lg text-blue-600 font-medium mb-2">Uploading Document...</p>
+          <div class="w-full bg-blue-200 rounded-full h-2 mb-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                 [style.width.%]="documentUploadProgress"></div>
+          </div>
+          <p class="text-sm text-blue-600">{{ documentUploadProgress }}% Complete</p>
+        </div>
+        
+        <!-- Default Upload State -->
+        <div *ngIf="!isDocumentUploading">
+        <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-4"></i>
+        <p class="text-sm text-gray-600 mb-2">Drag and drop your file here, or</p>
+          <label for="file-input-{{ selectedDocumentType?.id }}" class="text-blue-600 text-sm font-medium hover:text-blue-700 cursor-pointer">
+          Browse files
+          </label>
+          <input type="file" 
+                 id="file-input-{{ selectedDocumentType?.id }}"
+                 accept="image/*,.pdf"
+                 class="hidden">
+        <p class="text-xs text-gray-500 mt-2">PDF, JPG, PNG up to 10MB</p>
+        </div>
+      </div>
+      
+      <div class="flex justify-end space-x-3 mt-6">
+        <button (click)="closeUploadModal()" 
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          Cancel
+        </button>
+        <button (click)="onDocumentUploaded(selectedDocumentType!.id)" 
+                [disabled]="isDocumentUploading"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fas fa-spinner fa-spin mr-2" *ngIf="isDocumentUploading"></i>
+          <i class="fas fa-upload mr-2" *ngIf="!isDocumentUploading"></i>
+          {{ isDocumentUploading ? 'Uploading...' : 'Upload' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Payment Method Modal -->
+<div *ngIf="showAddPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-2xl rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Add Payment Method</h3>
+        <button (click)="closeAddPaymentModal()" class="text-gray-400 hover:text-gray-600">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
+          <select [(ngModel)]="newPaymentMethod.type" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="TILL">M-Pesa Till</option>
+            <option value="PAYBILL">Paybill</option>
+            <option value="BANK">Bank Account</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Number/Account</label>
+          <input type="text" 
+                 [(ngModel)]="newPaymentMethod.number" 
+                 placeholder="Enter payment number or account"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+        
+        <div class="bg-blue-50 p-3 rounded-lg">
+          <div class="flex items-start">
+            <i class="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
+            <div class="text-sm text-blue-700">
+              <p class="font-medium mb-1">Payment Method Guidelines:</p>
+              <ul class="text-xs space-y-1">
+                <li>• <strong>TILL:</strong> Your M-Pesa Till number (e.g., 123456)</li>
+                <li>• <strong>Paybill:</strong> Your Paybill number (e.g., 123456)</li>
+                <li>• <strong>Bank:</strong> Your bank account number</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex justify-end space-x-3 mt-6">
+        <button (click)="closeAddPaymentModal()" 
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          Cancel
+        </button>
+        <button (click)="addPaymentMethod()" 
+                class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+          <i class="fas fa-plus mr-2"></i>
+          Add Payment Method
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

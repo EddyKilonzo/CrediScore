@@ -65,64 +65,61 @@ export class AuthCallbackComponent implements OnInit {
 
   private handleOAuthCallback(): void {
     this.route.queryParams.subscribe(params => {
-      const token = params['token'];
-      const userData = params['user'];
+      const sessionId = params['sessionId'];
       const error = params['error'];
 
       if (error) {
         console.error('OAuth error:', error);
-        this.router.navigate(['/auth/login'], { 
-          queryParams: { error: 'oauth_failed' } 
-        });
+        this.toastService.error('Google login failed. Please try again.');
+        this.router.navigate(['/auth/login']);
         return;
       }
 
-      if (token && userData) {
-        try {
-          const loginResponse = JSON.parse(decodeURIComponent(userData));
-          
-          // Store authentication data
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(loginResponse));
-          
-          // Update auth service state
-          this.authService.setAuthData({ user: loginResponse, token });
-          
-          // Show success toast
-          this.toastService.success(`Welcome back, ${loginResponse.name.split(' ')[0]}! Google login successful.`);
-          
-          // Redirect based on user role
-          this.redirectBasedOnRole(loginResponse.role);
-          
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-          this.router.navigate(['/auth/login'], { 
-            queryParams: { error: 'parsing_failed' } 
-          });
-        }
+      if (sessionId) {
+        // Fetch OAuth data from session endpoint
+        this.fetchOAuthSessionData(sessionId);
       } else {
-        console.error('Missing token or user data');
-        this.router.navigate(['/auth/login'], { 
-          queryParams: { error: 'missing_data' } 
-        });
+        console.error('Missing session ID');
+        this.toastService.error('Login session missing. Please try again.');
+        this.router.navigate(['/auth/login']);
       }
     });
   }
 
+  private fetchOAuthSessionData(sessionId: string): void {
+    // Fetch the OAuth data from the backend session
+    fetch(`http://localhost:3000/api/auth/oauth/session/${sessionId}`, {
+      method: 'GET',
+      credentials: 'include', // Include cookies for session
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(loginResponse => {
+      // Use auth service to store data properly (handles large avatar data)
+      this.authService.setAuthData({ user: loginResponse, token: loginResponse.accessToken });
+      
+      // Show success toast
+      this.toastService.success(`Welcome back, ${loginResponse.name.split(' ')[0]}! Google login successful.`);
+      
+      // Redirect based on user role
+      this.redirectBasedOnRole(loginResponse.role);
+    })
+    .catch(error => {
+      console.error('Error fetching OAuth session data:', error);
+      this.toastService.error('Failed to complete login. Please try again.');
+      this.router.navigate(['/auth/login']);
+    });
+  }
+
   private redirectBasedOnRole(role: string): void {
-    switch (role) {
-      case 'admin':
-        this.router.navigate(['/admin/dashboard']);
-        break;
-      case 'business':
-        this.router.navigate(['/business/dashboard']);
-        break;
-      case 'user':
-      case 'CUSTOMER':
-        this.router.navigate(['/user/dashboard']);
-        break;
-      default:
-        this.router.navigate(['/home']);
-    }
+    // Redirect all authenticated users to the main dashboard
+    this.router.navigate(['/dashboard']);
   }
 }

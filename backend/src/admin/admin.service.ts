@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
+import { UpdateBusinessStatusDto } from '../business/dto/business.dto';
 
 export interface AdminUserStats {
   totalUsers: number;
@@ -813,5 +814,289 @@ export class AdminService {
       dismissedReports,
       reportsThisMonth,
     };
+  }
+
+  // Business Onboarding Management
+  async getPendingBusinesses(page: number = 1, limit: number = 10) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const [businesses, total] = await Promise.all([
+        this.prisma.business.findMany({
+          where: {
+            status: 'UNDER_REVIEW',
+            submittedForReview: true,
+          },
+          skip,
+          take: limit,
+          include: {
+            owner: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
+            documents: {
+              orderBy: { uploadedAt: 'desc' },
+            },
+            payments: {
+              orderBy: { addedAt: 'desc' },
+            },
+            businessCategory: true,
+          },
+          orderBy: { createdAt: 'asc' }, // Oldest first
+        }),
+        this.prisma.business.count({
+          where: {
+            status: 'UNDER_REVIEW',
+            submittedForReview: true,
+          },
+        }),
+      ]);
+
+      return {
+        businesses,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching pending businesses:', error);
+      throw new InternalServerErrorException('Failed to fetch pending businesses');
+    }
+  }
+
+  async getBusinessOnboardingDetails(businessId: string) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          businessCategory: true,
+          documents: {
+            orderBy: { uploadedAt: 'desc' },
+          },
+          payments: {
+            orderBy: { addedAt: 'desc' },
+          },
+          trustScore: true,
+        },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      // Analyze AI verification results
+      const aiAnalysis = business.documents.map(doc => ({
+        documentId: doc.id,
+        type: doc.type,
+        name: doc.name,
+        uploadedAt: doc.uploadedAt,
+        verified: doc.verified,
+        verifiedAt: doc.verifiedAt,
+        verifiedBy: doc.verifiedBy,
+        verificationNotes: doc.verificationNotes,
+        // AI Analysis
+        aiVerified: doc.aiVerified,
+        aiVerifiedAt: doc.aiVerifiedAt,
+        ocrConfidence: doc.ocrConfidence,
+        extractedData: doc.extractedData,
+        aiAnalysis: doc.aiAnalysis,
+      }));
+
+      return {
+        business: {
+          id: business.id,
+          name: business.name,
+          description: business.description,
+          category: business.category,
+          website: business.website,
+          phone: business.phone,
+          email: business.email,
+          location: business.location,
+          latitude: business.latitude,
+          longitude: business.longitude,
+          isVerified: business.isVerified,
+          isActive: business.isActive,
+          status: business.status,
+          onboardingStep: business.onboardingStep,
+          submittedForReview: business.submittedForReview,
+          reviewedAt: business.reviewedAt,
+          reviewedBy: business.reviewedBy,
+          reviewNotes: business.reviewNotes,
+          rejectionReason: business.rejectionReason,
+          createdAt: business.createdAt,
+          updatedAt: business.updatedAt,
+        },
+        owner: business.owner,
+        businessCategory: business.businessCategory,
+        documents: aiAnalysis,
+        payments: business.payments,
+        trustScore: business.trustScore,
+        // Summary for admin review
+        summary: {
+          totalDocuments: business.documents.length,
+          verifiedDocuments: business.documents.filter(doc => doc.verified).length,
+          aiVerifiedDocuments: business.documents.filter(doc => doc.aiVerified).length,
+          totalPayments: business.payments.length,
+          verifiedPayments: business.payments.filter(payment => payment.verified).length,
+          hasValidDocument: business.documents.some(doc => doc.aiVerified),
+          canApprove: business.documents.length > 0 && business.payments.length > 0,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching business onboarding details:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch business onboarding details');
+    }
+  }
+
+  async updateBusinessStatus(
+    adminUserId: string,
+    businessId: string,
+    updateStatusDto: UpdateBusinessStatusDto,
+  ): Promise<{ message: string }> {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      const updateData: any = {
+        status: updateStatusDto.status,
+        reviewedAt: new Date(),
+        reviewedBy: adminUserId,
+      };
+
+      if (updateStatusDto.reviewNotes) {
+        updateData.reviewNotes = updateStatusDto.reviewNotes;
+      }
+
+      if (updateStatusDto.rejectionReason) {
+        updateData.rejectionReason = updateStatusDto.rejectionReason;
+      }
+
+      // If verifying, also set isVerified to true
+      if (updateStatusDto.status === 'VERIFIED') {
+        updateData.isVerified = true;
+      }
+
+      await this.prisma.business.update({
+        where: { id: businessId },
+        data: updateData,
+      });
+
+      this.logger.log(
+        `Business status updated: ${businessId} -> ${updateStatusDto.status} by admin: ${adminUserId}`,
+      );
+      return { message: 'Business status updated successfully' };
+    } catch (error) {
+      this.logger.error('Error updating business status:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update business status');
+    }
+  }
+
+  async getBusinessOnboardingDetails(businessId: string) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              createdAt: true,
+            },
+          },
+          documents: {
+            orderBy: { uploadedAt: 'desc' },
+          },
+          payments: {
+            orderBy: { addedAt: 'desc' },
+          },
+          businessCategory: true,
+          trustScore: true,
+        },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      // Calculate onboarding progress
+      const requiredDocuments = ['BUSINESS_REGISTRATION', 'TAX_CERTIFICATE'];
+      const uploadedDocumentTypes = business.documents.map(doc => doc.type);
+      const missingDocuments = requiredDocuments.filter(
+        type => !uploadedDocumentTypes.includes(type as any)
+      );
+
+      const onboardingDetails = {
+        business,
+        progress: {
+          currentStep: business.onboardingStep,
+          status: business.status,
+          submittedForReview: business.submittedForReview,
+          documents: {
+            uploaded: business.documents.length,
+            verified: business.documents.filter(doc => doc.verified).length,
+            required: requiredDocuments.length,
+            missing: missingDocuments,
+            details: business.documents.map(doc => ({
+              id: doc.id,
+              type: doc.type,
+              name: doc.name,
+              url: doc.url,
+              verified: doc.verified,
+              verifiedAt: doc.verifiedAt,
+              verificationNotes: doc.verificationNotes,
+              uploadedAt: doc.uploadedAt,
+            })),
+          },
+          payments: {
+            uploaded: business.payments.length,
+            verified: business.payments.filter(payment => payment.verified).length,
+            details: business.payments.map(payment => ({
+              id: payment.id,
+              type: payment.type,
+              number: payment.number,
+              verified: payment.verified,
+              addedAt: payment.addedAt,
+            })),
+          },
+          canApprove: missingDocuments.length === 0 && business.payments.length > 0,
+        },
+      };
+
+      return onboardingDetails;
+    } catch (error) {
+      this.logger.error('Error fetching business onboarding details:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch business onboarding details');
+    }
   }
 }

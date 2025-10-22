@@ -79,12 +79,16 @@ export class AuthService {
       // Hash password
       const hashedPassword: string = await bcryptHash(dto.password, 10);
 
-      // Create user with default CUSTOMER role
+      // Determine user role based on signup data
+      const userRole = dto.role === 'business' ? UserRole.BUSINESS_OWNER : UserRole.CUSTOMER;
+
+      // Create user with specified role
       const user = await this.users.create({
         name: dto.name,
         email: dto.email,
         password: hashedPassword,
-        role: UserRole.CUSTOMER,
+        role: userRole,
+        phone: dto.phone,
       });
 
       // Generate JWT
@@ -93,7 +97,7 @@ export class AuthService {
         email: user.email,
       });
 
-      this.logger.log(`User created successfully: ${user.id}`);
+      this.logger.log(`User created successfully: ${user.id} with role: ${user.role}`);
 
       return {
         id: user.id,
@@ -339,6 +343,14 @@ export class AuthService {
               providerId: oauthUser.providerId,
               avatar: oauthUser.avatar,
               emailVerified: true,
+            },
+          });
+        } else if (oauthUser.avatar && !user.avatar) {
+          // Update avatar if user doesn't have one but OAuth provides one
+          user = await this.prisma.user.update({
+            where: { id: (user as User).id },
+            data: {
+              avatar: oauthUser.avatar,
             },
           });
         }

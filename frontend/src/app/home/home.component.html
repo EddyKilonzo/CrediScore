@@ -106,7 +106,7 @@
   <div class="relative z-10 flex-1 flex items-center justify-center p-8">
     <div class="max-w-7xl w-full text-center">
     <!-- Main Heading -->
-    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight hero-title">
       <span class="hero-word text-primary">Verify.</span>
       <span class="hero-word text-accent mx-2">Review.</span>
       <span class="hero-word text-secondary">Trust.</span>
@@ -122,8 +122,8 @@
     <div class="max-w-3xl mx-auto mb-12 hero-search-section">
       <div class="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg shadow-2xl mb-6">
         <!-- Search Input -->
-        <div class="relative flex-1 w-full flex items-center">
-          <svg class="absolute left-3 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="relative flex-1 w-full flex items-center hero-search-input">
+          <svg class="absolute left-3 w-4 h-4 text-gray-400 search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -173,8 +173,8 @@
         </div>
 
         <!-- Search Button -->
-        <button (click)="onSearch()" class="hero-search-button inline-flex items-center px-5 py-1.5 bg-primary text-white text-sm rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-sm whitespace-nowrap w-full lg:w-auto justify-center">
-          <svg class="relative w-4 h-4 mr-2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button (click)="onSearch()" class="hero-search-button inline-flex items-center px-5 py-1.5 bg-primary text-white text-sm rounded-lg font-semibold hover:bg-primary-700 transition-all duration-300 transform hover:-translate-y-0.5 shadow-sm hover:shadow-lg whitespace-nowrap w-full lg:w-auto justify-center">
+          <svg class="relative w-4 h-4 mr-2 z-10 search-button-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <span class="relative z-10">Search</span>
@@ -196,15 +196,15 @@
     </div>
 
     <!-- CTA Buttons -->
-    <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
-      <button routerLink="/auth/register" class="hero-cta-primary inline-flex items-center px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-primary/40">
-        <svg class="relative w-5 h-5 mr-2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex flex-col sm:flex-row gap-6 justify-center items-center hero-cta-buttons">
+      <button routerLink="/auth/register" class="hero-cta-primary inline-flex items-center px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-primary/40 hover:scale-105">
+        <svg class="relative w-5 h-5 mr-2 z-10 cta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="relative z-10">Verify Your Business</span>
       </button>
-      <button routerLink="/auth/login" class="hero-cta-secondary inline-flex items-center px-8 py-4 bg-white text-gray-900 border-2 border-white rounded-lg font-semibold hover:bg-transparent hover:text-white transition-all transform hover:-translate-y-1">
-        <svg class="relative w-5 h-5 mr-2 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button routerLink="/auth/login" class="hero-cta-secondary inline-flex items-center px-8 py-4 bg-white text-gray-900 border-2 border-white rounded-lg font-semibold hover:bg-transparent hover:text-white transition-all duration-300 transform hover:-translate-y-1 hover:scale-105">
+        <svg class="relative w-5 h-5 mr-2 z-10 cta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
         <span class="relative z-10">Browse Businesses</span>

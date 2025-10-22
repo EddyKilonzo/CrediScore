@@ -10,6 +10,7 @@ import {
   Patch,
   ValidationPipe,
   Res,
+  Param,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -34,6 +35,17 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserWithoutPassword } from './interfaces/user.interface';
 import { Public } from './decorators/public.decorator';
 
+interface SessionData {
+  data: any;
+  timestamp: number;
+  expires: number;
+}
+
+interface RequestWithSession {
+  user?: UserWithoutPassword;
+  session: Record<string, SessionData>;
+}
+
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -56,9 +68,7 @@ export class AuthController {
     status: 500,
     description: 'Internal server error',
   })
-  async signup(
-    @Body(ValidationPipe) signUpDto: SignUpDto,
-  ): Promise<SignUpResponseDto> {
+  async signup(@Body() signUpDto: SignUpDto): Promise<SignUpResponseDto> {
     return this.authService.signup(signUpDto);
   }
 
@@ -208,21 +218,71 @@ export class AuthController {
     description: 'OAuth authentication failed',
   })
   async googleAuthRedirect(
-    @Request() req: { user: UserWithoutPassword },
+    @Request() req: RequestWithSession,
     @Res() res: Response,
   ) {
     try {
-      const loginResponse = await this.authService.login(req.user);
+      const loginResponse = await this.authService.login(req.user!);
 
-      // Redirect to frontend with token as query parameter
+      // Generate a unique session ID for this OAuth flow
+      const sessionId = `oauth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Store the full login response in session (server-side storage)
+      req.session[sessionId] = {
+        data: loginResponse,
+        timestamp: Date.now(),
+        expires: Date.now() + 5 * 60 * 1000, // 5 minutes expiration
+      };
+
+      // Redirect to frontend with only the session ID
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-      const redirectUrl = `${frontendUrl}/auth/callback?token=${loginResponse.accessToken}&user=${encodeURIComponent(JSON.stringify(loginResponse))}`;
+      const redirectUrl = `${frontendUrl}/auth/callback?sessionId=${sessionId}`;
 
       res.redirect(redirectUrl);
-    } catch {
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
       // Redirect to frontend with error
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
       res.redirect(`${frontendUrl}/auth/login?error=oauth_failed`);
+    }
+  }
+
+  @Public()
+  @Get('oauth/session/:sessionId')
+  @ApiOperation({ summary: 'Retrieve OAuth session data' })
+  @ApiResponse({
+    status: 200,
+    description: 'OAuth session data retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Session not found or expired',
+  })
+  getOAuthSession(
+    @Request() req: RequestWithSession,
+    @Res() res: Response,
+    @Param('sessionId') sessionId: string,
+  ) {
+    try {
+      const sessionData = req.session[sessionId];
+
+      if (!sessionData) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
+      // Check if session has expired
+      if (Date.now() > sessionData.expires) {
+        delete req.session[sessionId]; // Clean up expired session
+        return res.status(404).json({ error: 'Session expired' });
+      }
+
+      // Clean up the session after retrieving data
+      delete req.session[sessionId];
+
+      return res.json(sessionData.data);
+    } catch (error) {
+      console.error('OAuth session retrieval error:', error);
+      return res.status(500).json({ error: 'Failed to retrieve session data' });
     }
   }
 }

@@ -6,38 +6,6 @@ import { AuthService, RegisterRequest } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
-// Interfaces for multi-step signup
-interface SignupStep {
-  id: number;
-  title: string;
-  description: string;
-  icon: string;
-  completed: boolean;
-}
-
-interface DiscoveryFormData {
-  userType: 'customer' | 'business';
-  interests: string[];
-  businessNeeds: string;
-}
-
-interface AccountFormData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  phone?: string;
-  acceptTerms: boolean;
-  role: 'customer' | 'business';
-}
-
-interface VerificationFormData {
-  businessName?: string;
-  businessCategory?: string;
-  businessLocation?: string;
-  verificationMethod: 'email' | 'document';
-}
-
 @Component({
   selector: 'app-register',
   standalone: true,
@@ -46,39 +14,8 @@ interface VerificationFormData {
   styleUrl: './register.component.css'
 })
 export class RegisterComponent implements OnInit {
-  // Multi-step registration state
-  currentStep = 1;
-  totalSteps = 3;
-  
-  // Steps configuration
-  steps: SignupStep[] = [
-    {
-      id: 1,
-      title: 'Account Setup',
-      description: 'Create your account with basic information and choose your role in the platform.',
-      icon: 'person',
-      completed: false
-    },
-    {
-      id: 2,
-      title: 'Verification',
-      description: 'Complete your profile verification for enhanced trust and credibility.',
-      icon: 'verified',
-      completed: false
-    },
-    {
-      id: 3,
-      title: 'Review',
-      description: 'Review your information before completing registration.',
-      icon: 'check',
-      completed: false
-    }
-  ];
-
-  // Forms for each step
-  discoveryForm: FormGroup;
-  accountForm: FormGroup;
-  verificationForm: FormGroup;
+  // Single form for registration
+  signupForm: FormGroup;
 
   // State management
   isLoading = signal(false);
@@ -94,15 +31,8 @@ export class RegisterComponent implements OnInit {
     private http: HttpClient,
     private toastService: ToastService
   ) {
-    // Step 1: Discovery/Interest Form
-    this.discoveryForm = this.fb.group({
-      userType: ['customer', [Validators.required]],
-      interests: this.fb.array([]),
-      businessNeeds: ['', [Validators.minLength(10)]]
-    });
-
-    // Step 1: Account Creation Form
-    this.accountForm = this.fb.group({
+    // Single signup form
+    this.signupForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
@@ -112,64 +42,15 @@ export class RegisterComponent implements OnInit {
         Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
       ]],
       confirmPassword: ['', [Validators.required]],
-      phone: ['', [Validators.pattern(/^[\+]?[0-9\s\-\(\)]{7,15}$/)]],
+      phone: ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
       acceptTerms: [false, [Validators.requiredTrue]],
-      role: ['customer', [Validators.required]]
+      role: ['user', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
-
-    // Step 3: Verification Form
-    this.verificationForm = this.fb.group({
-      businessName: [''],
-      businessCategory: [''],
-      businessLocation: [''],
-      businessDescription: [''],
-      verificationMethod: ['email', [Validators.required]]
-    });
   }
 
   ngOnInit() {
-    // Initialize when component loads
     // Scroll to top when component loads
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  // Step navigation methods
-  nextStep(): void {
-    if (this.validateCurrentStep()) {
-      if (this.currentStep < this.totalSteps) {
-        this.steps[this.currentStep - 1].completed = true;
-        this.currentStep++;
-      } else {
-        this.completeSignup();
-      }
-    }
-  }
-
-  prevStep(): void {
-    if (this.currentStep > 1) {
-      this.currentStep--;
-      this.error.set(null);
-    }
-  }
-
-  goToStep(stepNumber: number): void {
-    if (stepNumber <= this.currentStep || this.steps[stepNumber - 1].completed) {
-      this.currentStep = stepNumber;
-      this.error.set(null);
-    }
-  }
-
-  validateCurrentStep(): boolean {
-    switch (this.currentStep) {
-      case 1:
-        return this.accountForm.valid;
-      case 2:
-        return this.verificationForm.valid;
-      case 3:
-        return true; // Review step doesn't need validation
-      default:
-        return false;
-    }
   }
 
   // Google SSO Integration
@@ -188,36 +69,50 @@ export class RegisterComponent implements OnInit {
 
   // Traditional form submission
   completeSignup(): void {
-    if (this.accountForm.valid) {
+    if (this.signupForm.valid) {
       this.isLoading.set(true);
       this.error.set(null);
 
-      const registerData: RegisterRequest = {
-        name: `${this.accountForm.value.firstName} ${this.accountForm.value.lastName}`,
-        email: this.accountForm.value.email,
-        password: this.accountForm.value.password,
-        role: this.accountForm.value.role === 'business' ? 'business' : 'user',
-        phone: this.accountForm.value.phone || undefined
+      const registerData = {
+        name: `${this.signupForm.value.firstName} ${this.signupForm.value.lastName}`,
+        email: this.signupForm.value.email,
+        password: this.signupForm.value.password,
+        role: this.signupForm.value.role,
+        ...(this.signupForm.value.phone && this.signupForm.value.phone.trim() !== '' && { phone: this.signupForm.value.phone })
       };
+
+      // Debug logging
+      console.log('Form values:', this.signupForm.value);
+      console.log('Register data being sent:', registerData);
 
       this.authService.register(registerData).subscribe({
         next: (response) => {
           this.isLoading.set(false);
-          this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Your account has been created successfully.`);
-          // Complete the final step
-          this.steps[this.currentStep - 1].completed = true;
+          
+          if (response.user.role === 'business') {
+            this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Your business account has been created. Please complete your business profile by uploading verification documents.`);
+          } else {
+            this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Your account has been created successfully.`);
+          }
+          
           // Redirect based on user role
           this.redirectBasedOnRole(response.user.role);
         },
         error: (error) => {
           this.isLoading.set(false);
-          const errorMessage = error.error?.message || 'Registration failed. Please try again.';
+          
+          // Detailed error logging
+          console.error('Registration error:', error);
+          console.error('Error status:', error?.status);
+          console.error('Error message:', error?.error);
+          
+          const errorMessage = error?.error?.message || error?.message || 'Registration failed. Please try again.';
           this.error.set(errorMessage);
           
           // Check if user already exists
-          if (errorMessage.toLowerCase().includes('already exists') || 
+          if (typeof errorMessage === 'string' && (errorMessage.toLowerCase().includes('already exists') || 
               errorMessage.toLowerCase().includes('email already') ||
-              errorMessage.toLowerCase().includes('user already')) {
+              errorMessage.toLowerCase().includes('user already'))) {
             this.toastService.warning('An account with this email already exists. Please sign in instead.');
           } else {
             this.toastService.error(errorMessage);
@@ -242,18 +137,11 @@ export class RegisterComponent implements OnInit {
   }
 
   private redirectBasedOnRole(role: string): void {
-    switch (role) {
-      case 'admin':
-        this.router.navigate(['/admin/dashboard']);
-        break;
-      case 'business':
-        this.router.navigate(['/business/dashboard']);
-        break;
-      case 'user':
-        this.router.navigate(['/user/dashboard']);
-        break;
-      default:
-        this.router.navigate(['/home']);
+    // Redirect based on user role
+    if (role === 'business' || role === 'BUSINESS_OWNER') {
+      this.router.navigate(['/business/dashboard']);
+    } else {
+      this.router.navigate(['/dashboard']);
     }
   }
 
@@ -262,25 +150,14 @@ export class RegisterComponent implements OnInit {
   }
 
   private markFormGroupTouched(): void {
-    const currentForm = this.getCurrentForm();
-    Object.keys(currentForm.controls).forEach(key => {
-      const control = currentForm.get(key);
+    Object.keys(this.signupForm.controls).forEach(key => {
+      const control = this.signupForm.get(key);
       control?.markAsTouched();
     });
   }
 
-  getCurrentForm(): FormGroup {
-    switch (this.currentStep) {
-      case 1: return this.accountForm;
-      case 2: return this.verificationForm;
-      case 3: return this.accountForm; // Review step uses account form for display
-      default: return this.accountForm;
-    }
-  }
-
   getFieldError(fieldName: string): string {
-    const form = this.getCurrentForm();
-    const field = form.get(fieldName);
+    const field = this.signupForm.get(fieldName);
     
     if (field?.errors && field.touched) {
       if (field.errors['required']) {
@@ -293,9 +170,6 @@ export class RegisterComponent implements OnInit {
         if (fieldName === 'firstName' || fieldName === 'lastName') {
           return 'Name must be at least 2 characters long';
         }
-        if (fieldName === 'businessDescription') {
-          return 'Please provide more details (at least 10 characters)';
-        }
         if (fieldName === 'password') {
           return 'Password must be at least 8 characters long';
         }
@@ -306,7 +180,7 @@ export class RegisterComponent implements OnInit {
       }
       if (field.errors['pattern']) {
         if (fieldName === 'phone') {
-          return 'Please enter a valid phone number (e.g., 0768163367, +254 768 163 367)';
+          return 'Please enter a valid phone number (e.g., +254712345678)';
         }
         if (fieldName === 'password') {
           return 'Password does not meet security requirements';
@@ -320,27 +194,6 @@ export class RegisterComponent implements OnInit {
     return '';
   }
 
-  // Step-specific getters
-  get progressPercentage(): number {
-    return (this.currentStep / this.totalSteps) * 100;
-  }
-
-  get isFirstStep(): boolean {
-    return this.currentStep === 1;
-  }
-
-  get isLastStep(): boolean {
-    return this.currentStep === this.totalSteps;
-  }
-
-  get stepTitle(): string {
-    return this.steps[this.currentStep - 1]?.title || '';
-  }
-
-  get stepDescription(): string {
-    return this.steps[this.currentStep - 1]?.description || '';
-  }
-
   // Password visibility toggle methods
   togglePasswordVisibility(): void {
     this.showPassword.set(!this.showPassword());
@@ -352,7 +205,7 @@ export class RegisterComponent implements OnInit {
 
   // Password strength validation
   getPasswordStrength(): { strength: string; message: string; color: string; progress: number } {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     
     if (!password) {
       return { strength: '', message: '', color: '', progress: 0 };
@@ -383,7 +236,7 @@ export class RegisterComponent implements OnInit {
 
   // Check if password meets all requirements
   isPasswordValid(): boolean {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     return password.length >= 8 && 
            /[a-z]/.test(password) && 
            /[A-Z]/.test(password) && 
@@ -393,28 +246,38 @@ export class RegisterComponent implements OnInit {
 
   // Password requirement checkers for template
   hasMinLength(): boolean {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     return password.length >= 8;
   }
 
   hasLowerCase(): boolean {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     return /[a-z]/.test(password);
   }
 
   hasUpperCase(): boolean {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     return /[A-Z]/.test(password);
   }
 
   hasNumber(): boolean {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     return /\d/.test(password);
   }
 
   hasSpecialChar(): boolean {
-    const password = this.accountForm.get('password')?.value || '';
+    const password = this.signupForm.get('password')?.value || '';
     return /[@$!%*?&]/.test(password);
+  }
+
+  // Debug method to check role selection
+  getSelectedRole(): string {
+    return this.signupForm.get('role')?.value || 'none';
+  }
+
+  // Method to log role changes
+  onRoleChange(): void {
+    console.log('Role changed to:', this.getSelectedRole());
   }
 }
 

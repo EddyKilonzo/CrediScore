@@ -32,7 +32,7 @@
           <div class="profile-avatar hover-lift" (click)="triggerFileUpload()">
             <img 
               *ngIf="getProfileImageUrl()" 
-              [src]="getProfileImageUrl()" 
+              [src]="imageService.getOptimizedProfileImageUrl(getProfileImageUrl()!, 'medium')" 
               alt="Profile Picture"
               class="avatar-image">
             <div 
@@ -155,7 +155,7 @@
             @for (activity of mockData.recentActivity; track activity.action) {
               <div class="activity-item">
                 <div class="activity-avatar">
-                  <img [src]="getProfileImageUrl() || '/images/default-avatar.png'" alt="User">
+                  <img [src]="getProfileImageUrl()" alt="User" *ngIf="getProfileImageUrl()">
                 </div>
                 <div class="activity-content">
                   <p class="activity-text">{{ activity.action }} for <strong>{{ activity.business }}</strong></p>

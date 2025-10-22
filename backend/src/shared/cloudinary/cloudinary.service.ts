@@ -17,11 +17,33 @@ export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
 
   constructor(private readonly configService: ConfigService) {
-    cloudinary.config({
-      cloud_name: this.configService.get<string>('CLOUDINARY_CLOUD_NAME'),
-      api_key: this.configService.get<string>('CLOUDINARY_API_KEY'),
-      api_secret: this.configService.get<string>('CLOUDINARY_API_SECRET'),
+    const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
+    const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
+    const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
+
+    this.logger.log('Cloudinary configuration check:', {
+      cloudName: cloudName ? 'Set' : 'Missing',
+      apiKey: apiKey ? 'Set' : 'Missing',
+      apiSecret: apiSecret ? 'Set' : 'Missing',
     });
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      this.logger.error('Cloudinary credentials not configured properly');
+      this.logger.error('Missing:', {
+        cloudName: !cloudName,
+        apiKey: !apiKey,
+        apiSecret: !apiSecret,
+      });
+      throw new Error('Cloudinary credentials are missing');
+    }
+
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+
+    this.logger.log('Cloudinary configured successfully');
   }
 
   /**
@@ -32,6 +54,10 @@ export class CloudinaryService {
     options: CloudinaryUploadOptions = {},
   ): Promise<UploadApiResponse> {
     try {
+      this.logger.log(
+        `Uploading file: ${file.originalname} (${file.buffer.length} bytes)`,
+      );
+
       const uploadOptions = {
         folder: options.folder || 'crediscore',
         resource_type: options.resource_type || 'auto',
@@ -40,6 +66,8 @@ export class CloudinaryService {
         tags: options.tags || [],
         ...(options.public_id && { public_id: options.public_id }),
       };
+
+      this.logger.log('Upload options:', uploadOptions);
 
       const result = await new Promise<UploadApiResponse>((resolve, reject) => {
         cloudinary.uploader
@@ -69,6 +97,12 @@ export class CloudinaryService {
       return result;
     } catch (error) {
       this.logger.error('Failed to upload file to Cloudinary:', error);
+      this.logger.error('Upload details:', {
+        fileName: file.originalname,
+        fileSize: file.buffer.length,
+        mimeType: file.mimetype,
+        options,
+      });
       throw error;
     }
   }

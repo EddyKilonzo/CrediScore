@@ -1,13 +1,13 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { tap, map } from 'rxjs/operators';
 
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'business' | 'user';
+  role: 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER';
   isVerified: boolean;
   avatar?: string; // Profile image URL from database
   phone?: string; // Phone number
@@ -30,6 +30,19 @@ export interface RegisterRequest {
 export interface AuthResponse {
   user: User;
   token: string;
+  accessToken?: string; // Backend returns this field
+}
+
+// Backend signup response structure (direct user data)
+export interface SignUpResponse {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  avatar?: string;
+  createdAt: Date;
+  accessToken: string;
 }
 
 @Injectable({
@@ -90,37 +103,122 @@ export class AuthService {
   register(userData: RegisterRequest): Observable<AuthResponse> {
     this.isLoading.set(true);
     
-    return this.http.post<AuthResponse>(`${this.API_URL}/auth/register`, userData)
+    return this.http.post<SignUpResponse>(`${this.API_URL}/auth/signup`, userData)
       .pipe(
         tap(response => {
-          this.setAuthDataInternal(response);
+          // Transform SignUpResponse to AuthResponse format
+          const authResponse: AuthResponse = {
+            user: {
+              id: response.id,
+              email: response.email,
+              name: response.name,
+              role: response.role as 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+              isVerified: true, // New signups are considered verified
+              avatar: response.avatar,
+              phone: response.phone
+            },
+            token: response.accessToken,
+            accessToken: response.accessToken
+          };
+          this.setAuthDataInternal(authResponse);
           this.isLoading.set(false);
+        }),
+        map(response => {
+          // Transform SignUpResponse to AuthResponse format
+          return {
+            user: {
+              id: response.id,
+              email: response.email,
+              name: response.name,
+              role: response.role as 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+              isVerified: true, // New signups are considered verified
+              avatar: response.avatar,
+              phone: response.phone
+            },
+            token: response.accessToken,
+            accessToken: response.accessToken
+          } as AuthResponse;
         })
       );
   }
 
-  logout(): void {
+  logout(redirectToHome: boolean = false): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.currentUserSubject.next(null);
     this.currentUser.set(null);
     this.isAuthenticated.set(false);
+    
+    // Redirect to home if requested
+    if (redirectToHome) {
+      window.location.href = '/';
+    }
   }
 
   private setAuthDataInternal(response: AuthResponse): void {
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
+    // Handle both token formats (backend returns accessToken)
+    const token = response.accessToken || response.token;
+    localStorage.setItem('token', token);
+    
+    // Store only essential user data, exclude large base64 avatar data
+    const userForStorage = {
+      id: response.user.id,
+      email: response.user.email,
+      name: response.user.name,
+      role: response.user.role,
+      isVerified: response.user.isVerified,
+      phone: response.user.phone,
+      bio: response.user.bio,
+      // Only store avatar if it's a URL (not base64 data)
+      avatar: response.user.avatar?.startsWith('http') ? response.user.avatar : undefined
+    };
+    
+    localStorage.setItem('user', JSON.stringify(userForStorage));
+    
+    // Store the full user object in memory (including base64 avatar)
     this.currentUserSubject.next(response.user);
     this.currentUser.set(response.user);
     this.isAuthenticated.set(true);
   }
 
   setAuthData(response: AuthResponse): void {
-    this.setAuthDataInternal(response);
+    try {
+      this.setAuthDataInternal(response);
+    } catch (error) {
+      console.error('Error setting auth data:', error);
+      // Fallback: store minimal data
+      const token = response.accessToken || response.token;
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify({
+          id: response.user.id,
+          email: response.user.email,
+          name: response.user.name,
+          role: response.user.role,
+          isVerified: response.user.isVerified
+        }));
+        this.currentUserSubject.next(response.user);
+        this.currentUser.set(response.user);
+        this.isAuthenticated.set(true);
+      }
+    }
   }
 
   updateUserData(user: User): void {
-    localStorage.setItem('user', JSON.stringify(user));
+    // Store only essential user data, exclude large base64 avatar data
+    const userForStorage = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isVerified: user.isVerified,
+      phone: user.phone,
+      bio: user.bio,
+      // Only store avatar if it's a URL (not base64 data)
+      avatar: user.avatar?.startsWith('http') ? user.avatar : undefined
+    };
+    
+    localStorage.setItem('user', JSON.stringify(userForStorage));
     this.currentUserSubject.next(user);
     this.currentUser.set(user);
   }

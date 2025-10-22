@@ -53,7 +53,18 @@ export class LoginComponent implements OnInit {
         },
         error: (error) => {
           this.isLoading.set(false);
-          const errorMessage = error.error?.message || 'Login failed. Please try again.';
+          let errorMessage = 'Login failed. Please try again.';
+          
+          if (error.status === 431) {
+            errorMessage = 'Request data too large. Please contact support.';
+          } else if (error.status === 401) {
+            errorMessage = 'Invalid email or password. Please check your credentials.';
+          } else if (error.status === 429) {
+            errorMessage = 'Too many login attempts. Please wait a moment and try again.';
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          }
+          
           this.error.set(errorMessage);
           this.toastService.error(errorMessage);
         }
@@ -64,19 +75,8 @@ export class LoginComponent implements OnInit {
   }
 
   private redirectBasedOnRole(role: string): void {
-    switch (role) {
-      case 'admin':
-        this.router.navigate(['/admin/dashboard']);
-        break;
-      case 'business':
-        this.router.navigate(['/business/dashboard']);
-        break;
-      case 'user':
-        this.router.navigate(['/user/dashboard']);
-        break;
-      default:
-        this.router.navigate(['/home']);
-    }
+    // Redirect all authenticated users to the main dashboard
+    this.router.navigate(['/dashboard']);
   }
 
   private markFormGroupTouched(): void {

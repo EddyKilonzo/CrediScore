@@ -24,6 +24,8 @@ import {
 } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
+import { BusinessService } from '../business/business.service';
+import { UpdateBusinessStatusDto, VerifyDocumentDto } from '../business/dto/business.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -53,6 +55,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly fraudDetectionService: FraudDetectionService,
+    private readonly businessService: BusinessService,
   ) {}
 
   // Dashboard
@@ -504,5 +507,119 @@ export class AdminController {
       flaggingResult,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  // Business Onboarding Management
+  @Get('businesses/pending-review')
+  @ApiOperation({ summary: 'Get businesses pending admin review' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending businesses retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async getPendingBusinesses(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getPendingBusinesses(page, limit);
+  }
+
+  @Get('businesses/:id/onboarding-details')
+  @ApiOperation({ summary: 'Get detailed business onboarding information with AI analysis' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Business onboarding details retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async getBusinessOnboardingDetails(@Param('id') businessId: string) {
+    return this.adminService.getBusinessOnboardingDetails(businessId);
+  }
+
+  @Patch('businesses/:id/status')
+  @ApiOperation({ summary: 'Update business status (Admin only)' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiBody({ type: UpdateBusinessStatusDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Business status updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async updateBusinessStatus(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+    @Body(ValidationPipe) updateStatusDto: UpdateBusinessStatusDto,
+  ) {
+    return this.adminService.updateBusinessStatus(
+      req.user.id,
+      businessId,
+      updateStatusDto,
+    );
+  }
+
+  @Patch('documents/:id/verify')
+  @ApiOperation({ summary: 'Verify or reject a business document' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiBody({ type: VerifyDocumentDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Document verification updated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async verifyDocument(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') documentId: string,
+    @Body(ValidationPipe) verifyData: VerifyDocumentDto,
+  ) {
+    return this.businessService.verifyDocument(
+      req.user.id,
+      documentId,
+      verifyData,
+    );
+  }
+
+  @Get('businesses/:id/onboarding-details')
+  @ApiOperation({ summary: 'Get detailed business onboarding information' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Business onboarding details retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async getBusinessOnboardingDetails(@Param('id') businessId: string) {
+    return this.adminService.getBusinessOnboardingDetails(businessId);
   }
 }

@@ -163,6 +163,91 @@ export class MailerService {
   }
 
   /**
+   * Send a business welcome email to new business owners
+   */
+  async sendBusinessWelcomeEmail(
+    email: string,
+    name: string,
+    businessName?: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>(
+      'APP_URL',
+      'http://localhost:3000',
+    );
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Welcome to CrediScore Business! Complete Your Setup',
+        template: 'business-welcome',
+        context: {
+          name,
+          email,
+          businessName,
+          appUrl,
+          year: new Date().getFullYear(),
+        },
+      });
+      this.logger.log(`Business welcome email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send business welcome email to ${email}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send business verification status email
+   */
+  async sendBusinessVerificationStatusEmail(
+    email: string,
+    name: string,
+    businessName: string,
+    status: 'verified' | 'under_review' | 'rejected',
+    rejectionReason?: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>(
+      'APP_URL',
+      'http://localhost:3000',
+    );
+
+    let subject: string;
+    switch (status) {
+      case 'verified':
+        subject = 'Your Business is Now Verified!';
+        break;
+      case 'under_review':
+        subject = 'Business Verification Under Review';
+        break;
+      case 'rejected':
+        subject = 'Business Verification Update Required';
+        break;
+      default:
+        subject = 'Business Verification Status Update';
+    }
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject,
+        template: 'business-verification-status',
+        context: {
+          name,
+          email,
+          businessName,
+          status,
+          rejectionReason,
+          appUrl,
+          year: new Date().getFullYear(),
+        },
+      });
+      this.logger.log(`Business verification status email sent to ${email} - Status: ${status}`);
+    } catch (error) {
+      this.logger.error(`Failed to send business verification status email to ${email}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Send a generic email with custom template
    */
   async sendEmail(options: SendEmailOptions): Promise<void> {

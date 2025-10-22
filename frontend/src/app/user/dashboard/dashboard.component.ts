@@ -98,6 +98,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit() {
+    // Check if user is a business owner and redirect to business dashboard
+    const user = this.currentUser();
+    if (user?.role === 'business') {
+      // Redirect to business dashboard
+      window.location.href = '/business/dashboard';
+      return;
+    }
+    
     this.loadDashboardData();
     this.setupQuickActions();
     this.loadRecentActivities();
@@ -403,7 +411,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   logout() {
     const userName = this.currentUser()?.name || 'User';
-    this.authService.logout();
+    this.authService.logout(true); // Redirect to home
     this.toastService.info(`Goodbye, ${userName}! You have been logged out successfully.`);
   }
 }

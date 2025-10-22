@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
+import { OCRService } from '../shared/ocr/ocr.service';
 import {
   CreateBusinessDto,
   UpdateBusinessDto,
@@ -15,6 +16,12 @@ import {
   AddPaymentMethodDto,
   CreateBusinessCategoryDto,
   UpdateBusinessCategoryDto,
+  SubmitForReviewDto,
+  UpdateBusinessStatusDto,
+  UpdateOnboardingStepDto,
+  VerifyDocumentDto,
+  BusinessStatus,
+  DocumentType,
 } from './dto/business.dto';
 
 export interface BusinessSearchDto {
@@ -34,6 +41,7 @@ export class BusinessService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly fraudDetectionService: FraudDetectionService,
+    private readonly ocrService: OCRService,
   ) {}
 
   // Business CRUD Operations
@@ -60,6 +68,8 @@ export class BusinessService {
         data: {
           ...businessData,
           ownerId: userId,
+          status: 'PENDING',
+          onboardingStep: 1,
         },
         include: {
           owner: {
@@ -538,12 +548,19 @@ export class BusinessService {
         );
       }
 
+      // Create document first
       const document = await this.prisma.document.create({
         data: {
           ...documentData,
           businessId: businessId,
         },
       });
+
+      // Process document with OCR and AI verification asynchronously
+      this.processDocumentWithAI(document.id, documentData.url)
+        .catch(error => {
+          this.logger.error(`Failed to process document ${document.id} with AI:`, error);
+        });
 
       this.logger.log(
         `Document uploaded: ${document.id} for business: ${businessId}`,
@@ -558,6 +575,111 @@ export class BusinessService {
         throw error;
       }
       throw new InternalServerErrorException('Failed to upload document');
+    }
+  }
+
+  /**
+   * Process document with OCR and AI verification
+   */
+  private async processDocumentWithAI(documentId: string, documentUrl: string) {
+    try {
+      this.logger.log(`Processing document ${documentId} with AI`);
+
+      // Step 1: Extract text using OCR
+      const ocrResult = await this.ocrService.extractText(documentUrl);
+      
+      // Step 2: Analyze document content
+      const analysisResult = await this.ocrService.analyzeDocument(ocrResult);
+      
+      // Step 3: Verify document authenticity
+      const authenticityResult = await this.ocrService.verifyDocumentAuthenticity(
+        ocrResult,
+        analysisResult,
+      );
+
+      // Update document with OCR and AI results
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          ocrText: ocrResult.text,
+          ocrConfidence: ocrResult.confidence,
+          aiAnalysis: {
+            documentType: analysisResult.documentType,
+            extractedData: analysisResult.extractedData,
+            confidence: analysisResult.confidence,
+            isValid: analysisResult.isValid,
+            validationErrors: analysisResult.validationErrors,
+            authenticity: authenticityResult,
+          },
+          aiVerified: authenticityResult.isAuthentic && analysisResult.isValid,
+          aiVerifiedAt: new Date(),
+          extractedData: analysisResult.extractedData,
+        },
+      });
+
+      this.logger.log(`Document ${documentId} processed successfully with AI`);
+    } catch (error) {
+      this.logger.error(`Error processing document ${documentId} with AI:`, error);
+      
+      // Update document with error status
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          aiAnalysis: {
+            error: error.message,
+            processedAt: new Date(),
+          },
+        },
+      });
+    }
+  }
+
+  async getDocumentProcessingStatus(
+    userId: string,
+    businessId: string,
+    documentId: string,
+  ) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException(
+          'You can only view document status for your own businesses',
+        );
+      }
+
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      return {
+        documentId: document.id,
+        processingStatus: document.aiAnalysis ? 'completed' : 'processing',
+        aiVerified: document.aiVerified,
+        aiVerifiedAt: document.aiVerifiedAt,
+        ocrConfidence: document.ocrConfidence,
+        extractedData: document.extractedData,
+        aiAnalysis: document.aiAnalysis,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching document processing status:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch document processing status');
     }
   }
 
@@ -1136,6 +1258,229 @@ export class BusinessService {
       throw new InternalServerErrorException(
         'Failed to fetch business analytics',
       );
+    }
+  }
+
+  // Onboarding Workflow Methods
+  async updateOnboardingStep(
+    userId: string,
+    businessId: string,
+    step: number,
+  ) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException('You can only update your own businesses');
+      }
+
+      // Validate step number
+      if (step < 1 || step > 4) {
+        throw new BadRequestException('Step must be between 1 and 4');
+      }
+
+      const updatedBusiness = await this.prisma.business.update({
+        where: { id: businessId },
+        data: { onboardingStep: step },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          businessCategory: true,
+        },
+      });
+
+      this.logger.log(`Business onboarding step updated: ${businessId} -> step ${step}`);
+      return updatedBusiness;
+    } catch (error) {
+      this.logger.error('Error updating onboarding step:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update onboarding step');
+    }
+  }
+
+  async submitForReview(
+    userId: string,
+    businessId: string,
+    submitData: SubmitForReviewDto,
+  ) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          documents: true,
+          payments: true,
+        },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException('You can only submit your own businesses');
+      }
+
+      // Check if business has at least one document (changed from requiring specific documents)
+      if (business.documents.length === 0) {
+        throw new BadRequestException('At least one business document is required');
+      }
+
+      // Check if the uploaded document has been processed by AI
+      const processedDocument = business.documents.find(doc => doc.aiAnalysis);
+      if (!processedDocument) {
+        throw new BadRequestException('Document is still being processed by AI. Please wait a moment and try again.');
+      }
+
+      // Check if business has at least one payment method
+      if (business.payments.length === 0) {
+        throw new BadRequestException('At least one payment method is required');
+      }
+
+      const updatedBusiness = await this.prisma.business.update({
+        where: { id: businessId },
+        data: {
+          status: 'UNDER_REVIEW',
+          submittedForReview: true,
+          onboardingStep: 4,
+          reviewNotes: submitData.notes,
+        },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          businessCategory: true,
+        },
+      });
+
+      this.logger.log(`Business submitted for review: ${businessId}`);
+      return updatedBusiness;
+    } catch (error) {
+      this.logger.error('Error submitting business for review:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to submit business for review');
+    }
+  }
+
+  async getOnboardingStatus(userId: string, businessId: string) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          documents: {
+            orderBy: { uploadedAt: 'desc' },
+          },
+          payments: {
+            orderBy: { addedAt: 'desc' },
+          },
+          businessCategory: true,
+        },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException('You can only view your own businesses');
+      }
+
+      // Calculate onboarding progress
+      const progress = {
+        currentStep: business.onboardingStep,
+        status: business.status,
+        submittedForReview: business.submittedForReview,
+        documents: {
+          uploaded: business.documents.length,
+          verified: business.documents.filter(doc => doc.verified).length,
+          aiVerified: business.documents.filter(doc => doc.aiVerified).length,
+          required: 1, // Only one document required now
+          missing: business.documents.length === 0 ? ['BUSINESS_DOCUMENT'] : [],
+        },
+        payments: {
+          uploaded: business.payments.length,
+          verified: business.payments.filter(payment => payment.verified).length,
+        },
+        canSubmit: business.documents.length > 0 && business.payments.length > 0,
+      };
+
+      return {
+        business,
+        progress,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching onboarding status:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch onboarding status');
+    }
+  }
+
+  async verifyDocument(
+    adminUserId: string,
+    documentId: string,
+    verifyData: VerifyDocumentDto,
+  ) {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          business: true,
+        },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      const updatedDocument = await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          verified: verifyData.verified,
+          verifiedAt: verifyData.verified ? new Date() : null,
+          verifiedBy: verifyData.verified ? adminUserId : null,
+          verificationNotes: verifyData.notes,
+        },
+      });
+
+      this.logger.log(`Document verification updated: ${documentId} -> ${verifyData.verified}`);
+      return updatedDocument;
+    } catch (error) {
+      this.logger.error('Error verifying document:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to verify document');
     }
   }
 }

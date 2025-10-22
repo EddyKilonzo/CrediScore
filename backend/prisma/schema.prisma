@@ -57,6 +57,14 @@ model Business {
   longitude     Float?
   isVerified    Boolean     @default(false)
   isActive      Boolean     @default(true)
+  // Onboarding workflow fields
+  status        BusinessStatus @default(PENDING)
+  onboardingStep Int        @default(1) // 1=Basic Info, 2=Documents, 3=Payment Methods, 4=Review
+  submittedForReview Boolean @default(false)
+  reviewedAt    DateTime?
+  reviewedBy    String?     // Admin user ID who reviewed
+  reviewNotes   String?     // Admin notes during review
+  rejectionReason String?   // Reason for rejection
   documents     Document[]
   reviews       Review[]
   payments      Payment[]
@@ -71,8 +79,21 @@ model Business {
 model Document {
   id          String    @id @default(uuid())
   url         String    // File storage link
-  type        String    // e.g. Registration certificate
+  type        DocumentType // Document type enum
+  name        String?   // Original filename
+  size        Int?      // File size in bytes
+  mimeType    String?   // MIME type
   verified    Boolean   @default(false)
+  verifiedAt  DateTime?
+  verifiedBy  String?   // Admin user ID who verified
+  verificationNotes String? // Admin notes
+  // OCR and AI verification fields
+  ocrText     String?   // Extracted text from OCR
+  ocrConfidence Int?    // OCR confidence score
+  aiAnalysis  Json?     // AI analysis results
+  aiVerified  Boolean   @default(false) // AI verification status
+  aiVerifiedAt DateTime? // AI verification timestamp
+  extractedData Json?   // Structured data extracted from document
   business    Business  @relation(fields: [businessId], references: [id])
   businessId  String
   uploadedAt  DateTime  @default(now())
@@ -138,6 +159,27 @@ model BusinessCategory {
   description String?
   businesses  Business[]
   createdAt   DateTime  @default(now())
+}
+
+enum DocumentType {
+  BUSINESS_DOCUMENT  // Generic business document for AI verification
+  BUSINESS_REGISTRATION
+  TAX_CERTIFICATE
+  TRADE_LICENSE
+  BANK_STATEMENT
+  UTILITY_BILL
+  ID_COPY
+  PROOF_OF_ADDRESS
+  OTHER
+}
+
+enum BusinessStatus {
+  PENDING
+  DOCUMENTS_REQUIRED
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  SUSPENDED
 }
 
 enum UserRole {

@@ -3,8 +3,26 @@
 /* Import Google Fonts for cursive headers */
 @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&family=Great+Vibes&display=swap');
 
+/* Import Unicons from local package */
+@import '@iconscout/unicons/css/line.css';
+
+/* Ensure Unicons are loaded properly */
+[class^="uil-"], [class*=" uil-"] {
+  font-family: 'unicons' !important;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind base;
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind components;
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
 /* Global background layer with color */
@@ -69,7 +87,8 @@ app-root > * {
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
-.fade-in-up.visible {
+.fade-in-up.visible,
+.fade-in-up.animated {
   opacity: 1;
   transform: translateY(0);
 }
@@ -113,11 +132,17 @@ app-root > * {
 
 /* Apply visible state to delayed animations */
 .fade-in-up-delay-1.visible,
+.fade-in-up-delay-1.animated,
 .fade-in-up-delay-2.visible,
+.fade-in-up-delay-2.animated,
 .fade-in-up-delay-3.visible,
+.fade-in-up-delay-3.animated,
 .fade-in-up-delay-4.visible,
+.fade-in-up-delay-4.animated,
 .fade-in-up-delay-5.visible,
-.fade-in-up-delay-6.visible {
+.fade-in-up-delay-5.animated,
+.fade-in-up-delay-6.visible,
+.fade-in-up-delay-6.animated {
   opacity: 1;
   transform: translateY(0);
 }
@@ -180,4 +205,43 @@ app-root > * {
 .slide-in-right.visible {
   opacity: 1;
   transform: translateX(0);
+}
+
+/* Performance optimizations for animations */
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Optimize animations for better performance */
+.fade-in-up,
+.fade-in-up-delay-1,
+.fade-in-up-delay-2,
+.fade-in-up-delay-3,
+.fade-in-up-delay-4,
+.fade-in-up-delay-5,
+.fade-in-up-delay-6,
+.stat-card,
+.business-card,
+.faq-item {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Ensure proper z-index stacking */
+.hero-overlay {
+  z-index: 1;
+}
+
+nav {
+  z-index: 20;
+}
+
+.back-to-top {
+  z-index: 1000;
 }

@@ -108,6 +108,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
 
   ngOnInit() {
+    console.log('Home component initialized');
     // Initialize display counts
     this.statistics.forEach(stat => stat.displayCount = 0);
     
@@ -126,25 +127,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     // Use setTimeout to ensure DOM is fully rendered
     setTimeout(() => {
       this.initScrollAnimations();
-    }, 100);
-
-    // Set up intersection observer for counter animation
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting && !this.hasAnimated) {
-            this.hasAnimated = true;
-            this.animateCounters();
-          }
-        });
-      },
-      { threshold: 0.3 }
-    );
-
-    // Observe the first stat card to trigger animation
-    if (this.statCards.first) {
-      observer.observe(this.statCards.first.nativeElement);
-    }
+      this.startCounterAnimation();
+    }, 200);
   }
 
   initScrollAnimations() {
@@ -163,8 +147,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         });
       },
       {
-        threshold: 0.2, // Trigger when 20% of element is visible
-        rootMargin: '50px 0px 50px 0px' // Start animation slightly before element enters viewport
+        threshold: 0.1, // Trigger when 10% of element is visible
+        rootMargin: '0px 0px -50px 0px' // Start animation when element is closer to viewport
       }
     );
 
@@ -175,7 +159,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       '.stat-card, .business-card, .faq-item'
     );
 
-    // Check initial state and observe all elements
+    // Observe all elements for scroll animation
     animatedElements.forEach(element => {
       const el = element as HTMLElement;
       // If already animated, keep visible
@@ -183,14 +167,15 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
         el.classList.add('animated');
         return;
       }
+      // Check if element is already in viewport
       const rect = el.getBoundingClientRect();
       const isInViewport = rect.top < window.innerHeight && rect.bottom > 0;
-      if (isInViewport && rect.top < window.innerHeight * 0.7) {
-        // Element is already in viewport, animate it immediately and mark as animated
+      if (isInViewport) {
+        // Element is already in viewport, animate it immediately
         setTimeout(() => {
           el.classList.add('animated');
           el.dataset['animated'] = 'true';
-        }, 200);
+        }, 100);
       } else {
         // Element is below viewport, observe it for scroll animation
         fadeObserver.observe(el);
@@ -198,10 +183,17 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  startCounterAnimation() {
+    // Start counter animation after a short delay
+    setTimeout(() => {
+      this.animateCounters();
+    }, 1000);
+  }
+
   animateCounters() {
     this.statistics.forEach((stat, index) => {
-      const duration = 3500; // 3.5 seconds - slower for better UI
-      const steps = 70; // More steps for smoother animation
+      const duration = 2000; // 2 seconds for smoother animation
+      const steps = 60; // More steps for smoother animation
       const increment = stat.count / steps;
       let currentStep = 0;
 
@@ -340,7 +332,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   getProfileImageUrl(): string | null {
     const user = this.currentUser();
     if (user?.avatar) {
-      return user.avatar;
+      // Check if it's a Cloudinary URL or base64
+      if (user.avatar.startsWith('http')) {
+        return user.avatar; // Cloudinary URL
+      } else if (user.avatar.startsWith('data:')) {
+        return user.avatar; // Base64 fallback
+      }
     }
     // Fallback to localStorage for backward compatibility
     return localStorage.getItem('profileImage');
@@ -348,7 +345,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   logout() {
     const userName = this.currentUser()?.name || 'User';
-    this.authService.logout();
+    this.authService.logout(true); // Redirect to home
     this.toastService.info(`Goodbye, ${userName}! You have been logged out successfully.`);
   }
 }
