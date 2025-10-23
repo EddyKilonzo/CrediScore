@@ -32,4 +32,16 @@ export class Navbar {
   getProfileImageUrl(): string | null {
     return this.imageService.getProfileImageUrl(this.currentUser());
   }
+
+  onImageError(event: Event): void {
+    // Hide the image and show initials instead
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    
+    // Show the initials span
+    const span = img.parentElement?.querySelector('span');
+    if (span) {
+      span.style.display = 'flex';
+    }
+  }
 }

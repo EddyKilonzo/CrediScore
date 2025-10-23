@@ -9,11 +9,20 @@ export class ImageService {
    * Get profile image URL with consistent handling
    */
   getProfileImageUrl(user: { avatar?: string } | null): string | null {
-    if (user?.avatar) {
-      // Return the avatar URL directly (should be Cloudinary URL from database)
-      return user.avatar;
+    if (!user) return null;
+    
+    // Only show avatar if user has explicitly uploaded one
+    if (user.avatar && user.avatar.trim() !== '') {
+      // Validate the avatar URL
+      if (this.isValidImageUrl(user.avatar)) {
+        return user.avatar;
+      } else {
+        console.warn('Invalid avatar URL:', user.avatar);
+        return null;
+      }
     }
-    // Return null for consistency
+    
+    // Don't use localStorage fallback - only show initials by default
     return null;
   }
 
@@ -21,11 +30,24 @@ export class ImageService {
    * Get user initials for fallback display
    */
   getUserInitials(user: { name: string } | null): string {
-    if (!user || !user.name) return '';
-    const nameParts = user.name.split(' ');
+    if (!user || !user.name) return 'U';
+    
+    const nameParts = user.name.trim().split(' ');
     const firstName = nameParts[0] || '';
-    const lastName = nameParts[1] || '';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    const lastName = nameParts[nameParts.length - 1] || '';
+    
+    // Get first letter of first name and first letter of last name
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    
+    // If only one name, use first two letters
+    if (nameParts.length === 1 && firstName.length > 1) {
+      return firstName.substring(0, 2).toUpperCase();
+    }
+    
+    // Return initials or fallback to 'U' if no valid initials
+    const initials = firstInitial + lastInitial;
+    return initials || 'U';
   }
 
   /**

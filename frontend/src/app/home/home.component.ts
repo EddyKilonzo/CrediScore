@@ -322,25 +322,68 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Profile-related methods
   getUserInitials(user: User): string {
-    if (!user || !user.name) return '';
-    const nameParts = user.name.split(' ');
+    if (!user || !user.name) return 'U';
+    
+    const nameParts = user.name.trim().split(' ');
     const firstName = nameParts[0] || '';
-    const lastName = nameParts[1] || '';
-    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+    const lastName = nameParts[nameParts.length - 1] || '';
+    
+    // Get first letter of first name and first letter of last name
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    
+    // If only one name, use first two letters
+    if (nameParts.length === 1 && firstName.length > 1) {
+      return firstName.substring(0, 2).toUpperCase();
+    }
+    
+    // Return initials or fallback to 'U' if no valid initials
+    const initials = firstInitial + lastInitial;
+    return initials || 'U';
   }
 
   getProfileImageUrl(): string | null {
     const user = this.currentUser();
-    if (user?.avatar) {
-      // Check if it's a Cloudinary URL or base64
-      if (user.avatar.startsWith('http')) {
-        return user.avatar; // Cloudinary URL
-      } else if (user.avatar.startsWith('data:')) {
-        return user.avatar; // Base64 fallback
+    if (!user) return null;
+    
+    // Only show avatar if user has explicitly uploaded one
+    if (user.avatar && user.avatar.trim() !== '') {
+      // Validate the avatar URL
+      if (this.isValidImageUrl(user.avatar)) {
+        return user.avatar;
+      } else {
+        console.warn('Invalid avatar URL:', user.avatar);
+        return null;
       }
     }
-    // Fallback to localStorage for backward compatibility
-    return localStorage.getItem('profileImage');
+    
+    // Don't use localStorage fallback - only show initials by default
+    return null;
+  }
+
+  isValidImageUrl(url: string | null): boolean {
+    if (!url) return false;
+    
+    // Check if it's a valid URL
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      // Check if it's a base64 data URL
+      return url.startsWith('data:image/');
+    }
+  }
+
+  onImageError(event: Event): void {
+    // Hide the image and show initials instead
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+    
+    // Show the initials span
+    const span = img.parentElement?.querySelector('span');
+    if (span) {
+      span.style.display = 'flex';
+    }
   }
 
   logout() {

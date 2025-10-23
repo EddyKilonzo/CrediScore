@@ -1,0 +1,131 @@
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="text-center">
+      <img class="mx-auto h-12 w-auto" src="/images/CrediScore.png" alt="CrediScore">
+      <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+        Verify Your Email
+      </h2>
+      <p class="mt-2 text-sm text-gray-600">
+        We've sent a 6-digit verification code to your email address
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <!-- Verification Form -->
+      <form class="space-y-6" [formGroup]="verificationForm" (ngSubmit)="onSubmit()">
+        <div>
+          <label for="code" class="block text-sm font-medium text-gray-700">
+            Verification Code
+          </label>
+          <div class="mt-1">
+            <input
+              id="code"
+              name="code"
+              type="text"
+              formControlName="code"
+              maxlength="6"
+              placeholder="123456"
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-center text-2xl font-mono tracking-widest"
+              [class.border-red-500]="verificationForm.get('code')?.invalid && verificationForm.get('code')?.touched"
+            >
+          </div>
+          <div *ngIf="verificationForm.get('code')?.invalid && verificationForm.get('code')?.touched" class="mt-1 text-sm text-red-600">
+            <p *ngIf="verificationForm.get('code')?.errors?.['required']">Verification code is required</p>
+            <p *ngIf="verificationForm.get('code')?.errors?.['pattern']">Please enter a valid 6-digit code</p>
+          </div>
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            [disabled]="verificationForm.invalid || isLoading"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span *ngIf="!isLoading">Verify Email</span>
+            <span *ngIf="isLoading" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Verifying...
+            </span>
+          </button>
+        </div>
+      </form>
+
+      <!-- Resend Code Section -->
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white text-gray-500">Need a new code?</span>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <button
+            type="button"
+            (click)="toggleResendForm()"
+            [disabled]="resendCooldown > 0"
+            class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span *ngIf="resendCooldown === 0">Resend Verification Code</span>
+            <span *ngIf="resendCooldown > 0">Resend in {{ resendCooldown }}s</span>
+          </button>
+        </div>
+
+        <!-- Resend Form -->
+        <div *ngIf="showResendForm" class="mt-4 p-4 bg-gray-50 rounded-md">
+          <form [formGroup]="resendForm" (ngSubmit)="onResendCode()">
+            <div>
+              <label for="resend-email" class="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <div class="mt-1">
+                <input
+                  id="resend-email"
+                  name="email"
+                  type="email"
+                  formControlName="email"
+                  class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter your email address"
+                >
+              </div>
+            </div>
+            <div class="mt-3 flex space-x-3">
+              <button
+                type="submit"
+                [disabled]="resendForm.invalid || isResending"
+                class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                <span *ngIf="!isResending">Send Code</span>
+                <span *ngIf="isResending">Sending...</span>
+              </button>
+              <button
+                type="button"
+                (click)="toggleResendForm()"
+                class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Help Section -->
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+          Didn't receive the email? Check your spam folder or
+          <a routerLink="/auth/login" class="font-medium text-blue-600 hover:text-blue-500">
+            return to login
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

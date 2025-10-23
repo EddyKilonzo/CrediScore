@@ -867,7 +867,9 @@ export class AdminService {
       };
     } catch (error) {
       this.logger.error('Error fetching pending businesses:', error);
-      throw new InternalServerErrorException('Failed to fetch pending businesses');
+      throw new InternalServerErrorException(
+        'Failed to fetch pending businesses',
+      );
     }
   }
 
@@ -887,6 +889,25 @@ export class AdminService {
           businessCategory: true,
           documents: {
             orderBy: { uploadedAt: 'desc' },
+            select: {
+              id: true,
+              url: true,
+              type: true,
+              name: true,
+              size: true,
+              mimeType: true,
+              verified: true,
+              verifiedAt: true,
+              verifiedBy: true,
+              verificationNotes: true,
+              ocrText: true,
+              ocrConfidence: true,
+              aiAnalysis: true,
+              aiVerified: true,
+              aiVerifiedAt: true,
+              extractedData: true,
+              uploadedAt: true,
+            },
           },
           payments: {
             orderBy: { addedAt: 'desc' },
@@ -900,7 +921,7 @@ export class AdminService {
       }
 
       // Analyze AI verification results
-      const aiAnalysis = business.documents.map(doc => ({
+      const aiAnalysis = business.documents.map((doc) => ({
         documentId: doc.id,
         type: doc.type,
         name: doc.name,
@@ -949,12 +970,18 @@ export class AdminService {
         // Summary for admin review
         summary: {
           totalDocuments: business.documents.length,
-          verifiedDocuments: business.documents.filter(doc => doc.verified).length,
-          aiVerifiedDocuments: business.documents.filter(doc => doc.aiVerified).length,
+          verifiedDocuments: business.documents.filter((doc) => doc.verified)
+            .length,
+          aiVerifiedDocuments: business.documents.filter(
+            (doc) => doc.aiVerified,
+          ).length,
           totalPayments: business.payments.length,
-          verifiedPayments: business.payments.filter(payment => payment.verified).length,
-          hasValidDocument: business.documents.some(doc => doc.aiVerified),
-          canApprove: business.documents.length > 0 && business.payments.length > 0,
+          verifiedPayments: business.payments.filter(
+            (payment) => payment.verified,
+          ).length,
+          hasValidDocument: business.documents.some((doc) => doc.aiVerified),
+          canApprove:
+            business.documents.length > 0 && business.payments.length > 0,
         },
       };
     } catch (error) {
@@ -962,7 +989,9 @@ export class AdminService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('Failed to fetch business onboarding details');
+      throw new InternalServerErrorException(
+        'Failed to fetch business onboarding details',
+      );
     }
   }
 
@@ -1013,90 +1042,9 @@ export class AdminService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('Failed to update business status');
-    }
-  }
-
-  async getBusinessOnboardingDetails(businessId: string) {
-    try {
-      const business = await this.prisma.business.findUnique({
-        where: { id: businessId },
-        include: {
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-              createdAt: true,
-            },
-          },
-          documents: {
-            orderBy: { uploadedAt: 'desc' },
-          },
-          payments: {
-            orderBy: { addedAt: 'desc' },
-          },
-          businessCategory: true,
-          trustScore: true,
-        },
-      });
-
-      if (!business) {
-        throw new NotFoundException('Business not found');
-      }
-
-      // Calculate onboarding progress
-      const requiredDocuments = ['BUSINESS_REGISTRATION', 'TAX_CERTIFICATE'];
-      const uploadedDocumentTypes = business.documents.map(doc => doc.type);
-      const missingDocuments = requiredDocuments.filter(
-        type => !uploadedDocumentTypes.includes(type as any)
+      throw new InternalServerErrorException(
+        'Failed to update business status',
       );
-
-      const onboardingDetails = {
-        business,
-        progress: {
-          currentStep: business.onboardingStep,
-          status: business.status,
-          submittedForReview: business.submittedForReview,
-          documents: {
-            uploaded: business.documents.length,
-            verified: business.documents.filter(doc => doc.verified).length,
-            required: requiredDocuments.length,
-            missing: missingDocuments,
-            details: business.documents.map(doc => ({
-              id: doc.id,
-              type: doc.type,
-              name: doc.name,
-              url: doc.url,
-              verified: doc.verified,
-              verifiedAt: doc.verifiedAt,
-              verificationNotes: doc.verificationNotes,
-              uploadedAt: doc.uploadedAt,
-            })),
-          },
-          payments: {
-            uploaded: business.payments.length,
-            verified: business.payments.filter(payment => payment.verified).length,
-            details: business.payments.map(payment => ({
-              id: payment.id,
-              type: payment.type,
-              number: payment.number,
-              verified: payment.verified,
-              addedAt: payment.addedAt,
-            })),
-          },
-          canApprove: missingDocuments.length === 0 && business.payments.length > 0,
-        },
-      };
-
-      return onboardingDetails;
-    } catch (error) {
-      this.logger.error('Error fetching business onboarding details:', error);
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to fetch business onboarding details');
     }
   }
 }

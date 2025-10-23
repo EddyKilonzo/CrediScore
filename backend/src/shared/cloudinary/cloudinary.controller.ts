@@ -66,9 +66,9 @@ export class CloudinaryController {
           originalname: file.originalname,
           mimetype: file.mimetype,
           fieldname: file.fieldname,
-          size: file.size
+          size: file.size,
         });
-        
+
         // Allow images and documents
         if (
           file.mimetype.startsWith('image/') ||
@@ -98,7 +98,7 @@ export class CloudinaryController {
       fileSize: file?.buffer?.length,
       mimeType: file?.mimetype,
       hasBuffer: !!file?.buffer,
-      bufferLength: file?.buffer?.length
+      bufferLength: file?.buffer?.length,
     });
 
     // Parse options from the request body
@@ -179,12 +179,12 @@ export class CloudinaryController {
         fileName: file?.originalname,
         fileSize: file?.buffer?.length,
         mimeType: file?.mimetype,
-        hasBuffer: !!file?.buffer
+        hasBuffer: !!file?.buffer,
       });
-      
+
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      
+
       console.error('Throwing BadRequestException with message:', errorMessage);
       throw new BadRequestException(`Failed to upload file: ${errorMessage}`);
     }

@@ -282,7 +282,10 @@ export class BusinessController {
 
   @Get(':id/documents/:documentId/processing-status')
   @ApiOperation({ summary: 'Get document AI processing status' })
-  @ApiResponse({ status: 200, description: 'Processing status retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Processing status retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Document not found' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async getDocumentProcessingStatus(
@@ -290,7 +293,11 @@ export class BusinessController {
     @Param('id') businessId: string,
     @Param('documentId') documentId: string,
   ) {
-    return this.businessService.getDocumentProcessingStatus(req.user.id, businessId, documentId);
+    return this.businessService.getDocumentProcessingStatus(
+      req.user.id,
+      businessId,
+      documentId,
+    );
   }
 
   @Delete('documents/:documentId')

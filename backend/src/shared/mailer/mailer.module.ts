@@ -10,14 +10,19 @@ import { MailerService } from './mailer.service';
     NestMailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         transport: {
           host: configService.get<string>('MAIL_HOST'),
           port: configService.get<number>('MAIL_PORT'),
-          secure: configService.get<boolean>('MAIL_SECURE', false), // true for 465, false for other ports
+          secure: false, // Use STARTTLS instead of SSL
+          requireTLS: true,
           auth: {
             user: configService.get<string>('MAIL_USER'),
             pass: configService.get<string>('MAIL_PASSWORD'),
+          },
+          tls: {
+            rejectUnauthorized: false,
+            minVersion: 'TLSv1.2',
           },
         },
         defaults: {

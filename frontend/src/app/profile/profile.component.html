@@ -115,7 +115,7 @@
       <!-- Overview Tab -->
       <div *ngIf="activeTab() === 'overview'" class="tab-content animated-content fade-in-up">
         <!-- Business Information (only for business/admin users) -->
-        <div class="content-panel animated-panel" *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'admin'">
+        <div class="content-panel animated-panel" *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER' || currentUser()?.role === 'admin'">
           <div class="panel-header">
             <h3 class="panel-title">Business Information</h3>
             <button class="add-info-btn hover-lift">+ Add Info</button>

@@ -151,7 +151,7 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Check if user is not a business owner and redirect to customer dashboard
     const user = this.currentUser();
-    if (user?.role !== 'business') {
+    if (user?.role !== 'business' && user?.role !== 'BUSINESS_OWNER') {
       // Redirect to customer dashboard
       window.location.href = '/dashboard';
       return;

@@ -25,7 +25,10 @@ import {
 import { AdminService } from './admin.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
 import { BusinessService } from '../business/business.service';
-import { UpdateBusinessStatusDto, VerifyDocumentDto } from '../business/dto/business.dto';
+import {
+  UpdateBusinessStatusDto,
+  VerifyDocumentDto,
+} from '../business/dto/business.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -527,25 +530,6 @@ export class AdminController {
     @Query('limit') limit: number = 10,
   ) {
     return this.adminService.getPendingBusinesses(page, limit);
-  }
-
-  @Get('businesses/:id/onboarding-details')
-  @ApiOperation({ summary: 'Get detailed business onboarding information with AI analysis' })
-  @ApiParam({ name: 'id', description: 'Business ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Business onboarding details retrieved successfully',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Business not found',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Admin access required',
-  })
-  async getBusinessOnboardingDetails(@Param('id') businessId: string) {
-    return this.adminService.getBusinessOnboardingDetails(businessId);
   }
 
   @Patch('businesses/:id/status')

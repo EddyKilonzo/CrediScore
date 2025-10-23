@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,155 +8,157 @@ datasource db {
 }
 
 model User {
-  id          String     @id @default(uuid())
-  name        String
-  email       String     @unique
-  password    String?    // Optional for OAuth users
-  phone       String?    @unique
-  bio         String?    // User biography/description
-  role        UserRole   @default(CUSTOMER)
-  isActive    Boolean    @default(true)
-  provider    AuthProvider @default(LOCAL)
-  providerId  String?    // OAuth provider ID (e.g., Google ID)
-  avatar      String?    // Profile picture URL
-  emailVerified Boolean  @default(false)
-  reviews     Review[]
-  businesses  Business[] // For owners
-  fraudReports FraudReport[]
-  reputation  Int        @default(0) // Reviewer credibility score
-  lastLoginAt DateTime?
-  // Fraud detection fields
-  isFlagged   Boolean    @default(false) // User flagged for suspicious activity
-  flagReason  String?    // Reason for flagging
-  flagCount   Int        @default(0) // Number of times flagged
-  unverifiedReviewCount Int @default(0) // Count of unverified reviews
-  lastFlaggedAt DateTime? // Last time user was flagged
-  reviewPattern Json?    // Store review pattern analysis data
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                           String        @id @default(uuid())
+  name                         String
+  email                        String        @unique
+  password                     String?
+  phone                        String?       @unique
+  role                         UserRole      @default(CUSTOMER)
+  isActive                     Boolean       @default(true)
+  provider                     AuthProvider  @default(LOCAL)
+  providerId                   String?
+  avatar                       String?
+  emailVerified                Boolean       @default(false)
+  reputation                   Int           @default(0)
+  lastLoginAt                  DateTime?
+  createdAt                    DateTime      @default(now())
+  updatedAt                    DateTime      @updatedAt
+  flagCount                    Int           @default(0)
+  flagReason                   String?
+  isFlagged                    Boolean       @default(false)
+  lastFlaggedAt                DateTime?
+  reviewPattern                Json?
+  unverifiedReviewCount        Int           @default(0)
+  bio                          String?
+  emailVerificationSentAt      DateTime?
+  emailVerificationToken       String?
+  emailVerificationTokenExpiry DateTime?
+  passwordResetSentAt          DateTime?
+  passwordResetToken           String?
+  passwordResetTokenExpiry     DateTime?
+  businesses                   Business[]
+  fraudReports                 FraudReport[]
+  reviews                      Review[]
 }
 
 model Business {
-  id            String      @id @default(uuid())
-  name          String
-  description   String?
-  category      String?
-  website       String?
-  phone         String?
-  email         String?
-  owner         User?       @relation(fields: [ownerId], references: [id])
-  ownerId       String?
-  location      String?     // Address
-  latitude      Float?      // Google Maps
-  longitude     Float?
-  isVerified    Boolean     @default(false)
-  isActive      Boolean     @default(true)
-  // Onboarding workflow fields
-  status        BusinessStatus @default(PENDING)
-  onboardingStep Int        @default(1) // 1=Basic Info, 2=Documents, 3=Payment Methods, 4=Review
-  submittedForReview Boolean @default(false)
-  reviewedAt    DateTime?
-  reviewedBy    String?     // Admin user ID who reviewed
-  reviewNotes   String?     // Admin notes during review
-  rejectionReason String?   // Reason for rejection
-  documents     Document[]
-  reviews       Review[]
-  payments      Payment[]
-  trustScore    TrustScore?
-  fraudReports  FraudReport[]
-  businessCategory BusinessCategory? @relation(fields: [businessCategoryId], references: [id])
+  id                 String            @id @default(uuid())
+  name               String
+  description        String?
+  category           String?
+  website            String?
+  phone              String?
+  email              String?
+  ownerId            String?
+  location           String?
+  latitude           Float?
+  longitude          Float?
+  isVerified         Boolean           @default(false)
+  isActive           Boolean           @default(true)
   businessCategoryId String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  onboardingStep     Int               @default(1)
+  rejectionReason    String?
+  reviewNotes        String?
+  reviewedAt         DateTime?
+  reviewedBy         String?
+  status             BusinessStatus    @default(PENDING)
+  submittedForReview Boolean           @default(false)
+  businessCategory   BusinessCategory? @relation(fields: [businessCategoryId], references: [id])
+  owner              User?             @relation(fields: [ownerId], references: [id])
+  documents          Document[]
+  fraudReports       FraudReport[]
+  payments           Payment[]
+  reviews            Review[]
+  trustScore         TrustScore?
 }
 
 model Document {
-  id          String    @id @default(uuid())
-  url         String    // File storage link
-  type        DocumentType // Document type enum
-  name        String?   // Original filename
-  size        Int?      // File size in bytes
-  mimeType    String?   // MIME type
-  verified    Boolean   @default(false)
-  verifiedAt  DateTime?
-  verifiedBy  String?   // Admin user ID who verified
-  verificationNotes String? // Admin notes
-  // OCR and AI verification fields
-  ocrText     String?   // Extracted text from OCR
-  ocrConfidence Int?    // OCR confidence score
-  aiAnalysis  Json?     // AI analysis results
-  aiVerified  Boolean   @default(false) // AI verification status
-  aiVerifiedAt DateTime? // AI verification timestamp
-  extractedData Json?   // Structured data extracted from document
-  business    Business  @relation(fields: [businessId], references: [id])
-  businessId  String
-  uploadedAt  DateTime  @default(now())
+  id                String       @id @default(uuid())
+  url               String
+  verified          Boolean      @default(false)
+  businessId        String
+  uploadedAt        DateTime     @default(now())
+  aiAnalysis        Json?
+  aiVerified        Boolean      @default(false)
+  aiVerifiedAt      DateTime?
+  extractedData     Json?
+  mimeType          String?
+  name              String?
+  ocrConfidence     Int?
+  ocrText           String?
+  size              Int?
+  verificationNotes String?
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  type              DocumentType
+  business          Business     @relation(fields: [businessId], references: [id])
 }
 
 model Review {
-  id          String    @id @default(uuid())
-  rating      Int       // 1–5
-  comment     String?
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String
-  business    Business  @relation(fields: [businessId], references: [id])
-  businessId  String
-  credibility Int       @default(0) // AI/manual scoring of review
-  isVerified  Boolean   @default(false)
-  isActive    Boolean   @default(true)
-  // Receipt validation fields
-  receiptUrl  String?   // URL to uploaded receipt image
-  receiptData Json?     // Extracted receipt data from AI
-  validationResult Json? // AI validation result
-  amount      Float?    // Amount from receipt
-  reviewDate  DateTime? // Date of the reviewed transaction
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String    @id @default(uuid())
+  rating           Int
+  comment          String?
+  userId           String
+  businessId       String
+  credibility      Int       @default(0)
+  isVerified       Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  amount           Float?
+  receiptData      Json?
+  receiptUrl       String?
+  reviewDate       DateTime?
+  validationResult Json?
+  business         Business  @relation(fields: [businessId], references: [id])
+  user             User      @relation(fields: [userId], references: [id])
 }
 
 model Payment {
-  id          String    @id @default(uuid())
-  type        PaymentType
-  number      String    // Till or Paybill number
-  verified    Boolean   @default(false)
-  business    Business  @relation(fields: [businessId], references: [id])
-  businessId  String
-  addedAt     DateTime  @default(now())
+  id         String      @id @default(uuid())
+  type       PaymentType
+  number     String
+  verified   Boolean     @default(false)
+  businessId String
+  addedAt    DateTime    @default(now())
+  business   Business    @relation(fields: [businessId], references: [id])
 }
 
 model TrustScore {
-  id          String    @id @default(uuid())
-  grade       String    // A+, A, B, C, D, F
-  score       Int       // Numeric 0–100
-  business    Business  @relation(fields: [businessId], references: [id])
-  businessId  String    @unique
-  factors     Json?     // Store scoring factors breakdown
-  updatedAt   DateTime  @updatedAt
+  id         String   @id @default(uuid())
+  grade      String
+  score      Int
+  businessId String   @unique
+  factors    Json?
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id])
 }
 
 model FraudReport {
-  id          String    @id @default(uuid())
-  reporter    User      @relation(fields: [reporterId], references: [id])
+  id          String       @id @default(uuid())
   reporterId  String
-  business    Business  @relation(fields: [businessId], references: [id])
   businessId  String
-  reason      String    // Fraud reason
+  reason      String
   description String?
   status      ReportStatus @default(PENDING)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  business    Business     @relation(fields: [businessId], references: [id])
+  reporter    User         @relation(fields: [reporterId], references: [id])
 }
 
 model BusinessCategory {
-  id          String    @id @default(uuid())
-  name        String    @unique
+  id          String     @id @default(uuid())
+  name        String     @unique
   description String?
+  createdAt   DateTime   @default(now())
   businesses  Business[]
-  createdAt   DateTime  @default(now())
 }
 
 enum DocumentType {
-  BUSINESS_DOCUMENT  // Generic business document for AI verification
+  BUSINESS_DOCUMENT
   BUSINESS_REGISTRATION
   TAX_CERTIFICATE
   TRADE_LICENSE

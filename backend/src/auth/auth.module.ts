@@ -9,12 +9,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { CloudinaryModule } from '../shared/cloudinary/cloudinary.module';
+import { MailerModule } from '../shared/mailer/mailer.module';
 
 @Module({
   imports: [
     PrismaModule,
     PassportModule,
     CloudinaryModule,
+    MailerModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

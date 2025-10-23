@@ -18,8 +18,16 @@
         <div class="flex items-center space-x-4">
           <!-- User Profile -->
           <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-              <span class="text-sm font-medium text-gray-700">{{ getUserInitials(currentUser()!) }}</span>
+            <div class="w-8 h-8 rounded-full overflow-hidden">
+              <img *ngIf="hasValidAvatar()" 
+                   [src]="currentUser()?.avatar" 
+                   [alt]="currentUser()?.name + ' profile picture'"
+                   class="w-full h-full object-cover"
+                   (error)="onImageError($event)">
+              <div *ngIf="!hasValidAvatar()" 
+                   class="w-full h-full bg-gray-300 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium text-gray-700">{{ getUserInitials(currentUser()!) }}</span>
+              </div>
             </div>
             <div class="hidden md:block">
               <p class="text-sm font-medium text-gray-900">{{ currentUser()?.name }}</p>
@@ -48,7 +56,7 @@
       </p>
       
       <!-- Business Status Badge -->
-      <div *ngIf="currentUser()?.role === 'business'" class="mt-4">
+      <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="mt-4">
         <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300" 
               style="background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%); border: 1px solid #D1D5DB; color: #374151;">
           <i class="fas fa-building mr-2" style="color: #374151;"></i>
@@ -187,18 +195,18 @@
                     </label>
                     <div class="relative">
                       <input type="text" 
-                             [(ngModel)]="businessProfile.name" 
+                             [(ngModel)]="businessProfile['name']" 
                              (blur)="onFieldBlur('name')"
                              (input)="onFieldInput('name')"
                              placeholder="Enter your business name"
                              class="form-input"
-                             [class.error]="!businessProfile.name && fieldTouched.name"
+                             [class.error]="!businessProfile['name'] && fieldTouched['name']"
                              required>
                       <div class="form-input-icon">
                         <i class="fas fa-building text-gray-400"></i>
                       </div>
                     </div>
-                    <div *ngIf="!businessProfile.name && fieldTouched.name" class="form-error">
+                    <div *ngIf="!businessProfile['name'] && fieldTouched['name']" class="form-error">
                       <i class="fas fa-exclamation-circle mr-1"></i>
                       Business name is required
                     </div>
@@ -211,7 +219,7 @@
                     </label>
                     <div class="relative">
                       <input type="text" 
-                             [(ngModel)]="businessProfile.catchphrase" 
+                             [(ngModel)]="businessProfile['catchphrase']" 
                              placeholder="e.g., 'Quality First, Always'"
                              class="form-input">
                       <div class="form-input-icon">
@@ -229,7 +237,7 @@
                     Business Description
                   </label>
                   <div class="relative">
-                    <textarea [(ngModel)]="businessProfile.description" 
+                    <textarea [(ngModel)]="businessProfile['description']" 
                               placeholder="Describe your business, what you do, and what makes you unique..."
                               rows="4"
                               class="form-textarea"></textarea>
@@ -249,7 +257,7 @@
                     </label>
                     <div class="relative">
                       <input type="url" 
-                             [(ngModel)]="businessProfile.website" 
+                             [(ngModel)]="businessProfile['website']" 
                              placeholder="https://example.com"
                              class="form-input">
                       <div class="form-input-icon">
@@ -267,22 +275,22 @@
                     </label>
                     <div class="relative">
                       <input type="tel" 
-                             [(ngModel)]="businessProfile.phone" 
+                             [(ngModel)]="businessProfile['phone']" 
                              (blur)="onFieldBlur('phone')"
                              (input)="onFieldInput('phone')"
                              placeholder="+254 700 000 000"
                              class="form-input"
-                             [class.error]="!businessProfile.phone && fieldTouched.phone"
+                             [class.error]="!businessProfile['phone'] && fieldTouched['phone']"
                              required>
                       <div class="form-input-icon">
                         <i class="fas fa-phone text-gray-400"></i>
                       </div>
                     </div>
-                    <div *ngIf="!businessProfile.phone && fieldTouched.phone" class="form-error">
+                    <div *ngIf="!businessProfile['phone'] && fieldTouched['phone']" class="form-error">
                       <i class="fas fa-exclamation-circle mr-1"></i>
                       Phone number is required
                     </div>
-                    <div *ngIf="businessProfile.phone && fieldTouched.phone" class="form-help">Primary contact number</div>
+                    <div *ngIf="businessProfile['phone'] && fieldTouched['phone']" class="form-help">Primary contact number</div>
                   </div>
                   
                   <div class="form-group">
@@ -293,26 +301,26 @@
                     </label>
                     <div class="relative">
                       <input type="email" 
-                             [(ngModel)]="businessProfile.email" 
+                             [(ngModel)]="businessProfile['email']" 
                              (blur)="onFieldBlur('email')"
                              (input)="onFieldInput('email')"
                              placeholder="contact@business.com"
                              class="form-input"
-                             [class.error]="(!businessProfile.email || !isValidEmail(businessProfile.email)) && fieldTouched.email"
+                             [class.error]="(!businessProfile['email'] || !isValidEmail(businessProfile['email'])) && fieldTouched['email']"
                              required>
                       <div class="form-input-icon">
                         <i class="fas fa-envelope text-gray-400"></i>
                       </div>
                     </div>
-                    <div *ngIf="!businessProfile.email && fieldTouched.email" class="form-error">
+                    <div *ngIf="!businessProfile['email'] && fieldTouched['email']" class="form-error">
                       <i class="fas fa-exclamation-circle mr-1"></i>
                       Email address is required
                     </div>
-                    <div *ngIf="businessProfile.email && !isValidEmail(businessProfile.email) && fieldTouched.email" class="form-error">
+                    <div *ngIf="businessProfile['email'] && !isValidEmail(businessProfile['email']) && fieldTouched['email']" class="form-error">
                       <i class="fas fa-exclamation-circle mr-1"></i>
                       Please enter a valid email address
                     </div>
-                    <div *ngIf="businessProfile.email && isValidEmail(businessProfile.email) && fieldTouched.email" class="form-help">Business email for inquiries</div>
+                    <div *ngIf="businessProfile['email'] && isValidEmail(businessProfile['email']) && fieldTouched['email']" class="form-help">Business email for inquiries</div>
                   </div>
                 </div>
 

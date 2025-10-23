@@ -4,14 +4,17 @@ import {
   InternalServerErrorException,
   NotFoundException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailerService } from '../shared/mailer/mailer.service';
 import { SignUpDto, SignUpResponseDto } from './dto/signup.dto';
 import { UserRoleDto, UserRole } from './dto/user-role.enum';
 import { LoginResponseDto } from './dto/login.dto';
+import { VerifyEmailDto, ResendVerificationDto } from './dto/profile.dto';
 import {
   User,
   UserWithoutPassword,
@@ -62,6 +65,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailerService: MailerService,
   ) {
     this.users = new PrismaUserRepository(this.prisma);
   }
@@ -79,16 +83,24 @@ export class AuthService {
       // Hash password
       const hashedPassword: string = await bcryptHash(dto.password, 10);
 
-      // Determine user role based on signup data
-      const userRole = dto.role === 'business' ? UserRole.BUSINESS_OWNER : UserRole.CUSTOMER;
+      // Generate 6-digit verification code
+      const emailVerificationCode = Math.floor(
+        100000 + Math.random() * 900000,
+      ).toString();
+      const emailVerificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-      // Create user with specified role
-      const user = await this.users.create({
-        name: dto.name,
-        email: dto.email,
-        password: hashedPassword,
-        role: userRole,
-        phone: dto.phone,
+      // Create user with CUSTOMER role by default
+      const user = await this.prisma.user.create({
+        data: {
+          name: dto.name,
+          email: dto.email,
+          password: hashedPassword,
+          role: UserRole.CUSTOMER,
+          phone: dto.phone,
+          emailVerificationToken: emailVerificationCode, // Reusing the field for the 6-digit code
+          emailVerificationTokenExpiry: emailVerificationCodeExpiry,
+          emailVerificationSentAt: new Date(),
+        } as any, // Type assertion to bypass Prisma client type issues
       });
 
       // Generate JWT
@@ -97,15 +109,35 @@ export class AuthService {
         email: user.email,
       });
 
-      this.logger.log(`User created successfully: ${user.id} with role: ${user.role}`);
+      this.logger.log(
+        `User created successfully: ${user.id} with role: ${user.role}`,
+      );
+
+      // Send welcome email with verification code
+      try {
+        await this.mailerService.sendWelcomeEmail(
+          user.email,
+          user.name,
+          emailVerificationCode,
+        );
+        this.logger.log(
+          `Welcome email with verification code sent to ${user.email}`,
+        );
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to send welcome email to ${user.email}:`,
+          emailError,
+        );
+        // Don't throw error - user creation was successful
+      }
 
       return {
         id: user.id,
         name: user.name,
         email: user.email,
-        phone: user.phone,
+        phone: user.phone || undefined,
         role: user.role as unknown as UserRoleDto,
-        avatar: user.avatar,
+        avatar: user.avatar || undefined,
         createdAt: user.createdAt,
         accessToken: token,
       };
@@ -170,6 +202,13 @@ export class AuthService {
         return null;
       }
 
+      // Check if email is verified
+      if (!user.emailVerified) {
+        throw new UnauthorizedException(
+          'Please verify your email before logging in. Check your inbox for the verification code.',
+        );
+      }
+
       const passwordValid: boolean = await bcryptCompare(
         inputPassword,
         user.password,
@@ -184,6 +223,9 @@ export class AuthService {
       return result;
     } catch (error) {
       this.logger.error('User validation error:', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       return null;
     }
   }
@@ -385,6 +427,166 @@ export class AuthService {
     } catch (error) {
       this.logger.error('OAuth validation error:', error);
       throw new InternalServerErrorException('OAuth validation failed');
+    }
+  }
+
+  /**
+   * Verify email with 6-digit code
+   */
+  async verifyEmail(dto: VerifyEmailDto): Promise<{ message: string }> {
+    try {
+      this.logger.log(`Email verification attempt with code: ${dto.token}`);
+
+      const user = await this.prisma.user.findFirst({
+        where: {
+          emailVerificationToken: dto.token,
+          emailVerificationTokenExpiry: {
+            gt: new Date(), // Code not expired
+          },
+          emailVerified: false,
+        } as any, // Type assertion to bypass Prisma client type issues
+      });
+
+      if (!user) {
+        throw new BadRequestException('Invalid or expired verification code.');
+      }
+
+      // Mark email as verified and clear verification data
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: true,
+          emailVerificationToken: null,
+          emailVerificationTokenExpiry: null,
+        } as any, // Type assertion to bypass Prisma client type issues
+      });
+
+      this.logger.log(`Email verified successfully for user: ${user.id}`);
+
+      return {
+        message: 'Email verified successfully! You can now log in.',
+      };
+    } catch (error) {
+      this.logger.error('Email verification error:', error);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Something went wrong during email verification.',
+      );
+    }
+  }
+
+  /**
+   * Resend verification code
+   */
+  async resendVerificationCode(
+    dto: ResendVerificationDto,
+  ): Promise<{ message: string }> {
+    try {
+      this.logger.log(
+        `Resend verification code request for email: ${dto.email}`,
+      );
+
+      const user = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
+
+      if (user.emailVerified) {
+        throw new BadRequestException('Email is already verified.');
+      }
+
+      // Check if we can resend (rate limiting - max 3 attempts per hour)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const recentAttempts = await this.prisma.user.count({
+        where: {
+          email: dto.email,
+          emailVerificationSentAt: {
+            gt: oneHourAgo,
+          },
+        } as any, // Type assertion to bypass Prisma client type issues
+      });
+
+      if (recentAttempts >= 3) {
+        throw new BadRequestException(
+          'Too many verification attempts. Please wait 1 hour before trying again.',
+        );
+      }
+
+      // Generate new 6-digit verification code
+      const emailVerificationCode = Math.floor(
+        100000 + Math.random() * 900000,
+      ).toString();
+      const emailVerificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Update user with new verification code
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationToken: emailVerificationCode,
+          emailVerificationTokenExpiry: emailVerificationCodeExpiry,
+          emailVerificationSentAt: new Date(),
+        } as any, // Type assertion to bypass Prisma client type issues
+      });
+
+      // Send verification email
+      try {
+        await this.mailerService.sendEmailVerification(
+          user.email,
+          user.name,
+          emailVerificationCode,
+        );
+        this.logger.log(`Verification code resent to ${user.email}`);
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to send verification email to ${user.email}:`,
+          emailError,
+        );
+        throw new InternalServerErrorException(
+          'Failed to send verification email.',
+        );
+      }
+
+      return {
+        message: 'Verification code sent to your email.',
+      };
+    } catch (error) {
+      this.logger.error('Resend verification code error:', error);
+
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Something went wrong while resending verification code.',
+      );
+    }
+  }
+
+  /**
+   * Check if user email is verified before login
+   */
+  async validateEmailVerification(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { emailVerified: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email before logging in. Check your inbox for the verification code.',
+      );
     }
   }
 }

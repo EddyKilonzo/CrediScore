@@ -30,7 +30,7 @@
         </a>
         
         <!-- Customer Links -->
-        <ng-container *ngIf="currentUser()?.role === 'user'">
+        <ng-container *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'">
           <a 
             routerLink="/business/search" 
             routerLinkActive="text-blue-400"
@@ -52,7 +52,7 @@
         </ng-container>
 
         <!-- Business Owner Links -->
-        <ng-container *ngIf="currentUser()?.role === 'business'">
+        <ng-container *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'">
           <a 
             routerLink="/business/my-business" 
             routerLinkActive="text-blue-400"
@@ -122,12 +122,17 @@
             <button class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors">
               <!-- User Avatar -->
               <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium overflow-hidden">
+                <span 
+                  *ngIf="!getProfileImageUrl()"
+                  class="flex items-center justify-center w-full h-full">
+                  {{ getUserInitials(currentUser()!) }}
+                </span>
                 <img 
                   *ngIf="getProfileImageUrl()" 
                   [src]="imageService.getOptimizedProfileImageUrl(getProfileImageUrl()!, 'small')" 
                   alt="Profile" 
-                  class="w-full h-full object-cover">
-                <span *ngIf="!getProfileImageUrl()">{{ getUserInitials(currentUser()!) }}</span>
+                  class="w-full h-full object-cover"
+                  (error)="onImageError($event)">
               </div>
               
               <!-- User Info -->
@@ -151,7 +156,7 @@
               <div class="py-1">
                 <!-- Customer Dashboard -->
                 <a 
-                  *ngIf="currentUser()?.role === 'user'"
+                  *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'"
                   routerLink="/dashboard" 
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +167,7 @@
                 
                 <!-- Business Dashboard -->
                 <a 
-                  *ngIf="currentUser()?.role === 'business'"
+                  *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'"
                   routerLink="/business/dashboard" 
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +178,7 @@
                 
                 <!-- Business My Business -->
                 <a 
-                  *ngIf="currentUser()?.role === 'business'"
+                  *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'"
                   routerLink="/business/my-business" 
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

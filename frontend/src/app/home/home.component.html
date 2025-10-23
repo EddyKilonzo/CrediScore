@@ -55,12 +55,17 @@
               <button class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors backdrop-blur-sm">
                 <!-- User Avatar -->
                 <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium overflow-hidden">
+                  <span 
+                    *ngIf="!getProfileImageUrl()"
+                    class="flex items-center justify-center w-full h-full">
+                    {{ getUserInitials(currentUser()!) }}
+                  </span>
                   <img 
                     *ngIf="getProfileImageUrl()" 
                     [src]="getProfileImageUrl()" 
                     alt="Profile" 
-                    class="w-full h-full object-cover">
-                  <span *ngIf="!getProfileImageUrl()">{{ getUserInitials(currentUser()!) }}</span>
+                    class="w-full h-full object-cover"
+                    (error)="onImageError($event)">
                 </div>
                 
                 <!-- User Info -->

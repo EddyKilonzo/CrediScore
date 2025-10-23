@@ -1,0 +1,73 @@
+/* Email Verification Component Styles */
+
+/* Custom input styling for verification code */
+input[type="text"][formControlName="code"] {
+  letter-spacing: 0.5em;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+/* Focus state for verification code input */
+input[type="text"][formControlName="code"]:focus {
+  letter-spacing: 0.5em;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Success state styling */
+.verification-success {
+  background-color: #f0f9ff;
+  border-color: #0ea5e9;
+  color: #0c4a6e;
+}
+
+/* Error state styling */
+.verification-error {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+/* Resend form animation */
+.resend-form-enter {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cooldown button styling */
+.cooldown-button {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .verification-code-input {
+    font-size: 1.5rem;
+    letter-spacing: 0.3em;
+  }
+}

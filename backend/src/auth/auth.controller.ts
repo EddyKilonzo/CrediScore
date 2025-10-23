@@ -29,6 +29,7 @@ import {
   ResetPasswordDto,
   ChangePasswordDto,
 } from './dto/login.dto';
+import { VerifyEmailDto, ResendVerificationDto } from './dto/profile.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
@@ -284,5 +285,67 @@ export class AuthController {
       console.error('OAuth session retrieval error:', error);
       return res.status(500).json({ error: 'Failed to retrieve session data' });
     }
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify email with 6-digit code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Email verified successfully! You can now log in.',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired verification code',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend email verification code' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification code sent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Verification code sent to your email.',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already verified or too many attempts',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+  })
+  async resendVerificationCode(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerificationCode(dto);
   }
 }

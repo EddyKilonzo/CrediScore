@@ -100,7 +100,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Check if user is a business owner and redirect to business dashboard
     const user = this.currentUser();
-    if (user?.role === 'business') {
+    if (user?.role === 'business' || user?.role === 'BUSINESS_OWNER') {
       // Redirect to business dashboard
       window.location.href = '/business/dashboard';
       return;
@@ -118,7 +118,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private setupQuickActions() {
     const user = this.currentUser();
-    if (user?.role === 'business') {
+    if (user?.role === 'business' || user?.role === 'BUSINESS_OWNER') {
       this.quickActions = [
         {
           title: 'Add Business',

@@ -863,4 +863,18 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       default: return 'bg-gray-500';
     }
   }
+
+  onImageError(event: any): void {
+    // Hide the image and show initials instead
+    event.target.style.display = 'none';
+    const fallbackDiv = event.target.nextElementSibling;
+    if (fallbackDiv) {
+      fallbackDiv.style.display = 'flex';
+    }
+  }
+
+  hasValidAvatar(): boolean {
+    const user = this.currentUser();
+    return !!(user?.avatar && user.avatar.trim() !== '' && user.avatar.startsWith('http'));
+  }
 }

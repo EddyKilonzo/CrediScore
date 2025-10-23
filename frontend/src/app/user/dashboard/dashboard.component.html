@@ -11,7 +11,7 @@
         Welcome back, {{ currentUser()?.name }}! Here's your CrediScore overview.
       </p>
       <!-- Customer Reputation Level -->
-      <div *ngIf="currentUser()?.role === 'user'" class="mt-4">
+      <div *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'" class="mt-4">
         <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
           <i class="uil uil-star mr-2"></i>
           {{ getCustomerReputationLevel() }}
@@ -85,7 +85,7 @@
       </div>
 
       <!-- Customer Reputation Card -->
-      <div *ngIf="currentUser()?.role === 'user'" class="dashboard-card stats-card hover-lift">
+      <div *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'" class="dashboard-card stats-card hover-lift">
         <div class="flex items-center justify-between">
           <div>
             <p class="card-label">Reputation Level</p>
@@ -184,7 +184,7 @@
         </div>
 
         <!-- Your Businesses (for business owners) -->
-        <div *ngIf="currentUser()?.role === 'business'" class="dashboard-card content-card smooth-fade-in">
+        <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="dashboard-card content-card smooth-fade-in">
           <div class="flex items-center justify-between mb-6">
             <h3 class="section-title">Your Businesses</h3>
             <a routerLink="/business" class="section-link text-sm text-primary hover:text-primary-600 font-medium">

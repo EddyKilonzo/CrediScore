@@ -23,23 +23,42 @@
   </ul>
 </div>
 
+<!-- Email Verification Section -->
+<% if (verificationCode) { %>
+<div style="background: #f8f9fa; border-radius: 12px; padding: 25px; margin: 30px 0; text-align: center;">
+  <h3 style="color: #2C5270; font-size: 18px; font-weight: 600; margin: 0 0 15px 0;">Verify Your Email Address</h3>
+  <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0 0 20px 0;">
+    To complete your registration, please verify your email address using the code below:
+  </p>
+  
+  <!-- Verification Code Display -->
+  <div style="background: #ffffff; border: 2px solid #2C5270; border-radius: 8px; padding: 20px; margin: 20px 0; display: inline-block;">
+    <div style="font-size: 32px; font-weight: 700; color: #2C5270; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+      <%= verificationCode %>
+    </div>
+  </div>
+  
+  <p style="font-size: 14px; color: #666; margin: 15px 0 0 0;">
+    Enter this code in the verification form on our website.<br>
+    <strong>This code expires in 15 minutes.</strong>
+  </p>
+  
+  <div style="margin-top: 25px;">
+    <a href="<%= appUrl %>/verify-email" 
+       style="display: inline-block; background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%); color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(44, 82, 112, 0.3);">
+      Go to Verification Page →
+    </a>
+  </div>
+</div>
+<% } else { %>
 <!-- CTA Section -->
 <div style="text-align: center; margin: 30px 0;">
-  <% if (verificationUrl) { %>
-    <a href="<%= verificationUrl %>" 
-       style="display: inline-block; background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%); color: #ffffff; text-decoration: none; padding: 15px 35px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(44, 82, 112, 0.3);">
-      Verify Your Email →
-    </a>
-    <p style="font-size: 14px; color: #666; margin: 15px 0 0 0;">
-      Verification link expires at: <strong><%= new Date(Date.now() + 86400000).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) %></strong>
-    </p>
-  <% } else { %>
-    <a href="<%= appUrl %>/dashboard" 
-       style="display: inline-block; background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%); color: #ffffff; text-decoration: none; padding: 15px 35px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(44, 82, 112, 0.3);">
-      Go to Dashboard →
-    </a>
-  <% } %>
+  <a href="<%= appUrl %>/dashboard" 
+     style="display: inline-block; background: linear-gradient(135deg, #2C5270 0%, #3A6B8A 100%); color: #ffffff; text-decoration: none; padding: 15px 35px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(44, 82, 112, 0.3);">
+    Go to Dashboard →
+  </a>
 </div>
+<% } %>
 
 <!-- Support Section -->
 <div style="background: #f0f8ff; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center;">

@@ -237,11 +237,11 @@ export class AuthService {
   }
 
   isBusiness(): boolean {
-    return this.hasRole('business');
+    return this.hasRole('business') || this.hasRole('BUSINESS_OWNER');
   }
 
   isUser(): boolean {
-    return this.hasRole('user');
+    return this.hasRole('user') || this.hasRole('CUSTOMER');
   }
 
   updateProfile(updateData: Partial<User>): Observable<User> {
@@ -249,5 +249,18 @@ export class AuthService {
     const headers = { 'Authorization': `Bearer ${token}` };
     
     return this.http.patch<User>(`${this.API_URL}/user/profile`, updateData, { headers });
+  }
+
+  // Email verification methods
+  verifyEmail(code: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.API_URL}/auth/verify-email`, {
+      token: code
+    });
+  }
+
+  resendVerificationCode(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.API_URL}/auth/resend-verification`, {
+      email: email
+    });
   }
 }

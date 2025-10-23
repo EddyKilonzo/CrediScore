@@ -88,7 +88,7 @@ export class ProfileComponent implements OnInit {
 
     return this.allTabs.filter(tab => {
       if (tab.id === 'business') {
-        return user.role === 'business' || user.role === 'admin';
+        return user.role === 'business' || user.role === 'BUSINESS_OWNER' || user.role === 'admin';
       }
       return true;
     });

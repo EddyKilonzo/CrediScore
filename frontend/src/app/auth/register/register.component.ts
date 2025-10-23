@@ -89,14 +89,13 @@ export class RegisterComponent implements OnInit {
         next: (response) => {
           this.isLoading.set(false);
           
-          if (response.user.role === 'business') {
-            this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Your business account has been created. Please complete your business profile by uploading verification documents.`);
-          } else {
-            this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Your account has been created successfully.`);
-          }
+          // Show success message
+          this.toastService.success(`Welcome to CrediScore, ${response.user.name.split(' ')[0]}! Please check your email for verification code.`);
           
-          // Redirect based on user role
-          this.redirectBasedOnRole(response.user.role);
+          // Redirect to email verification page
+          this.router.navigate(['/auth/verify-email'], { 
+            queryParams: { email: response.user.email } 
+          });
         },
         error: (error) => {
           this.isLoading.set(false);

@@ -19,35 +19,32 @@ export class MailerService {
   ) {}
 
   /**
-   * Send a welcome email to a new user
+   * Send a welcome email to a new user with verification code
    */
   async sendWelcomeEmail(
     email: string,
     name: string,
-    verificationToken?: string,
+    verificationCode?: string,
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
       'http://localhost:3000',
     );
-    const verificationUrl = verificationToken
-      ? `${appUrl}/verify-email?token=${verificationToken}`
-      : null;
 
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Welcome to CrediScore! 🎉',
+        subject: 'Welcome to CrediScore! 🎉 - Verify Your Email',
         template: 'welcome',
         context: {
           name,
           email,
-          verificationUrl,
+          verificationCode,
           appUrl,
           year: new Date().getFullYear(),
         },
       });
-      this.logger.log(`Welcome email sent to ${email}`);
+      this.logger.log(`Welcome email with verification code sent to ${email}`);
     } catch (error) {
       this.logger.error(`Failed to send welcome email to ${email}:`, error);
       throw error;
@@ -92,18 +89,17 @@ export class MailerService {
   }
 
   /**
-   * Send an email verification email
+   * Send an email verification code
    */
   async sendEmailVerification(
     email: string,
     name: string,
-    verificationToken: string,
+    verificationCode: string,
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
       'http://localhost:3000',
     );
-    const verificationUrl = `${appUrl}/verify-email?token=${verificationToken}`;
 
     try {
       await this.mailerService.sendMail({
@@ -113,12 +109,12 @@ export class MailerService {
         context: {
           name,
           email,
-          verificationUrl,
+          verificationCode,
           appUrl,
           year: new Date().getFullYear(),
         },
       });
-      this.logger.log(`Email verification sent to ${email}`);
+      this.logger.log(`Email verification code sent to ${email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send email verification to ${email}:`,
@@ -190,7 +186,10 @@ export class MailerService {
       });
       this.logger.log(`Business welcome email sent to ${email}`);
     } catch (error) {
-      this.logger.error(`Failed to send business welcome email to ${email}:`, error);
+      this.logger.error(
+        `Failed to send business welcome email to ${email}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -240,9 +239,14 @@ export class MailerService {
           year: new Date().getFullYear(),
         },
       });
-      this.logger.log(`Business verification status email sent to ${email} - Status: ${status}`);
+      this.logger.log(
+        `Business verification status email sent to ${email} - Status: ${status}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to send business verification status email to ${email}:`, error);
+      this.logger.error(
+        `Failed to send business verification status email to ${email}:`,
+        error,
+      );
       throw error;
     }
   }

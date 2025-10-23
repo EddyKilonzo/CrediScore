@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
-import * as FormData from 'form-data';
+import FormData from 'form-data';
 
 export interface OCRResult {
   text: string;
@@ -43,7 +43,8 @@ export class OCRService {
 
   constructor() {
     this.apiKey = process.env.OCR_API_KEY || '';
-    this.apiUrl = process.env.OCR_API_URL || 'https://api.ocr.space/parse/image';
+    this.apiUrl =
+      process.env.OCR_API_URL || 'https://api.ocr.space/parse/image';
   }
 
   /**
@@ -78,25 +79,29 @@ export class OCRService {
 
       const result = parsedResults[0];
       const extractedText = result.ParsedText || '';
-      const confidence = result.TextOverlay?.Lines?.reduce(
-        (acc: number, line: any) => acc + (line.Words?.[0]?.Confidence || 0),
-        0,
-      ) / (result.TextOverlay?.Lines?.length || 1) || 0;
+      const confidence =
+        result.TextOverlay?.Lines?.reduce(
+          (acc: number, line: any) => acc + (line.Words?.[0]?.Confidence || 0),
+          0,
+        ) / (result.TextOverlay?.Lines?.length || 1) || 0;
 
       // Extract bounding boxes for better analysis
-      const boundingBoxes = result.TextOverlay?.Lines?.map((line: any) => ({
-        text: line.LineText || '',
-        confidence: line.Words?.[0]?.Confidence || 0,
-        coordinates: {
-          x: line.Words?.[0]?.Left || 0,
-          y: line.Words?.[0]?.Top || 0,
-          width: line.Words?.[0]?.Width || 0,
-          height: line.Words?.[0]?.Height || 0,
-        },
-      })) || [];
+      const boundingBoxes =
+        result.TextOverlay?.Lines?.map((line: any) => ({
+          text: line.LineText || '',
+          confidence: line.Words?.[0]?.Confidence || 0,
+          coordinates: {
+            x: line.Words?.[0]?.Left || 0,
+            y: line.Words?.[0]?.Top || 0,
+            width: line.Words?.[0]?.Width || 0,
+            height: line.Words?.[0]?.Height || 0,
+          },
+        })) || [];
 
-      this.logger.log(`Successfully extracted text with confidence: ${confidence}`);
-      
+      this.logger.log(
+        `Successfully extracted text with confidence: ${confidence}`,
+      );
+
       return {
         text: extractedText,
         confidence: Math.round(confidence),
@@ -155,12 +160,14 @@ export class OCRService {
 
       // Use OpenAI API for document analysis
       const openaiResponse = await this.callOpenAI(analysisPrompt);
-      
+
       try {
         const analysis = JSON.parse(openaiResponse);
-        
-        this.logger.log(`Document analysis completed - Type: ${analysis.documentType}, Valid: ${analysis.isValid}`);
-        
+
+        this.logger.log(
+          `Document analysis completed - Type: ${analysis.documentType}, Valid: ${analysis.isValid}`,
+        );
+
         return {
           documentType: analysis.documentType || 'UNKNOWN',
           extractedData: analysis.extractedData || {},
@@ -169,7 +176,9 @@ export class OCRService {
           validationErrors: analysis.validationErrors || [],
         };
       } catch (parseError) {
-        this.logger.warn('Failed to parse AI analysis response, using fallback');
+        this.logger.warn(
+          'Failed to parse AI analysis response, using fallback',
+        );
         return this.fallbackDocumentAnalysis(ocrResult.text);
       }
     } catch (error) {
@@ -195,7 +204,8 @@ export class OCRService {
           messages: [
             {
               role: 'system',
-              content: 'You are an expert document analyst specializing in business document verification. Always respond with valid JSON.',
+              content:
+                'You are an expert document analyst specializing in business document verification. Always respond with valid JSON.',
             },
             {
               role: 'user',
@@ -207,7 +217,7 @@ export class OCRService {
         },
         {
           headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
+            Authorization: `Bearer ${openaiApiKey}`,
             'Content-Type': 'application/json',
           },
           timeout: 30000,
@@ -226,21 +236,36 @@ export class OCRService {
    */
   private fallbackDocumentAnalysis(text: string): DocumentAnalysisResult {
     const upperText = text.toUpperCase();
-    
+
     // Determine document type based on keywords
     let documentType = 'UNKNOWN';
-    if (upperText.includes('BUSINESS REGISTRATION') || upperText.includes('CERTIFICATE OF INCORPORATION')) {
+    if (
+      upperText.includes('BUSINESS REGISTRATION') ||
+      upperText.includes('CERTIFICATE OF INCORPORATION')
+    ) {
       documentType = 'BUSINESS_REGISTRATION';
-    } else if (upperText.includes('TAX CERTIFICATE') || upperText.includes('TAX COMPLIANCE')) {
+    } else if (
+      upperText.includes('TAX CERTIFICATE') ||
+      upperText.includes('TAX COMPLIANCE')
+    ) {
       documentType = 'TAX_CERTIFICATE';
-    } else if (upperText.includes('TRADE LICENSE') || upperText.includes('BUSINESS LICENSE')) {
+    } else if (
+      upperText.includes('TRADE LICENSE') ||
+      upperText.includes('BUSINESS LICENSE')
+    ) {
       documentType = 'TRADE_LICENSE';
     }
 
     // Extract basic information using regex patterns
-    const businessNameMatch = text.match(/(?:business name|company name|name of business)[:\s]+([^\n\r]+)/i);
-    const registrationMatch = text.match(/(?:registration number|reg no|reg\. no)[:\s]+([A-Z0-9\-\/]+)/i);
-    const taxMatch = text.match(/(?:tax number|tax no|tax\. no|pin)[:\s]+([A-Z0-9\-\/]+)/i);
+    const businessNameMatch = text.match(
+      /(?:business name|company name|name of business)[:\s]+([^\n\r]+)/i,
+    );
+    const registrationMatch = text.match(
+      /(?:registration number|reg no|reg\. no)[:\s]+([A-Z0-9\-\/]+)/i,
+    );
+    const taxMatch = text.match(
+      /(?:tax number|tax no|tax\. no|pin)[:\s]+([A-Z0-9\-\/]+)/i,
+    );
     const dateMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/g);
 
     const extractedData = {
@@ -307,19 +332,23 @@ export class OCRService {
       `;
 
       const openaiResponse = await this.callOpenAI(verificationPrompt);
-      
+
       try {
         const verification = JSON.parse(openaiResponse);
-        
-        this.logger.log(`Document authenticity verification completed - Authentic: ${verification.isAuthentic}`);
-        
+
+        this.logger.log(
+          `Document authenticity verification completed - Authentic: ${verification.isAuthentic}`,
+        );
+
         return {
           isAuthentic: verification.isAuthentic || false,
           confidence: verification.confidence || 0,
           reasons: verification.reasons || [],
         };
       } catch (parseError) {
-        this.logger.warn('Failed to parse authenticity verification response, using fallback');
+        this.logger.warn(
+          'Failed to parse authenticity verification response, using fallback',
+        );
         return this.fallbackAuthenticityVerification(ocrResult, analysisResult);
       }
     } catch (error) {
@@ -362,13 +391,21 @@ export class OCRService {
 
     // Check for official elements
     const text = ocrResult.text.toUpperCase();
-    if (text.includes('SEAL') || text.includes('STAMP') || text.includes('OFFICIAL')) {
+    if (
+      text.includes('SEAL') ||
+      text.includes('STAMP') ||
+      text.includes('OFFICIAL')
+    ) {
       confidence += 10;
       reasons.push('Contains official elements');
     }
 
     // Check for suspicious patterns
-    if (text.includes('FAKE') || text.includes('COPY') || text.includes('SAMPLE')) {
+    if (
+      text.includes('FAKE') ||
+      text.includes('COPY') ||
+      text.includes('SAMPLE')
+    ) {
       confidence -= 30;
       reasons.push('Contains suspicious keywords');
     }
