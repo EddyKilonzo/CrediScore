@@ -252,6 +252,50 @@ export class MailerService {
   }
 
   /**
+   * Send account status change notification
+   */
+  async sendAccountStatusChangeEmail(
+    email: string,
+    name: string,
+    status: 'activated' | 'deactivated',
+    reason?: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>(
+      'APP_URL',
+      'http://localhost:3000',
+    );
+
+    const subject = status === 'activated' 
+      ? 'Your Account Has Been Activated - CrediScore'
+      : 'Your Account Has Been Deactivated - CrediScore';
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject,
+        template: 'account-status-change',
+        context: {
+          name,
+          email,
+          status,
+          reason,
+          appUrl,
+          year: new Date().getFullYear(),
+        },
+      });
+      this.logger.log(
+        `Account status change email sent to ${email} - Status: ${status}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send account status change email to ${email}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Send a generic email with custom template
    */
   async sendEmail(options: SendEmailOptions): Promise<void> {

@@ -606,4 +606,23 @@ export class AdminController {
   async getBusinessOnboardingDetails(@Param('id') businessId: string) {
     return this.adminService.getBusinessOnboardingDetails(businessId);
   }
+
+  @Post('test-email')
+  @ApiOperation({ summary: 'Test email functionality' })
+  @ApiResponse({
+    status: 200,
+    description: 'Test email sent successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async testEmail(@Request() req: { user: UserWithoutPassword }) {
+    try {
+      await this.adminService.testEmailFunctionality(req.user.email, req.user.name);
+      return { message: 'Test email sent successfully' };
+    } catch (error) {
+      throw error;
+    }
+  }
 }

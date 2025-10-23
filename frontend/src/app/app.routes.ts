@@ -1,5 +1,8 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from './core/guards/auth.guard';
+import { RoleGuard } from './core/guards/role.guard';
 
+// Application routes configuration
 export const routes: Routes = [
   // Home/Landing Page
   {
@@ -42,13 +45,16 @@ export const routes: Routes = [
   // Profile Route
   {
     path: 'profile',
-    loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent)
+    loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent),
+    canActivate: [AuthGuard]
   },
 
   // User Dashboard Route
   {
     path: 'dashboard',
-    loadComponent: () => import('./user/dashboard/dashboard.component').then(m => m.DashboardComponent)
+    loadComponent: () => import('./user/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['CUSTOMER', 'user'] }
   },
 
   // Business Routes
@@ -57,11 +63,51 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
-        loadComponent: () => import('./business/business-dashboard/business-dashboard.component').then(m => m.BusinessDashboardComponent)
+        loadComponent: () => import('./business/business-dashboard/business-dashboard.component').then(m => m.BusinessDashboardComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['BUSINESS_OWNER', 'business'] }
       },
       {
         path: 'my-business',
-        loadComponent: () => import('./business/my-business/my-business.component').then(m => m.MyBusinessComponent)
+        loadComponent: () => import('./business/my-business/my-business.component').then(m => m.MyBusinessComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['BUSINESS_OWNER', 'business'] }
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      }
+    ]
+  },
+
+  // Admin Routes
+  {
+    path: 'admin',
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./admin/admin-dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('./admin/manage-users/manage-users.component').then(m => m.ManageUsersComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'businesses',
+        loadComponent: () => import('./admin/manage-businesses/manage-businesses.component').then(m => m.ManageBusinessesComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'reports',
+        loadComponent: () => import('./admin/reports/reports.component').then(m => m.ReportsComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
       },
       {
         path: '',

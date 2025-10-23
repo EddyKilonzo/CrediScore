@@ -1,0 +1,414 @@
+<div class="manage-users">
+  <!-- Welcome Section - Matching dashboard -->
+  <div class="welcome-section">
+    <div class="dashboard-container">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="welcome-title">Manage Users</h1>
+          <p class="welcome-subtitle">View and manage user accounts, roles, and permissions</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <button 
+            (click)="refreshUsers()" 
+            [disabled]="getLoadingState()"
+            class="refresh-btn">
+            <svg class="refresh-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="dashboard-container">
+      <div class="filters-grid">
+        <div class="search-box">
+          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Search users by name, email, or phone..."
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearch()"
+            class="search-input">
+        </div>
+        
+        <div class="filter-controls">
+          <select 
+            [(ngModel)]="roleFilter"
+            (ngModelChange)="onFilterChange()"
+            class="filter-select"
+            data-filter="role">
+            <option value="">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="BUSINESS_OWNER">Business Owner</option>
+            <option value="CUSTOMER">Customer</option>
+          </select>
+          
+          <select 
+            [(ngModel)]="statusFilter"
+            (ngModelChange)="onFilterChange()"
+            class="filter-select"
+            data-filter="status">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        
+        <div class="clear-filters-container">
+          <button 
+            (click)="clearFilters()"
+            class="clear-filters-btn"
+            title="Clear all filters">
+            <svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="getLoadingState()" class="loading-container">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Loading users...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="getErrorState() && !getLoadingState()" class="error-container">
+    <div class="error-content">
+      <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <h3 class="error-title">Error Loading Users</h3>
+      <p class="error-message">{{ getErrorState() }}</p>
+      <button (click)="refreshUsers()" class="retry-btn">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Users Cards -->
+  <div *ngIf="!getLoadingState() && !getErrorState()" class="users-content">
+    <div class="users-cards-container">
+      <!-- Users Grid -->
+      <div class="users-grid" *ngIf="getUsers().length > 0">
+        <div *ngFor="let user of getUsers()" class="user-card hover-lift">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="user-avatar">
+              <img 
+                *ngIf="user.avatar" 
+                [src]="user.avatar" 
+                [alt]="user.name + ' profile picture'"
+                class="avatar-image"
+                (error)="onImageError($event)">
+              <div 
+                *ngIf="!user.avatar" 
+                class="avatar-placeholder">
+                <span class="avatar-initial">{{ getInitials(user.name) }}</span>
+              </div>
+            </div>
+            <div class="user-info">
+              <h3 class="user-name">{{ user.name }}</h3>
+              <p *ngIf="user.phone" class="user-phone">{{ user.phone }}</p>
+            </div>
+            <div class="status-indicator" [class.active]="user.isActive"></div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="card-body">
+            <div class="user-stats">
+              <div class="stat-item">
+                <span class="stat-label">Role</span>
+                <span [class]="getRoleBadgeClass(user.role)">
+                  {{ getRoleDisplayName(user.role) }}
+                  <span *ngIf="user.role === 'ADMIN' || user.role === 'admin'" class="protected-badge" title="Protected Account">🛡️</span>
+                </span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Status</span>
+                <span [class]="getStatusBadgeClass(user.isActive)">
+                  {{ getStatusText(user.isActive) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="user-dates">
+              <div class="date-item">
+                <span class="date-label">Joined</span>
+                <span class="date-value">{{ user.createdAt ? formatDate(user.createdAt) : 'N/A' }}</span>
+              </div>
+              <div class="date-item">
+                <span class="date-label">Last Login</span>
+                <span class="date-value">{{ user.lastLoginAt ? formatDate(user.lastLoginAt) : 'Never' }}</span>
+              </div>
+            </div>
+
+            <!-- Activity Stats -->
+            <div class="activity-stats" *ngIf="user._count">
+              <div class="activity-item">
+                <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>{{ user._count.reviews || 0 }} Reviews</span>
+              </div>
+              <div class="activity-item" *ngIf="user.role === 'BUSINESS_OWNER'">
+                <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span>{{ user._count.businesses || 0 }} Businesses</span>
+              </div>
+              <div class="activity-item">
+                <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span>{{ user._count.fraudReports || 0 }} Reports</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Footer -->
+          <div class="card-footer">
+            <div class="action-buttons">
+              <button 
+                (click)="openUserModal(user)"
+                class="action-btn view-btn"
+                title="View Details">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span>View</span>
+              </button>
+              <button 
+                *ngIf="user.role !== 'ADMIN' && user.role !== 'admin'"
+                (click)="openRoleModal(user)"
+                class="action-btn edit-btn"
+                title="Change Role">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Edit</span>
+              </button>
+              <button 
+                *ngIf="user.role !== 'ADMIN' && user.role !== 'admin'"
+                (click)="toggleUserStatus(user)"
+                class="action-btn toggle-btn"
+                [class.active]="user.isActive"
+                [disabled]="isUserLoading(user.id)"
+                [title]="user.isActive ? 'Deactivate' : 'Activate'">
+                @if (isUserLoading(user.id)) {
+                  <svg class="animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Processing...</span>
+                } @else {
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                  </svg>
+                  <span>{{ user.isActive ? 'Deactivate' : 'Activate' }}</span>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="getUsers().length === 0" class="empty-state">
+        <div class="empty-content">
+          <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+          </svg>
+          <h3 class="empty-title">No Users Found</h3>
+          <p class="empty-message">
+            {{ searchTerm() || roleFilter() || statusFilter() 
+              ? 'Try adjusting your search or filter criteria' 
+              : 'No users are currently registered on the platform' }}
+          </p>
+          <button 
+            *ngIf="searchTerm() || roleFilter() || statusFilter()"
+            (click)="clearFilters()"
+            class="clear-filters-btn">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="getPagination()" class="pagination-container">
+      <div class="pagination-info">
+        <span class="pagination-text">
+          Showing {{ (getPagination().page - 1) * getPagination().limit + 1 }} to 
+          {{ Math.min(getPagination().page * getPagination().limit, getPagination().total) }} 
+          of {{ getPagination().total }} users
+        </span>
+        <div class="pagination-stats">
+          <span class="page-info">Page {{ getPagination().page }} of {{ getPagination().totalPages }}</span>
+        </div>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          (click)="onPageChange(getPagination().page - 1)"
+          [disabled]="getPagination().page <= 1"
+          class="pagination-btn prev-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Previous
+        </button>
+        
+        <!-- Page Numbers -->
+        <div class="page-numbers">
+          <button 
+            *ngFor="let page of getPageNumbers()"
+            (click)="onPageChange(page)"
+            [class.active]="page === getPagination().page"
+            class="page-btn">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button 
+          (click)="onPageChange(getPagination().page + 1)"
+          [disabled]="getPagination().page >= getPagination().totalPages"
+          class="pagination-btn next-btn">
+          Next
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Details Modal -->
+  <div *ngIf="getShowUserModal()" class="modal-overlay" (click)="closeUserModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">User Details</h3>
+        <button (click)="closeUserModal()" class="modal-close">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="getSelectedUser()">
+        <div class="user-detail-section">
+          <h4>Basic Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Name:</label>
+              <span>{{ getSelectedUser()?.name }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Email:</label>
+              <span>{{ getSelectedUser()?.email }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Phone:</label>
+              <span>{{ getSelectedUser()?.phone || 'Not provided' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Role:</label>
+              <span [class]="getRoleBadgeClass(getSelectedUser()?.role || '')">
+                {{ getRoleDisplayName(getSelectedUser()?.role || '') }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Status:</label>
+              <span [class]="getStatusBadgeClass(getSelectedUser()?.isActive || false)">
+                {{ getStatusText(getSelectedUser()?.isActive || false) }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Email Verified:</label>
+              <span class="verification-badge" [class.verified]="getSelectedUser()?.isVerified">
+                {{ getSelectedUser()?.isVerified ? 'Yes' : 'No' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="user-detail-section">
+          <h4>Activity</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Reviews:</label>
+              <span>{{ getSelectedUser()?._count?.reviews || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Businesses:</label>
+              <span>{{ getSelectedUser()?._count?.businesses || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Fraud Reports:</label>
+              <span>{{ getSelectedUser()?._count?.fraudReports || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Reputation:</label>
+              <span>{{ getSelectedUser()?.reputation || 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Change Modal -->
+  <div *ngIf="getShowRoleModal()" class="modal-overlay" (click)="closeRoleModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Change User Role</h3>
+        <button (click)="closeRoleModal()" class="modal-close">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="role-change-section">
+          <p class="role-change-text">
+            Change role for <strong>{{ getSelectedUser()?.name }}</strong>
+          </p>
+          <div class="role-selector">
+            <label for="roleSelect">Select New Role:</label>
+            <select 
+              id="roleSelect"
+              [(ngModel)]="newRole"
+              class="role-select">
+              <option value="CUSTOMER">Customer</option>
+              <option value="BUSINESS_OWNER">Business Owner</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button (click)="closeRoleModal()" class="btn btn-secondary">Cancel</button>
+            <button (click)="updateUserRole()" class="btn btn-primary">Update Role</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

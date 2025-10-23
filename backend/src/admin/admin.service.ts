@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { UpdateBusinessStatusDto } from '../business/dto/business.dto';
+import { MailerService } from '../shared/mailer/mailer.service';
 
 export interface AdminUserStats {
   totalUsers: number;
@@ -50,7 +51,10 @@ export interface AdminDashboardStats {
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailerService: MailerService,
+  ) {}
 
   // User Management
   async getAllUsers(
@@ -102,6 +106,8 @@ export class AdminService {
             role: true,
             isActive: true,
             provider: true,
+            providerId: true,
+            avatar: true,
             emailVerified: true,
             reputation: true,
             lastLoginAt: true,
@@ -274,6 +280,11 @@ export class AdminService {
         throw new NotFoundException('User not found');
       }
 
+      // Prevent deactivating admin accounts
+      if (user.role === 'ADMIN' && user.isActive) {
+        throw new BadRequestException('Cannot deactivate admin accounts');
+      }
+
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
         data: { isActive: !user.isActive },
@@ -295,13 +306,41 @@ export class AdminService {
         },
       });
 
+      // Send account status change email
+      try {
+        const status = updatedUser.isActive ? 'activated' : 'deactivated';
+        this.logger.log(`Attempting to send account status change email to ${updatedUser.email} - Status: ${status}`);
+        
+        await this.mailerService.sendAccountStatusChangeEmail(
+          updatedUser.email,
+          updatedUser.name,
+          status,
+        );
+        
+        this.logger.log(`✅ Account status change email sent successfully to ${updatedUser.email}`);
+      } catch (emailError) {
+        this.logger.error(
+          `❌ Failed to send account status change email to ${updatedUser.email}:`,
+          emailError,
+        );
+        // Log more details about the error
+        if (emailError instanceof Error) {
+          this.logger.error(`Email error details: ${emailError.message}`);
+          this.logger.error(`Email error stack: ${emailError.stack}`);
+        }
+        // Don't throw error - email failure shouldn't break the status change
+      }
+
       this.logger.log(
         `User status toggled: ${userId} -> ${updatedUser.isActive ? 'active' : 'inactive'}`,
       );
       return updatedUser as UserWithoutPassword;
     } catch (error) {
       this.logger.error('Error toggling user status:', error);
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException('Failed to toggle user status');
@@ -1045,6 +1084,22 @@ export class AdminService {
       throw new InternalServerErrorException(
         'Failed to update business status',
       );
+    }
+  }
+
+  // Test email functionality
+  async testEmailFunctionality(email: string, name: string): Promise<void> {
+    try {
+      this.logger.log(`Testing email functionality for ${email}`);
+      await this.mailerService.sendAccountStatusChangeEmail(
+        email,
+        name,
+        'activated', // Test with activated status
+      );
+      this.logger.log(`✅ Test email sent successfully to ${email}`);
+    } catch (error) {
+      this.logger.error(`❌ Test email failed for ${email}:`, error);
+      throw error;
     }
   }
 }

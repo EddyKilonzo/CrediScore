@@ -1,13 +1,13 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { CommonModule, NgIf } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { ToastService } from '../toast/toast.service';
 import { ImageService } from '../../services/image.service';
 
 @Component({
   selector: 'app-navbar',
-  imports: [RouterLink, RouterLinkActive, CommonModule, NgIf],
+  imports: [RouterLink, RouterLinkActive, CommonModule],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css'
 })

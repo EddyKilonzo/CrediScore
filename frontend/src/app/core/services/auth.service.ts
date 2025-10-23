@@ -7,11 +7,21 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER';
+  role: 'admin' | 'ADMIN' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER';
   isVerified: boolean;
+  isActive: boolean;
   avatar?: string; // Profile image URL from database
   phone?: string; // Phone number
   bio?: string; // User bio
+  reputation?: number;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    reviews: number;
+    businesses: number;
+    fraudReports: number;
+  };
 }
 
 export interface LoginRequest {
@@ -100,10 +110,16 @@ export class AuthService {
               id: response.id,
               email: response.email,
               name: response.name,
-              role: response.role as 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
-              isVerified: response.emailVerified,
+              role: response.role as 'admin' | 'ADMIN' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+              isVerified: response.emailVerified || response.isVerified || false,
+              isActive: response.isActive !== undefined ? response.isActive : true,
               avatar: response.avatar,
-              phone: response.phone
+              phone: response.phone,
+              reputation: response.reputation || 0,
+              lastLoginAt: response.lastLoginAt,
+              createdAt: response.createdAt,
+              updatedAt: response.updatedAt,
+              _count: response._count || { reviews: 0, businesses: 0, fraudReports: 0 }
             },
             token: response.accessToken,
             accessToken: response.accessToken
@@ -129,10 +145,15 @@ export class AuthService {
               id: response.id,
               email: response.email,
               name: response.name,
-              role: response.role as 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+              role: response.role as 'admin' | 'ADMIN' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
               isVerified: true, // New signups are considered verified
+              isActive: true, // New signups are active by default
               avatar: response.avatar,
-              phone: response.phone
+              phone: response.phone,
+              reputation: 0, // New users start with 0 reputation
+              createdAt: response.createdAt?.toString() || new Date().toISOString(),
+              updatedAt: response.createdAt?.toString() || new Date().toISOString(),
+              _count: { reviews: 0, businesses: 0, fraudReports: 0 }
             },
             token: response.accessToken,
             accessToken: response.accessToken
@@ -147,10 +168,15 @@ export class AuthService {
               id: response.id,
               email: response.email,
               name: response.name,
-              role: response.role as 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+              role: response.role as 'admin' | 'ADMIN' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
               isVerified: true, // New signups are considered verified
+              isActive: true, // New signups are active by default
               avatar: response.avatar,
-              phone: response.phone
+              phone: response.phone,
+              reputation: 0, // New users start with 0 reputation
+              createdAt: response.createdAt?.toString() || new Date().toISOString(),
+              updatedAt: response.createdAt?.toString() || new Date().toISOString(),
+              _count: { reviews: 0, businesses: 0, fraudReports: 0 }
             },
             token: response.accessToken,
             accessToken: response.accessToken
@@ -184,8 +210,13 @@ export class AuthService {
       name: response.user.name,
       role: response.user.role,
       isVerified: response.user.isVerified,
+      isActive: response.user.isActive,
       phone: response.user.phone,
       bio: response.user.bio,
+      reputation: response.user.reputation,
+      lastLoginAt: response.user.lastLoginAt,
+      createdAt: response.user.createdAt,
+      updatedAt: response.user.updatedAt,
       // Only store avatar if it's a URL (not base64 data)
       avatar: response.user.avatar?.startsWith('http') ? response.user.avatar : undefined
     };
@@ -229,8 +260,13 @@ export class AuthService {
       name: user.name,
       role: user.role,
       isVerified: user.isVerified,
+      isActive: user.isActive,
       phone: user.phone,
       bio: user.bio,
+      reputation: user.reputation,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
       // Only store avatar if it's a URL (not base64 data)
       avatar: user.avatar?.startsWith('http') ? user.avatar : undefined
     };

@@ -1,0 +1,448 @@
+<div class="manage-businesses">
+  <!-- Welcome Section - Matching dashboard -->
+  <div class="welcome-section">
+    <div class="dashboard-container">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="welcome-title">Manage Businesses</h1>
+          <p class="welcome-subtitle">Review, verify, and manage business listings</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <button 
+            (click)="refreshBusinesses()" 
+            [disabled]="getLoadingState()"
+            class="refresh-btn">
+            <svg class="refresh-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="dashboard-container">
+      <div class="filters-grid">
+        <div class="search-box">
+          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Search businesses by name, category, or location..."
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearch()"
+            class="search-input">
+        </div>
+        
+        <div class="filter-controls">
+          <select 
+            [(ngModel)]="verificationFilter"
+            (ngModelChange)="onFilterChange()"
+            class="filter-select"
+            data-filter="verification">
+            <option value="">All Verification</option>
+            <option value="verified">Verified</option>
+            <option value="pending">Pending</option>
+          </select>
+          
+          <select 
+            [(ngModel)]="statusFilter"
+            (ngModelChange)="onFilterChange()"
+            class="filter-select"
+            data-filter="status">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        
+        <div class="clear-filters-container">
+          <button 
+            (click)="clearFilters()"
+            class="clear-filters-btn"
+            title="Clear all filters">
+            <svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="getLoadingState()" class="loading-container">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Loading businesses...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="getErrorState() && !getLoadingState()" class="error-container">
+    <div class="error-content">
+      <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <h3 class="error-title">Error Loading Businesses</h3>
+      <p class="error-message">{{ getErrorState() }}</p>
+      <button (click)="refreshBusinesses()" class="retry-btn">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Businesses Cards -->
+  <div *ngIf="!getLoadingState() && !getErrorState()" class="businesses-content">
+    <div class="businesses-cards-container">
+      <!-- Businesses Grid -->
+      <div class="businesses-grid" *ngIf="getBusinesses().length > 0">
+        <div *ngFor="let business of getBusinesses()" class="business-card hover-lift">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="business-avatar">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <div class="business-info">
+              <h3 class="business-name">{{ business.name }}</h3>
+              <p class="business-location">{{ business.location }}</p>
+              <p *ngIf="business.website" class="business-website">{{ business.website }}</p>
+            </div>
+            <div class="status-indicator" [class.active]="business.isActive"></div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="card-body">
+            <div class="business-stats">
+              <div class="stat-item">
+                <span class="stat-label">Category</span>
+                <span class="category-badge">{{ business.category }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Status</span>
+                <span [class]="getStatusBadgeClassFromStatus(business.status)">
+                  {{ getStatusTextFromStatus(business.status) }}
+                </span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Verification</span>
+                <span [class]="getVerificationBadgeClass(business.isVerified)">
+                  {{ getVerificationText(business.isVerified) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="business-dates">
+              <div class="date-item">
+                <span class="date-label">Created</span>
+                <span class="date-value">{{ formatDate(business.createdAt) }}</span>
+              </div>
+              <div class="date-item">
+                <span class="date-label">Owner</span>
+                <span class="date-value">{{ business.owner.name }}</span>
+              </div>
+            </div>
+
+            <!-- Activity Stats -->
+            <div class="activity-stats" *ngIf="business._count">
+              <div class="activity-item">
+                <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                <span>{{ business._count.reviews || 0 }} Reviews</span>
+              </div>
+              <div class="activity-item">
+                <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{{ business._count.documents || 0 }} Documents</span>
+              </div>
+              <div class="activity-item">
+                <svg class="activity-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                <span>{{ business._count.payments || 0 }} Payments</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Footer -->
+          <div class="card-footer">
+            <div class="action-buttons">
+              <button 
+                (click)="openBusinessModal(business)"
+                class="action-btn view-btn"
+                title="View Details">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span>View</span>
+              </button>
+              <button 
+                *ngIf="!business.isVerified"
+                (click)="openVerificationModal(business, 'verify')"
+                class="action-btn verify-btn"
+                title="Verify Business">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Verify</span>
+              </button>
+              <button 
+                *ngIf="business.isVerified"
+                (click)="openVerificationModal(business, 'unverify')"
+                class="action-btn unverify-btn"
+                title="Remove Verification">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Unverify</span>
+              </button>
+              <button 
+                (click)="toggleBusinessStatus(business)"
+                class="action-btn toggle-btn"
+                [class.active]="business.isActive"
+                [title]="business.isActive ? 'Deactivate' : 'Activate'">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                </svg>
+                <span>{{ business.isActive ? 'Deactivate' : 'Activate' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="getBusinesses().length === 0" class="empty-state">
+        <div class="empty-content">
+          <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <h3 class="empty-title">No Businesses Found</h3>
+          <p class="empty-message">
+            {{ searchTerm() || verificationFilter() || statusFilter() 
+              ? 'Try adjusting your search or filter criteria' 
+              : 'No businesses are currently registered on the platform' }}
+          </p>
+          <button 
+            *ngIf="searchTerm() || verificationFilter() || statusFilter()"
+            (click)="clearFilters()"
+            class="clear-filters-btn">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="getPagination()" class="pagination-container">
+      <div class="pagination-info">
+        <span class="pagination-text">
+          Showing {{ (getPagination().page - 1) * getPagination().limit + 1 }} to 
+          {{ Math.min(getPagination().page * getPagination().limit, getPagination().total) }} 
+          of {{ getPagination().total }} businesses
+        </span>
+        <div class="pagination-stats">
+          <span class="page-info">Page {{ getPagination().page }} of {{ getPagination().totalPages }}</span>
+        </div>
+      </div>
+      <div class="pagination-controls">
+        <button 
+          (click)="onPageChange(getPagination().page - 1)"
+          [disabled]="getPagination().page <= 1"
+          class="pagination-btn prev-btn">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Previous
+        </button>
+        
+        <!-- Page Numbers -->
+        <div class="page-numbers">
+          <button 
+            *ngFor="let page of getPageNumbers()"
+            (click)="onPageChange(page)"
+            [class.active]="page === getPagination().page"
+            class="page-btn">
+            {{ page }}
+          </button>
+        </div>
+        
+        <button 
+          (click)="onPageChange(getPagination().page + 1)"
+          [disabled]="getPagination().page >= getPagination().totalPages"
+          class="pagination-btn next-btn">
+          Next
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Business Details Modal -->
+  <div *ngIf="getShowBusinessModal()" class="modal-overlay" (click)="closeBusinessModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Business Details</h3>
+        <button (click)="closeBusinessModal()" class="modal-close">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" *ngIf="getSelectedBusiness()">
+        <div class="business-detail-section">
+          <h4>Basic Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Name:</label>
+              <span>{{ getSelectedBusiness()?.name }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Category:</label>
+              <span>{{ getSelectedBusiness()?.category }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Location:</label>
+              <span>{{ getSelectedBusiness()?.location }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Website:</label>
+              <span>{{ getSelectedBusiness()?.website || 'Not provided' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Phone:</label>
+              <span>{{ getSelectedBusiness()?.phone || 'Not provided' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Email:</label>
+              <span>{{ getSelectedBusiness()?.email || 'Not provided' }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="business-detail-section">
+          <h4>Status & Verification</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Verification:</label>
+              <span [class]="getVerificationBadgeClass(getSelectedBusiness()?.isVerified || false)">
+                {{ getVerificationText(getSelectedBusiness()?.isVerified || false) }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Status:</label>
+              <span [class]="getStatusBadgeClassFromStatus(getSelectedBusiness()?.status || '')">
+                {{ getStatusTextFromStatus(getSelectedBusiness()?.status || '') }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Active:</label>
+              <span [class]="getStatusBadgeClass(getSelectedBusiness()?.isActive || false)">
+                {{ getStatusText(getSelectedBusiness()?.isActive || false) }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Onboarding Step:</label>
+              <span>{{ getSelectedBusiness()?.onboardingStep || 0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="business-detail-section">
+          <h4>Owner Information</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Owner Name:</label>
+              <span>{{ getSelectedBusiness()?.owner?.name }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Owner Email:</label>
+              <span>{{ getSelectedBusiness()?.owner?.email }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="business-detail-section">
+          <h4>Activity</h4>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Reviews:</label>
+              <span>{{ getSelectedBusiness()?._count?.reviews || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Documents:</label>
+              <span>{{ getSelectedBusiness()?._count?.documents || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Payments:</label>
+              <span>{{ getSelectedBusiness()?._count?.payments || 0 }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Fraud Reports:</label>
+              <span>{{ getSelectedBusiness()?._count?.fraudReports || 0 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verification Modal -->
+  <div *ngIf="getShowVerificationModal()" class="modal-overlay" (click)="closeVerificationModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          {{ getVerificationAction() === 'verify' ? 'Verify Business' : 'Remove Verification' }}
+        </h3>
+        <button (click)="closeVerificationModal()" class="modal-close">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="verification-section">
+          <p class="verification-text">
+            {{ getVerificationAction() === 'verify' 
+              ? 'Are you sure you want to verify this business?' 
+              : 'Are you sure you want to remove verification from this business?' }}
+          </p>
+          <div class="business-summary" *ngIf="getSelectedBusiness()">
+            <h4>{{ getSelectedBusiness()?.name }}</h4>
+            <p>{{ getSelectedBusiness()?.category }} • {{ getSelectedBusiness()?.location }}</p>
+          </div>
+          <div class="modal-actions">
+            <button (click)="closeVerificationModal()" class="btn btn-secondary">Cancel</button>
+            <button 
+              (click)="getVerificationAction() === 'verify' ? verifyBusiness() : unverifyBusiness()" 
+              [class]="getVerificationAction() === 'verify' ? 'btn btn-success' : 'btn btn-warning'">
+              {{ getVerificationAction() === 'verify' ? 'Verify Business' : 'Remove Verification' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

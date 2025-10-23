@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #3E6A8A;
+            margin-bottom: 10px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 20px 0;
+        }
+        .status-activated {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .status-deactivated {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .content {
+            margin: 30px 0;
+        }
+        .reason-box {
+            background-color: #f8fafc;
+            border-left: 4px solid #3E6A8A;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+        .cta-button:hover {
+            background: linear-gradient(135deg, #2C5270, #4A7A95);
+            transform: translateY(-1px);
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .contact-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">CrediScore</div>
+            <h1>Account Status Update</h1>
+        </div>
+
+        <div class="content">
+            <p>Hello {{ name }},</p>
+            
+            <p>We wanted to inform you that your CrediScore account status has been updated.</p>
+
+            <div class="status-badge status-{{ status }}">
+                {% if status === 'activated' %}
+                    ✅ Account Activated Successfully
+                {% else %}
+                    ⚠️ Account Deactivated
+                {% endif %}
+            </div>
+
+            {% if status === 'activated' %}
+            <p><strong>What this means:</strong></p>
+            <ul>
+                <li>✅ You can now log in to your account</li>
+                <li>🏠 Access your dashboard and profile</li>
+                <li>🏢 Browse and review businesses</li>
+                <li>⭐ Build your reputation score</li>
+                <li>📊 Track your activity and achievements</li>
+            </ul>
+            {% else %}
+            <p><strong>What this means:</strong></p>
+            <ul>
+                <li>❌ You cannot log in to your account</li>
+                <li>🚫 Access to platform features is restricted</li>
+                <li>📧 You will not receive platform notifications</li>
+            </ul>
+            {% endif %}
+
+            {% if reason %}
+            <div class="reason-box">
+                <h3>📋 Additional Information:</h3>
+                <p>{{ reason }}</p>
+            </div>
+            {% endif %}
+
+            <p>If you have any questions about this change or need assistance, our support team is here to help.</p>
+
+            <div style="text-align: center;">
+                <a href="{{ appUrl }}/contact" class="cta-button">💬 Contact Support</a>
+            </div>
+        </div>
+
+        <div class="contact-info">
+            <h3>💬 Need Help?</h3>
+            <p>Our support team is always here to assist you. Don't hesitate to reach out if you have any questions:</p>
+            <ul>
+                <li>📧 Email: support@crediscore.com</li>
+                <li>📞 Phone: +1 (555) 123-4567</li>
+                <li>🌐 Visit: <a href="{{ appUrl }}/support">{{ appUrl }}/support</a></li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>This email was sent to {{ email }}</p>
+            <p>&copy; {{ year }} CrediScore. All rights reserved.</p>
+            <p>
+                <a href="{{ appUrl }}/privacy">Privacy Policy</a> | 
+                <a href="{{ appUrl }}/terms">Terms of Service</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

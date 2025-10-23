@@ -6,6 +6,7 @@ import { AuthService, RegisterRequest } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
+// Register component for user signup
 @Component({
   selector: 'app-register',
   standalone: true,
