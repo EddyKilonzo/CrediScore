@@ -44,7 +44,7 @@ export class RegisterComponent implements OnInit {
       confirmPassword: ['', [Validators.required]],
       phone: ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
       acceptTerms: [false, [Validators.requiredTrue]],
-      role: ['user', [Validators.required]]
+      role: ['user', [Validators.required, Validators.pattern(/^(user|business)$/)]]
     }, { validators: this.passwordMatchValidator });
   }
 
@@ -189,6 +189,9 @@ export class RegisterComponent implements OnInit {
       if (field.errors['requiredTrue']) {
         return 'You must accept the terms and conditions';
       }
+      if (field.errors['pattern'] && fieldName === 'role') {
+        return 'Please select a valid account type';
+      }
     }
     return '';
   }
@@ -276,7 +279,18 @@ export class RegisterComponent implements OnInit {
 
   // Method to log role changes
   onRoleChange(): void {
-    console.log('Role changed to:', this.getSelectedRole());
+    const selectedRole = this.getSelectedRole();
+    console.log('Role changed to:', selectedRole);
+    
+    // Mark the role field as touched to trigger validation
+    this.signupForm.get('role')?.markAsTouched();
+    
+    // Optional: Show a toast notification
+    if (selectedRole === 'business') {
+      this.toastService.info('Business account selected - you\'ll have access to business features');
+    } else if (selectedRole === 'user') {
+      this.toastService.info('Customer account selected - you can review and verify businesses');
+    }
   }
 }
 

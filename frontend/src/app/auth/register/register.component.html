@@ -162,6 +162,11 @@
                   <div *ngIf="getFieldError('role')" class="text-xs text-red-600 mt-1">
                     {{ getFieldError('role') }}
                   </div>
+                  
+                  <!-- Debug info (remove in production) -->
+                  <div class="text-xs text-gray-500 mt-1">
+                    Selected role: {{ getSelectedRole() }}
+                  </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">

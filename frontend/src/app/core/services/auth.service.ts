@@ -91,8 +91,25 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<AuthResponse> {
     this.isLoading.set(true);
     
-    return this.http.post<AuthResponse>(`${this.API_URL}/auth/login`, credentials)
+    return this.http.post<any>(`${this.API_URL}/auth/login`, credentials)
       .pipe(
+        map(response => {
+          // Transform backend LoginResponseDto to frontend AuthResponse format
+          const authResponse: AuthResponse = {
+            user: {
+              id: response.id,
+              email: response.email,
+              name: response.name,
+              role: response.role as 'admin' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+              isVerified: response.emailVerified,
+              avatar: response.avatar,
+              phone: response.phone
+            },
+            token: response.accessToken,
+            accessToken: response.accessToken
+          };
+          return authResponse;
+        }),
         tap(response => {
           this.setAuthDataInternal(response);
           this.isLoading.set(false);

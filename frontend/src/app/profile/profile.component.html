@@ -3,10 +3,12 @@
   <!-- Header -->
   <div class="profile-header fade-in-up">
     <h1 class="profile-title slide-in-left">Profile</h1>
-    <button class="add-employee-btn slide-in-right" *ngIf="currentUser()?.role === 'admin'">
-      <i class="fas fa-plus"></i>
-      Add Employee
-    </button>
+    @if (currentUser()?.role === 'admin') {
+      <button class="add-employee-btn slide-in-right">
+        <i class="fas fa-plus"></i>
+        Add Employee
+      </button>
+    }
   </div>
 
   <!-- Navigation Tabs -->
@@ -30,16 +32,17 @@
       <div class="profile-card animated-card">
         <div class="profile-avatar-container animated-avatar">
           <div class="profile-avatar hover-lift" (click)="triggerFileUpload()">
-            <img 
-              *ngIf="getProfileImageUrl()" 
-              [src]="imageService.getOptimizedProfileImageUrl(getProfileImageUrl()!, 'medium')" 
-              alt="Profile Picture"
-              class="avatar-image">
-            <div 
-              *ngIf="!getProfileImageUrl()" 
-              class="avatar-initials">
-              {{ getUserInitials(currentUser()!) }}
-            </div>
+            @if (getProfileImageUrl()) {
+              <img 
+                [src]="imageService.getOptimizedProfileImageUrl(getProfileImageUrl()!, 'medium')" 
+                alt="Profile Picture"
+                class="avatar-image">
+            }
+            @if (!getProfileImageUrl()) {
+              <div class="avatar-initials">
+                {{ getUserInitials(currentUser()!) }}
+              </div>
+            }
             <div class="avatar-overlay">
               <i class="fas fa-camera"></i>
               <span>Edit Photo</span>
@@ -65,14 +68,18 @@
           <i class="fas fa-envelope info-icon"></i>
           <span>{{ currentUser()?.email }}</span>
         </div>
-        <div class="info-item animated-item" *ngIf="currentUser()?.phone">
-          <i class="fas fa-phone info-icon"></i>
-          <span>{{ currentUser()?.phone }}</span>
-        </div>
-        <div class="info-item animated-item" *ngIf="currentUser()?.bio">
-          <i class="fas fa-user-circle info-icon"></i>
-          <span>{{ currentUser()?.bio }}</span>
-        </div>
+        @if (currentUser()?.phone) {
+          <div class="info-item animated-item">
+            <i class="fas fa-phone info-icon"></i>
+            <span>{{ currentUser()?.phone }}</span>
+          </div>
+        }
+        @if (currentUser()?.bio) {
+          <div class="info-item animated-item">
+            <i class="fas fa-user-circle info-icon"></i>
+            <span>{{ currentUser()?.bio }}</span>
+          </div>
+        }
       </div>
 
       <!-- Address Section -->
@@ -113,9 +120,11 @@
     <!-- Right Column - Tab Content -->
     <div class="profile-main fade-in-right">
       <!-- Overview Tab -->
-      <div *ngIf="activeTab() === 'overview'" class="tab-content animated-content fade-in-up">
+      @if (activeTab() === 'overview') {
+        <div class="tab-content animated-content fade-in-up">
         <!-- Business Information (only for business/admin users) -->
-        <div class="content-panel animated-panel" *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER' || currentUser()?.role === 'admin'">
+        @if (currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER' || currentUser()?.role === 'admin') {
+          <div class="content-panel animated-panel">
           <div class="panel-header">
             <h3 class="panel-title">Business Information</h3>
             <button class="add-info-btn hover-lift">+ Add Info</button>
@@ -145,6 +154,7 @@
             }
           </div>
         </div>
+        }
 
         <!-- Activity Panel -->
         <div class="content-panel">
@@ -155,7 +165,9 @@
             @for (activity of mockData.recentActivity; track activity.action) {
               <div class="activity-item">
                 <div class="activity-avatar">
-                  <img [src]="getProfileImageUrl()" alt="User" *ngIf="getProfileImageUrl()">
+                  @if (getProfileImageUrl()) {
+                    <img [src]="getProfileImageUrl()" alt="User">
+                  }
                 </div>
                 <div class="activity-content">
                   <p class="activity-text">{{ activity.action }} for <strong>{{ activity.business }}</strong></p>
@@ -189,36 +201,44 @@
           <a href="#" class="view-all-link">View all</a>
         </div>
       </div>
+      }
 
       <!-- Business Info Tab -->
-      <div *ngIf="activeTab() === 'business'" class="tab-content animated-content fade-in-up">
+      @if (activeTab() === 'business') {
+        <div class="tab-content animated-content fade-in-up">
         <div class="content-panel">
           <h3 class="panel-title">Business Information</h3>
           <p class="panel-description">Manage your business profiles and verification status.</p>
           <!-- Business info content will go here -->
         </div>
       </div>
+      }
 
       <!-- Reviews Tab -->
-      <div *ngIf="activeTab() === 'reviews'" class="tab-content animated-content fade-in-up">
+      @if (activeTab() === 'reviews') {
+        <div class="tab-content animated-content fade-in-up">
         <div class="content-panel">
           <h3 class="panel-title">Your Reviews</h3>
           <p class="panel-description">View and manage your business reviews.</p>
           <!-- Reviews content will go here -->
         </div>
       </div>
+      }
 
       <!-- Trust Score Tab -->
-      <div *ngIf="activeTab() === 'trust'" class="tab-content animated-content fade-in-up">
+      @if (activeTab() === 'trust') {
+        <div class="tab-content animated-content fade-in-up">
         <div class="content-panel">
           <h3 class="panel-title">Trust Score Details</h3>
           <p class="panel-description">Detailed breakdown of your trust score and reputation.</p>
           <!-- Trust score content will go here -->
         </div>
       </div>
+      }
 
       <!-- Settings Tab -->
-      <div *ngIf="activeTab() === 'settings'" class="tab-content animated-content fade-in-up">
+      @if (activeTab() === 'settings') {
+        <div class="tab-content animated-content fade-in-up">
         <div class="content-panel">
           <h3 class="panel-title">Account Settings</h3>
           <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="settings-form">
@@ -231,9 +251,11 @@
                   type="text"
                   class="form-input"
                   placeholder="Enter first name">
-                <div *ngIf="getFieldError('firstName')" class="form-error">
-                  {{ getFieldError('firstName') }}
-                </div>
+                @if (getFieldError('firstName')) {
+                  <div class="form-error">
+                    {{ getFieldError('firstName') }}
+                  </div>
+                }
               </div>
 
               <div class="form-group">
@@ -243,9 +265,11 @@
                   type="text"
                   class="form-input"
                   placeholder="Enter last name">
-                <div *ngIf="getFieldError('lastName')" class="form-error">
-                  {{ getFieldError('lastName') }}
-                </div>
+                @if (getFieldError('lastName')) {
+                  <div class="form-error">
+                    {{ getFieldError('lastName') }}
+                  </div>
+                }
               </div>
             </div>
 
@@ -258,9 +282,11 @@
                   class="form-input"
                   placeholder="Enter email address"
                   readonly>
-                <div *ngIf="getFieldError('email')" class="form-error">
-                  {{ getFieldError('email') }}
-                </div>
+                @if (getFieldError('email')) {
+                  <div class="form-error">
+                    {{ getFieldError('email') }}
+                  </div>
+                }
               </div>
 
               <div class="form-group">
@@ -270,9 +296,11 @@
                   type="tel"
                   class="form-input"
                   placeholder="Enter phone number">
-                <div *ngIf="getFieldError('phone')" class="form-error">
-                  {{ getFieldError('phone') }}
-                </div>
+                @if (getFieldError('phone')) {
+                  <div class="form-error">
+                    {{ getFieldError('phone') }}
+                  </div>
+                }
               </div>
             </div>
 
@@ -284,23 +312,29 @@
                 class="form-textarea"
                 placeholder="Tell us about yourself"
                 rows="4"></textarea>
-              <div *ngIf="getFieldError('bio')" class="form-error">
-                {{ getFieldError('bio') }}
-              </div>
+              @if (getFieldError('bio')) {
+                <div class="form-error">
+                  {{ getFieldError('bio') }}
+                </div>
+              }
             </div>
 
             <button
               type="submit"
               [disabled]="isLoading()"
               class="save-btn">
-              <div *ngIf="isLoading()" class="btn-loading">
-                <div class="spinner"></div>
-                Saving...
-              </div>
-              <div *ngIf="!isLoading()" class="btn-content">
-                <i class="fas fa-save"></i>
-                Save Changes
-              </div>
+              @if (isLoading()) {
+                <div class="btn-loading">
+                  <div class="spinner"></div>
+                  Saving...
+                </div>
+              }
+              @if (!isLoading()) {
+                <div class="btn-content">
+                  <i class="fas fa-save"></i>
+                  Save Changes
+                </div>
+              }
             </button>
           </form>
         </div>
@@ -420,6 +454,7 @@
           </div>
         </div>
       </div>
+      }
     </div>
   </div>
 </div>

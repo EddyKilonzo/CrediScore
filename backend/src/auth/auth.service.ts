@@ -89,18 +89,24 @@ export class AuthService {
       ).toString();
       const emailVerificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-      // Create user with CUSTOMER role by default
+      // Map frontend role to backend role
+      const mappedRole =
+        dto.role === 'business' ? UserRole.BUSINESS_OWNER : UserRole.CUSTOMER;
+
+      // Create user with selected role
+      const userData = {
+        name: dto.name,
+        email: dto.email,
+        password: hashedPassword,
+        role: mappedRole,
+        phone: dto.phone,
+        emailVerificationToken: emailVerificationCode, // Reusing the field for the 6-digit code
+        emailVerificationTokenExpiry: emailVerificationCodeExpiry,
+        emailVerificationSentAt: new Date(),
+      };
+
       const user = await this.prisma.user.create({
-        data: {
-          name: dto.name,
-          email: dto.email,
-          password: hashedPassword,
-          role: UserRole.CUSTOMER,
-          phone: dto.phone,
-          emailVerificationToken: emailVerificationCode, // Reusing the field for the 6-digit code
-          emailVerificationTokenExpiry: emailVerificationCodeExpiry,
-          emailVerificationSentAt: new Date(),
-        } as any, // Type assertion to bypass Prisma client type issues
+        data: userData,
       });
 
       // Generate JWT
@@ -179,6 +185,7 @@ export class AuthService {
         avatar: user.avatar,
         reputation: user.reputation,
         isActive: user.isActive,
+        emailVerified: user.emailVerified,
         lastLoginAt: new Date(),
         accessToken: token,
         expiresIn: 24 * 60 * 60, // 24 hours in seconds
@@ -437,14 +444,16 @@ export class AuthService {
     try {
       this.logger.log(`Email verification attempt with code: ${dto.token}`);
 
+      const whereClause = {
+        emailVerificationToken: dto.token,
+        emailVerificationTokenExpiry: {
+          gt: new Date(), // Code not expired
+        },
+        emailVerified: false,
+      };
+
       const user = await this.prisma.user.findFirst({
-        where: {
-          emailVerificationToken: dto.token,
-          emailVerificationTokenExpiry: {
-            gt: new Date(), // Code not expired
-          },
-          emailVerified: false,
-        } as any, // Type assertion to bypass Prisma client type issues
+        where: whereClause,
       });
 
       if (!user) {
@@ -452,13 +461,15 @@ export class AuthService {
       }
 
       // Mark email as verified and clear verification data
+      const updateData = {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      };
+
       await this.prisma.user.update({
         where: { id: user.id },
-        data: {
-          emailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationTokenExpiry: null,
-        } as any, // Type assertion to bypass Prisma client type issues
+        data: updateData,
       });
 
       this.logger.log(`Email verified successfully for user: ${user.id}`);
@@ -503,13 +514,15 @@ export class AuthService {
 
       // Check if we can resend (rate limiting - max 3 attempts per hour)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const countWhereClause = {
+        email: dto.email,
+        emailVerificationSentAt: {
+          gt: oneHourAgo,
+        },
+      };
+
       const recentAttempts = await this.prisma.user.count({
-        where: {
-          email: dto.email,
-          emailVerificationSentAt: {
-            gt: oneHourAgo,
-          },
-        } as any, // Type assertion to bypass Prisma client type issues
+        where: countWhereClause,
       });
 
       if (recentAttempts >= 3) {
@@ -525,13 +538,15 @@ export class AuthService {
       const emailVerificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       // Update user with new verification code
+      const updateVerificationData = {
+        emailVerificationToken: emailVerificationCode,
+        emailVerificationTokenExpiry: emailVerificationCodeExpiry,
+        emailVerificationSentAt: new Date(),
+      };
+
       await this.prisma.user.update({
         where: { id: user.id },
-        data: {
-          emailVerificationToken: emailVerificationCode,
-          emailVerificationTokenExpiry: emailVerificationCodeExpiry,
-          emailVerificationSentAt: new Date(),
-        } as any, // Type assertion to bypass Prisma client type issues
+        data: updateVerificationData,
       });
 
       // Send verification email

@@ -86,6 +86,12 @@ export class LoginResponseDto {
   isActive: boolean;
 
   @ApiProperty({
+    description: 'Email verification status',
+    example: true,
+  })
+  emailVerified: boolean;
+
+  @ApiProperty({
     description: 'Last login timestamp',
     example: '2024-01-01T00:00:00.000Z',
   })
