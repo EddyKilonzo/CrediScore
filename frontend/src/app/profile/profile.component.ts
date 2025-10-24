@@ -75,7 +75,7 @@ export class ProfileComponent implements OnInit {
   // Available tabs
   allTabs: Tab[] = [
     { id: 'overview', label: 'Overview', icon: 'fas fa-chart-pie', active: true },
-    { id: 'business', label: 'Business', icon: 'fas fa-building', active: false },
+    { id: 'business', label: this.isAdmin() ? 'Management' : 'Business', icon: this.isAdmin() ? 'fas fa-cogs' : 'fas fa-building', active: false },
     { id: 'reviews', label: 'Reviews', icon: 'fas fa-star', active: false },
     { id: 'trust', label: 'Trust Score', icon: 'fas fa-shield-alt', active: false },
     { id: 'settings', label: 'Settings', icon: 'fas fa-cog', active: false }
@@ -239,7 +239,8 @@ export class ProfileComponent implements OnInit {
     const date = new Date(user.createdAt);
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
-      month: 'long' 
+      month: 'long',
+      day: 'numeric'
     });
   }
 
@@ -538,5 +539,61 @@ export class ProfileComponent implements OnInit {
     this.selectedLanguage.set(language);
     localStorage.setItem('language', language);
     this.toastService.success(`Language changed to ${language}`);
+  }
+
+  // Admin-specific methods
+  getAdminStats(): any {
+    if (!this.profileData?.roleSpecificData?.adminMetrics) return {};
+    return this.profileData.roleSpecificData.adminMetrics;
+  }
+
+  getAdminQuickActions(): any[] {
+    if (!this.profileData?.roleSpecificData?.quickActions) return [];
+    return this.profileData.roleSpecificData.quickActions;
+  }
+
+  navigateToAdminDashboard(): void {
+    this.router.navigate(['/admin/dashboard']);
+  }
+
+  handleAdminAction(action: string): void {
+    switch (action) {
+      case 'review_fraud_report':
+        this.router.navigate(['/admin/fraud-reports']);
+        break;
+      case 'review_flagged_users':
+        this.router.navigate(['/admin/flagged-users']);
+        break;
+      case 'verify_business':
+        this.router.navigate(['/admin/businesses']);
+        break;
+      case 'moderate_reviews':
+        this.router.navigate(['/admin/reviews']);
+        break;
+      case 'verify_documents':
+        this.router.navigate(['/admin/documents']);
+        break;
+      case 'manage_users':
+        this.router.navigate(['/admin/users']);
+        break;
+      case 'system_maintenance':
+        this.router.navigate(['/admin/system']);
+        break;
+      default:
+        this.router.navigate(['/admin/dashboard']);
+    }
+  }
+
+  getActionIcon(action: string): string {
+    const iconMap: { [key: string]: string } = {
+      'review_fraud_report': 'fas fa-exclamation-triangle',
+      'review_flagged_users': 'fas fa-flag',
+      'verify_business': 'fas fa-building',
+      'moderate_reviews': 'fas fa-star',
+      'verify_documents': 'fas fa-file-alt',
+      'manage_users': 'fas fa-users',
+      'system_maintenance': 'fas fa-cogs'
+    };
+    return iconMap[action] || 'fas fa-cog';
   }
 }

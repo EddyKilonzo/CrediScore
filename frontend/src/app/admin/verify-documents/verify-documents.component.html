@@ -1,0 +1,142 @@
+<div class="admin-page">
+  <div class="page-header fade-in-up">
+    <div class="header-content">
+      <h1 class="verify-title slide-in-left">Document Verification</h1>
+      <p class="slide-in-right">Verify and manage business documents for compliance</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Display -->
+  @if (error) {
+    <div class="error-banner fade-in-up">
+      <div class="error-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button class="error-close" (click)="error = null">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Success Display -->
+  @if (successMessage) {
+    <div class="success-banner fade-in-up">
+      <div class="success-content">
+        <i class="fas fa-check-circle"></i>
+        <span>{{ successMessage }}</span>
+        <button class="success-close" (click)="successMessage = null">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-container fade-in-up">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading documents...</p>
+    </div>
+  }
+  
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">Pending Document Verifications</h2>
+      <div class="header-actions slide-in-right">
+        <button class="btn-primary hover-lift" (click)="refreshDocuments()">
+          <i class="fas fa-sync-alt"></i>
+          Refresh
+        </button>
+        <button class="btn-secondary hover-lift">
+          <i class="fas fa-filter"></i>
+          Filter
+        </button>
+        <button class="btn-secondary hover-lift">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+      </div>
+    </div>
+    
+    @if (documents.length === 0 && !isLoading) {
+      <div class="empty-state fade-in-up">
+        <i class="fas fa-file-alt"></i>
+        <h3>No Pending Documents</h3>
+        <p>All documents have been verified. Check back later for new submissions.</p>
+      </div>
+    } @else {
+      <div class="documents-grid">
+        @for (doc of documents; track doc.id) {
+          <div class="document-card animated-card hover-lift" [style.animation-delay]="($index * 0.1) + 's'">
+            <div class="document-header">
+              <div class="business-info">
+                <div class="business-avatar">
+                  {{ doc.businessName.charAt(0) }}
+                </div>
+                <div class="business-details">
+                  <h3>{{ doc.businessName }}</h3>
+                  <p>{{ doc.businessType }}</p>
+                </div>
+              </div>
+              <span class="doc-type-badge" [class]="'type-' + doc.documentType">
+                {{ doc.documentType | titlecase }}
+              </span>
+            </div>
+            
+            <div class="document-content">
+              <div class="document-preview">
+                <div class="preview-placeholder">
+                  <i class="fas fa-file-alt"></i>
+                  <span>{{ doc.fileName }}</span>
+                </div>
+                <button class="btn-secondary hover-lift" (click)="viewDocument(doc.id)">
+                  <i class="fas fa-eye"></i>
+                  View Document
+                </button>
+              </div>
+              
+              <div class="document-meta">
+                <div class="meta-item">
+                  <span class="meta-label">Uploaded:</span>
+                  <span class="meta-value">{{ doc.uploadDate | date:'MMM d, y' }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">File Size:</span>
+                  <span class="meta-value">{{ doc.fileSize }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">Status:</span>
+                  <span class="meta-value status-badge" [class]="'status-' + doc.status">
+                    {{ doc.status | titlecase }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="document-actions">
+              <button class="btn-success hover-lift" (click)="approveDocument(doc.id)" [disabled]="isProcessing">
+                <i class="fas fa-check"></i>
+                Approve
+              </button>
+              <button class="btn-warning hover-lift" (click)="requestRevision(doc.id)" [disabled]="isProcessing">
+                <i class="fas fa-edit"></i>
+                Request Revision
+              </button>
+              <button class="btn-danger hover-lift" (click)="rejectDocument(doc.id)" [disabled]="isProcessing">
+                <i class="fas fa-times"></i>
+                Reject
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

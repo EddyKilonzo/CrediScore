@@ -1106,4 +1106,321 @@ export class AdminService {
       throw error;
     }
   }
+
+  // Document Management
+  async getPendingDocuments(page: number = 1, limit: number = 10) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const [documents, total] = await Promise.all([
+        this.prisma.document.findMany({
+          where: {
+            verified: false,
+            business: {
+              isActive: true,
+            },
+          },
+          skip,
+          take: limit,
+          include: {
+            business: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+                owner: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { uploadedAt: 'asc' }, // Oldest first
+        }),
+        this.prisma.document.count({
+          where: {
+            verified: false,
+            business: {
+              isActive: true,
+            },
+          },
+        }),
+      ]);
+
+      return {
+        documents: documents.map(doc => ({
+          id: doc.id,
+          businessName: doc.business.name,
+          businessType: doc.business.category,
+          documentType: doc.type,
+          fileName: doc.name,
+          fileSize: doc.size,
+          uploadDate: doc.uploadedAt,
+          status: 'pending',
+          businessOwner: doc.business.owner,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching pending documents:', error);
+      throw new InternalServerErrorException('Failed to fetch pending documents');
+    }
+  }
+
+  async approveDocument(adminUserId: string, documentId: string): Promise<{ message: string }> {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: { business: true },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      if (document.verified) {
+        throw new BadRequestException('Document is already verified');
+      }
+
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          verified: true,
+          verifiedAt: new Date(),
+          verifiedBy: adminUserId,
+          verificationNotes: 'Approved by admin',
+        },
+      });
+
+      this.logger.log(`Document approved: ${documentId} by admin: ${adminUserId}`);
+      return { message: 'Document approved successfully' };
+    } catch (error) {
+      this.logger.error('Error approving document:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to approve document');
+    }
+  }
+
+  async rejectDocument(adminUserId: string, documentId: string, reason?: string): Promise<{ message: string }> {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          verified: false,
+          verifiedAt: new Date(),
+          verifiedBy: adminUserId,
+          verificationNotes: reason || 'Rejected by admin',
+        },
+      });
+
+      this.logger.log(`Document rejected: ${documentId} by admin: ${adminUserId}`);
+      return { message: 'Document rejected successfully' };
+    } catch (error) {
+      this.logger.error('Error rejecting document:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to reject document');
+    }
+  }
+
+  async requestDocumentRevision(adminUserId: string, documentId: string, notes?: string): Promise<{ message: string }> {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          verificationNotes: notes || 'Revision requested by admin',
+          verifiedAt: new Date(),
+          verifiedBy: adminUserId,
+        },
+      });
+
+      this.logger.log(`Document revision requested: ${documentId} by admin: ${adminUserId}`);
+      return { message: 'Revision requested successfully' };
+    } catch (error) {
+      this.logger.error('Error requesting document revision:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to request document revision');
+    }
+  }
+
+  // Review Management
+  async getPendingReviews(page: number = 1, limit: number = 10) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const [reviews, total] = await Promise.all([
+        this.prisma.review.findMany({
+          where: {
+            isVerified: false,
+            isActive: true,
+          },
+          skip,
+          take: limit,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                reputation: true,
+              },
+            },
+            business: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' }, // Oldest first
+        }),
+        this.prisma.review.count({
+          where: {
+            isVerified: false,
+            isActive: true,
+          },
+        }),
+      ]);
+
+      return {
+        reviews: reviews.map(review => ({
+          id: review.id,
+          reviewer: review.user.name,
+          business: review.business.name,
+          rating: review.rating,
+          content: review.comment,
+          date: review.createdAt,
+          status: review.isVerified ? 'approved' : 'pending',
+          user: review.user,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching pending reviews:', error);
+      throw new InternalServerErrorException('Failed to fetch pending reviews');
+    }
+  }
+
+  async approveReview(adminUserId: string, reviewId: string): Promise<{ message: string }> {
+    try {
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      await this.prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          isVerified: true,
+          updatedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`Review approved: ${reviewId} by admin: ${adminUserId}`);
+      return { message: 'Review approved successfully' };
+    } catch (error) {
+      this.logger.error('Error approving review:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to approve review');
+    }
+  }
+
+  async rejectReview(adminUserId: string, reviewId: string, reason?: string): Promise<{ message: string }> {
+    try {
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      await this.prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          isActive: false,
+          updatedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`Review rejected: ${reviewId} by admin: ${adminUserId}`);
+      return { message: 'Review rejected successfully' };
+    } catch (error) {
+      this.logger.error('Error rejecting review:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to reject review');
+    }
+  }
+
+  async flagReview(adminUserId: string, reviewId: string, reason?: string): Promise<{ message: string }> {
+    try {
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      // For flagging, we'll keep the review active but mark it as needing attention
+      // We could add a flagged field to the Review model in the future
+      await this.prisma.review.update({
+        where: { id: reviewId },
+        data: {
+          updatedAt: new Date(),
+        },
+      });
+
+      this.logger.log(`Review flagged: ${reviewId} by admin: ${adminUserId}`);
+      return { message: 'Review flagged successfully' };
+    } catch (error) {
+      this.logger.error('Error flagging review:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to flag review');
+    }
+  }
 }

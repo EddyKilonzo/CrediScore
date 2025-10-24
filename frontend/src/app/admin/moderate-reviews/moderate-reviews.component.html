@@ -1,0 +1,126 @@
+<div class="admin-page">
+  <div class="page-header fade-in-up">
+    <div class="header-content">
+      <h1 class="moderate-title slide-in-left">Review Moderation</h1>
+      <p class="slide-in-right">Moderate and manage user reviews for quality and compliance</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Display -->
+  @if (error) {
+    <div class="error-banner fade-in-up">
+      <div class="error-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button class="error-close" (click)="error = null">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Success Display -->
+  @if (successMessage) {
+    <div class="success-banner fade-in-up">
+      <div class="success-content">
+        <i class="fas fa-check-circle"></i>
+        <span>{{ successMessage }}</span>
+        <button class="success-close" (click)="successMessage = null">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-container fade-in-up">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading reviews...</p>
+    </div>
+  }
+  
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">Pending Reviews</h2>
+      <div class="header-actions slide-in-right">
+        <button class="btn-primary hover-lift" (click)="refreshReviews()">
+          <i class="fas fa-sync-alt"></i>
+          Refresh
+        </button>
+        <button class="btn-secondary hover-lift">
+          <i class="fas fa-filter"></i>
+          Filter
+        </button>
+        <button class="btn-secondary hover-lift">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+      </div>
+    </div>
+    
+    @if (reviews.length === 0 && !isLoading) {
+      <div class="empty-state fade-in-up">
+        <i class="fas fa-clipboard-list"></i>
+        <h3>No Pending Reviews</h3>
+        <p>All reviews have been moderated. Check back later for new submissions.</p>
+      </div>
+    } @else {
+      <div class="reviews-grid">
+        @for (review of reviews; track review.id) {
+          <div class="review-card animated-card hover-lift" [style.animation-delay]="($index * 0.1) + 's'">
+            <div class="review-header">
+              <div class="reviewer-info">
+                <div class="reviewer-avatar">
+                  {{ review.reviewer.charAt(0) }}
+                </div>
+                <div class="reviewer-details">
+                  <h3>{{ review.reviewer }}</h3>
+                  <p>{{ review.business }}</p>
+                </div>
+              </div>
+              <div class="review-rating">
+                <div class="stars">
+                  <i *ngFor="let star of getStars(review.rating)" 
+                     [class]="star ? 'fas fa-star filled' : 'far fa-star'"></i>
+                </div>
+                <span class="rating-text">{{ review.rating }}/5</span>
+              </div>
+            </div>
+            
+            <div class="review-content">
+              <p class="review-text">{{ review.content }}</p>
+              <div class="review-meta">
+                <span class="review-date">{{ review.date | date:'MMM d, y' }}</span>
+                <span class="review-status" [class]="'status-' + review.status">
+                  {{ review.status | titlecase }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="review-actions">
+              <button class="btn-success hover-lift" (click)="approveReview(review.id)" [disabled]="isProcessing">
+                <i class="fas fa-check"></i>
+                Approve
+              </button>
+              <button class="btn-warning hover-lift" (click)="flagReview(review.id)" [disabled]="isProcessing">
+                <i class="fas fa-flag"></i>
+                Flag
+              </button>
+              <button class="btn-danger hover-lift" (click)="rejectReview(review.id)" [disabled]="isProcessing">
+                <i class="fas fa-times"></i>
+                Reject
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

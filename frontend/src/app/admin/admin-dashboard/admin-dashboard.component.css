@@ -695,33 +695,233 @@
 .management-card:nth-child(2) { animation-delay: 0.2s; }
 .management-card:nth-child(3) { animation-delay: 0.3s; }
 
-/* Chart Styles */
+/* Chart Styles - Enhanced to match Quick Actions */
 .chart-container {
   padding: 1rem 0;
 }
 
-.chart-section {
+/* New Analytics Layout */
+.analytics-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  min-height: 500px;
+}
+
+.user-growth-section {
+  grid-column: 1;
+  grid-row: 1 / -1;
   padding: 1rem;
 }
 
-.chart-placeholder {
-  background: #f8fafc;
-  border-radius: 0.5rem;
+.business-verification-section {
+  grid-column: 2;
+  grid-row: 1;
   padding: 1rem;
-  border: 1px solid #e5e7eb;
+  min-width: 200px;
+}
+
+.chart-placeholder {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); /* Gradient background like Quick Actions */
+  border-radius: 0.75rem; /* Match Quick Actions border radius */
+  padding: 1.5rem; /* Increased padding */
+  border: 1px solid rgba(62, 106, 138, 0.1); /* Match Quick Actions border */
+  min-height: 450px; /* Further increased minimum height */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Match Quick Actions transition */
+}
+
+.chart-placeholder:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); /* Subtle hover effect */
+  border-color: rgba(62, 106, 138, 0.2);
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+.chart-container-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 1rem;
+}
+
+.chart-bars-container {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  height: 400px; /* Increased height for better visualization */
+  gap: 0.25rem; /* Reduced gap for 12 months */
+  padding: 0 0.25rem; /* Reduced padding for more space */
+  position: relative;
+}
+
+.chart-bars-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
 }
 
 .chart-bar {
   background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
-  border-radius: 0.25rem 0.25rem 0 0;
+  border-radius: 0.5rem 0.5rem 0 0;
   transition: all 0.3s ease;
   cursor: pointer;
   min-height: 20px;
+  flex: 1;
+  max-width: 35px; /* Reduced for 12 months fitting */
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 0.5rem;
+  box-shadow: 0 2px 8px rgba(62, 106, 138, 0.2);
+  margin: 0 0.125rem; /* Reduced margin for tighter spacing */
 }
 
 .chart-bar:hover {
   background: linear-gradient(135deg, #2C5270, #3E6A8A);
   transform: scaleY(1.05);
+  box-shadow: 0 4px 16px rgba(62, 106, 138, 0.3);
+}
+
+.bar-value {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.chart-bar:hover .bar-value {
+  opacity: 1;
+}
+
+.chart-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.25rem; /* Match bars container padding */
+  margin-top: 0.5rem;
+  gap: 0.25rem; /* Match bars gap */
+}
+
+.month-label {
+  font-size: 0.7rem; /* Slightly smaller for 12 months */
+  color: #6b7280;
+  font-weight: 500;
+  text-align: center;
+  flex: 1;
+  max-width: 35px; /* Match bar width */
+  padding: 0 0.125rem; /* Reduced padding for tighter spacing */
+}
+
+/* Chart Section Titles - Enhanced to match Quick Actions */
+.chart-section h3 {
+  font-size: 1.125rem; /* Match Quick Actions title size */
+  font-weight: 600;
+  color: #374151; /* Match Quick Actions text color */
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(62, 106, 138, 0.1); /* Subtle border like Quick Actions */
+  position: relative;
+}
+
+.chart-section h3::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 2rem;
+  height: 2px;
+  background: linear-gradient(90deg, #3E6A8A, #5C8BA5); /* Theme color accent */
+  border-radius: 1px;
+}
+
+/* Business Verification Chart Styles - Smaller and positioned top right */
+.verification-chart-container {
+  display: flex;
+  align-items: flex-start; /* Changed to flex-start to accommodate lower text */
+  justify-content: center;
+  height: 250px; /* Increased height to accommodate lower text */
+  padding: 1rem;
+}
+
+.circular-progress-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 2px 4px rgba(62, 106, 138, 0.2)); /* Smaller shadow */
+}
+
+.progress-circle {
+  transition: stroke-dashoffset 0.5s ease-in-out;
+  filter: drop-shadow(0 1px 2px rgba(62, 106, 138, 0.3)); /* Smaller shadow */
+}
+
+.progress-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.progress-percentage {
+  font-size: 1.5rem; /* Smaller percentage text */
+  font-weight: 700;
+  color: #3E6A8A;
+  margin-bottom: 0.125rem;
+  text-shadow: 0 1px 2px rgba(62, 106, 138, 0.1);
+}
+
+.progress-label {
+  font-size: 0.75rem; /* Smaller label text */
+  color: #6b7280;
+  font-weight: 500;
+  margin-bottom: 0.5rem; /* Reduced margin */
+}
+
+.progress-details {
+  position: absolute;
+  top: 100%; /* Position below the circle */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 1rem; /* Add space below circle */
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem; /* Smaller detail text */
+  padding: 0.125rem 0.25rem;
+  background: rgba(62, 106, 138, 0.05);
+  border-radius: 0.25rem;
+  min-width: 100px; /* Smaller width */
+}
+
+.detail-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: #3E6A8A;
+  font-weight: 600;
 }
 
 /* Activity Icons */
@@ -784,8 +984,67 @@
     padding: 0.5rem 0;
   }
   
-  .chart-section {
+  /* Mobile layout - stack vertically */
+  .analytics-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 1rem;
+  }
+  
+  .user-growth-section {
+    grid-column: 1;
+    grid-row: 1;
     padding: 0.5rem;
+  }
+  
+  .business-verification-section {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 0.5rem;
+    min-width: auto;
+  }
+  
+  .chart-placeholder {
+    min-height: 300px; /* Reduced for mobile */
+    padding: 1rem;
+  }
+  
+  .chart-bars-container {
+    height: 200px; /* Reduced for mobile */
+    gap: 0.125rem; /* Smaller gap for mobile with 12 months */
+    padding: 0 0.125rem;
+  }
+  
+  .chart-bar {
+    max-width: 25px; /* Smaller bars for mobile with 12 months */
+    margin: 0 0.0625rem;
+  }
+  
+  .month-label {
+    max-width: 25px; /* Match bar width */
+    font-size: 0.6rem; /* Smaller text for 12 months */
+  }
+  
+  .chart-labels {
+    gap: 0.125rem;
+    padding: 0 0.125rem;
+  }
+  
+  .verification-chart-container {
+    height: 150px; /* Smaller for mobile */
+  }
+  
+  .progress-percentage {
+    font-size: 1.25rem; /* Smaller for mobile */
+  }
+  
+  .progress-label {
+    font-size: 0.7rem; /* Smaller for mobile */
+  }
+  
+  .detail-item {
+    font-size: 0.6rem; /* Smaller for mobile */
+    min-width: 80px;
   }
 }
 

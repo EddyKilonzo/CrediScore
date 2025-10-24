@@ -48,6 +48,9 @@ export class ManageUsersComponent implements OnInit {
   newRole = signal('');
 
   ngOnInit() {
+    // Scroll to top when component loads
+    window.scrollTo(0, 0);
+    
     // Check if user is admin
     if (!this.isAuthenticated() || !this.isAdmin()) {
       window.location.href = '/dashboard';

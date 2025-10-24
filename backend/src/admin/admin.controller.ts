@@ -628,4 +628,184 @@ export class AdminController {
       throw error;
     }
   }
+
+  // Document Management
+  @Get('documents/pending')
+  @ApiOperation({ summary: 'Get pending documents for verification' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending documents retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async getPendingDocuments(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getPendingDocuments(page, limit);
+  }
+
+  @Post('documents/:id/approve')
+  @ApiOperation({ summary: 'Approve a document' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Document approved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async approveDocument(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') documentId: string,
+  ) {
+    return this.adminService.approveDocument(req.user.id, documentId);
+  }
+
+  @Post('documents/:id/reject')
+  @ApiOperation({ summary: 'Reject a document' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Document rejected successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async rejectDocument(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') documentId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminService.rejectDocument(req.user.id, documentId, body.reason);
+  }
+
+  @Post('documents/:id/request-revision')
+  @ApiOperation({ summary: 'Request revision for a document' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiBody({ schema: { type: 'object', properties: { notes: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Revision requested successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async requestDocumentRevision(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') documentId: string,
+    @Body() body: { notes?: string },
+  ) {
+    return this.adminService.requestDocumentRevision(req.user.id, documentId, body.notes);
+  }
+
+  // Review Management
+  @Get('reviews/pending')
+  @ApiOperation({ summary: 'Get pending reviews for moderation' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending reviews retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async getPendingReviews(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.adminService.getPendingReviews(page, limit);
+  }
+
+  @Post('reviews/:id/approve')
+  @ApiOperation({ summary: 'Approve a review' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review approved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async approveReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') reviewId: string,
+  ) {
+    return this.adminService.approveReview(req.user.id, reviewId);
+  }
+
+  @Post('reviews/:id/reject')
+  @ApiOperation({ summary: 'Reject a review' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Review rejected successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async rejectReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') reviewId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminService.rejectReview(req.user.id, reviewId, body.reason);
+  }
+
+  @Post('reviews/:id/flag')
+  @ApiOperation({ summary: 'Flag a review for further review' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiResponse({
+    status: 200,
+    description: 'Review flagged successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async flagReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') reviewId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminService.flagReview(req.user.id, reviewId, body.reason);
+  }
 }

@@ -1,0 +1,157 @@
+<div class="admin-page">
+  <div class="page-header fade-in-up">
+    <div class="header-content">
+      <h1 class="maintenance-title slide-in-left">System Maintenance</h1>
+      <p class="slide-in-right">Monitor system health and perform maintenance tasks</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Display -->
+  @if (error) {
+    <div class="error-banner fade-in-up">
+      <div class="error-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+        <button class="error-close" (click)="error = null">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-container fade-in-up">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading system data...</p>
+    </div>
+  }
+  
+  <!-- System Status Overview -->
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">System Status</h2>
+      <div class="status-indicator slide-in-right">
+        <span class="status-dot healthy pulse"></span>
+        <span class="status-text">All Systems Operational</span>
+      </div>
+    </div>
+    
+    <div class="status-grid">
+      <div class="status-card animated-card hover-lift" *ngFor="let card of getStatusCards(); let i = index" 
+           [style.animation-delay]="(i * 0.1) + 's'"
+           [class.backup-card]="card.label === 'Last Backup'">
+        <div class="status-icon" [class.backup-icon]="card.label === 'Last Backup'">
+          <i [class]="card.icon"></i>
+        </div>
+        <div class="status-content">
+          <h3 [class.backup-value]="card.label === 'Last Backup'">
+            @if (card.label === 'Last Backup') {
+              {{ card.value | date:'MMM d, y' }}
+            } @else {
+              {{ card.value }}
+            }
+          </h3>
+          <p>{{ card.label }}</p>
+          @if (card.label === 'Last Backup') {
+            <div class="backup-status">
+              <span class="backup-indicator" [class.success]="isBackupRecent()" [class.warning]="!isBackupRecent()">
+                <i class="fas fa-circle"></i>
+                {{ isBackupRecent() ? 'Recent' : 'Overdue' }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Maintenance Tasks -->
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">Scheduled Maintenance</h2>
+      <div class="header-actions slide-in-right">
+        <button class="btn-primary hover-lift" (click)="backupSystem()">
+          <i class="fas fa-save"></i>
+          Backup Now
+        </button>
+        <button class="btn-secondary hover-lift" (click)="clearCache()">
+          <i class="fas fa-broom"></i>
+          Clear Cache
+        </button>
+      </div>
+    </div>
+    
+    <div class="maintenance-grid">
+      <div class="maintenance-card animated-card hover-lift" *ngFor="let task of maintenanceTasks; let i = index" [style.animation-delay]="(i * 0.15) + 's'">
+        <div class="task-header">
+          <h3>{{ task.name }}</h3>
+          <span class="task-status" [class]="'status-' + task.status">
+            {{ task.status | titlecase }}
+          </span>
+        </div>
+        
+        <div class="task-details">
+          <div class="detail-item">
+            <span class="detail-label">Priority:</span>
+            <span class="detail-value priority-badge" [class]="'priority-' + task.priority">
+              {{ task.priority | titlecase }}
+            </span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Scheduled:</span>
+            <span class="detail-value">{{ task.scheduledDate | date:'MMM d, y' }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Duration:</span>
+            <span class="detail-value">{{ task.estimatedDuration }}</span>
+          </div>
+        </div>
+        
+        <div class="task-actions">
+          <button class="btn-primary hover-lift" (click)="runMaintenance(task.id)" 
+                  [disabled]="task.status === 'completed'">
+            <i class="fas fa-play"></i>
+            Run Now
+          </button>
+          <button class="btn-secondary hover-lift" (click)="scheduleMaintenance(task.id)">
+            <i class="fas fa-calendar"></i>
+            Reschedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- System Logs -->
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">Recent System Logs</h2>
+      <button class="btn-secondary hover-lift slide-in-right" (click)="viewLogs()">
+        <i class="fas fa-list"></i>
+        View All Logs
+      </button>
+    </div>
+    
+    <div class="logs-list">
+      <div class="log-item animated-item hover-lift" *ngFor="let log of logs; let i = index" [style.animation-delay]="(i * 0.1) + 's'">
+        <div class="log-header">
+          <span class="log-level" [class]="'level-' + log.level">
+            {{ log.level | uppercase }}
+          </span>
+          <span class="log-timestamp">{{ log.timestamp | date:'MMM d, HH:mm:ss' }}</span>
+        </div>
+        <div class="log-content">
+          <p class="log-message">{{ log.message }}</p>
+          <p class="log-source">{{ log.source }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

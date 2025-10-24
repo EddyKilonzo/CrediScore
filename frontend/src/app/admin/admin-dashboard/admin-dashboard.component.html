@@ -199,47 +199,54 @@
           <div class="dashboard-card">
             <h2 class="section-title">Platform Analytics</h2>
             <div class="chart-container">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- User Growth Chart -->
-                <div class="chart-section">
+              <div class="analytics-layout">
+                <!-- User Growth Chart - Takes most of the space -->
+                <div class="user-growth-section">
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">User Growth</h3>
                   <div class="chart-placeholder">
-                    <div class="flex items-end justify-between h-40 gap-2">
-                      <div class="chart-bar" style="height: 60%"></div>
-                      <div class="chart-bar" style="height: 80%"></div>
-                      <div class="chart-bar" style="height: 45%"></div>
-                      <div class="chart-bar" style="height: 90%"></div>
-                      <div class="chart-bar" style="height: 70%"></div>
-                      <div class="chart-bar" style="height: 95%"></div>
-                      <div class="chart-bar" style="height: 85%"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-500 mt-2">
-                      <span>Jan</span>
-                      <span>Feb</span>
-                      <span>Mar</span>
-                      <span>Apr</span>
-                      <span>May</span>
-                      <span>Jun</span>
-                      <span>Jul</span>
+                    <div class="chart-container-inner">
+                      <div class="chart-bars-container">
+                        @for (data of getUserGrowthData(); track data.month; let i = $index) {
+                          <div class="chart-bar" 
+                               [style.height]="data.height" 
+                               [attr.data-value]="data.value">
+                            <div class="bar-value">{{ data.value }}</div>
+                          </div>
+                        }
+                      </div>
+                      <div class="chart-labels">
+                        @for (data of getUserGrowthData(); track data.month) {
+                          <span class="month-label">{{ data.month }}</span>
+                        }
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- Business Verification Chart -->
-                <div class="chart-section">
+                <!-- Business Verification Chart - Smaller, positioned top right -->
+                <div class="business-verification-section">
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">Business Verification</h3>
-                  <div class="chart-placeholder">
-                    <div class="flex items-center justify-center h-40">
-                      <div class="relative w-32 h-32">
-                        <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
-                          <circle cx="50" cy="50" r="40" stroke="#3E6A8A" stroke-width="8" fill="none" 
-                                  stroke-dasharray="251.2" stroke-dashoffset="75.36" stroke-linecap="round"/>
-                        </svg>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                          <div class="text-center">
-                            <div class="text-2xl font-bold text-gray-900">70%</div>
-                            <div class="text-sm text-gray-600">Verified</div>
+                  <div class="verification-chart-container">
+                    <div class="circular-progress-container">
+                      <svg class="progress-ring w-24 h-24" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
+                        <circle cx="50" cy="50" r="40" stroke="#3E6A8A" stroke-width="8" fill="none" 
+                                [attr.stroke-dasharray]="251.2" 
+                                [attr.stroke-dashoffset]="251.2 - (251.2 * getBusinessVerificationData().percentage / 100)"
+                                stroke-linecap="round"
+                                class="progress-circle"/>
+                      </svg>
+                      <div class="progress-content">
+                        <div class="progress-percentage">{{ getBusinessVerificationData().percentage }}%</div>
+                        <div class="progress-label">Verified</div>
+                        <div class="progress-details">
+                          <div class="detail-item">
+                            <span class="detail-label">Verified:</span>
+                            <span class="detail-value">{{ getBusinessVerificationData().verified }}</span>
+                          </div>
+                          <div class="detail-item">
+                            <span class="detail-label">Pending:</span>
+                            <span class="detail-value">{{ getBusinessVerificationData().pending }}</span>
                           </div>
                         </div>
                       </div>
@@ -330,6 +337,37 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 Review Businesses
+              </a>
+              <a routerLink="/admin/fraud-reports" class="section-link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Fraud Reports
+              </a>
+              <a routerLink="/admin/flagged-users" class="section-link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+                Flagged Users
+              </a>
+              <a routerLink="/admin/reviews" class="section-link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                Moderate Reviews
+              </a>
+              <a routerLink="/admin/documents" class="section-link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Verify Documents
+              </a>
+              <a routerLink="/admin/system" class="section-link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                System Maintenance
               </a>
               <a routerLink="/admin/reports" class="section-link">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

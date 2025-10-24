@@ -122,8 +122,81 @@
       <!-- Overview Tab -->
       @if (activeTab() === 'overview') {
         <div class="tab-content animated-content fade-in-up">
-        <!-- Business Information (only for business/admin users) -->
-        @if (isBusinessOwner() || isAdmin()) {
+        <!-- Admin Dashboard Overview -->
+        @if (isAdmin()) {
+          <div class="content-panel animated-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Platform Overview</h3>
+            </div>
+            
+            <!-- Admin Quick Stats -->
+            <div class="admin-stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                  <h4>{{ getAdminStats().platformOverview?.totalUsers || 0 }}</h4>
+                  <p>Total Users</p>
+                </div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-building"></i>
+                </div>
+                <div class="stat-content">
+                  <h4>{{ getAdminStats().platformBusinesses?.totalBusinesses || 0 }}</h4>
+                  <p>Total Businesses</p>
+                </div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                  <h4>{{ getAdminStats().securityModeration?.pendingFraudReports || 0 }}</h4>
+                  <p>Pending Reports</p>
+                </div>
+              </div>
+              
+              <div class="stat-card">
+                <div class="stat-icon">
+                  <i class="fas fa-flag"></i>
+                </div>
+                <div class="stat-content">
+                  <h4>{{ getAdminStats().securityModeration?.flaggedUsers || 0 }}</h4>
+                  <p>Flagged Users</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Admin Quick Actions -->
+            <div class="admin-actions">
+              <h4>Quick Actions</h4>
+              <div class="action-buttons">
+                @for (action of getAdminQuickActions(); track action.action) {
+                  <button 
+                    class="action-btn" 
+                    [class.high-priority]="action.priority === 'high'"
+                    [class.medium-priority]="action.priority === 'medium'"
+                    [class.low-priority]="action.priority === 'low'"
+                    (click)="handleAdminAction(action.action)">
+                    <i [class]="getActionIcon(action.action)"></i>
+                    <span>{{ action.label }}</span>
+                    @if (action.count > 0) {
+                      <span class="action-count">{{ action.count }}</span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Business Information (only for business owners) -->
+        @if (isBusinessOwner() && !isAdmin()) {
           <div class="content-panel animated-panel">
           <div class="panel-header">
             <h3 class="panel-title">Business Information</h3>
@@ -269,10 +342,98 @@
       </div>
       }
 
-      <!-- Business Info Tab -->
+      <!-- Admin Management Tab -->
       @if (activeTab() === 'business') {
         <div class="tab-content animated-content fade-in-up">
-        @if (isBusinessOwner() || isAdmin()) {
+        @if (isAdmin()) {
+          <div class="content-panel">
+            <h3 class="panel-title">Platform Management</h3>
+            <p class="panel-description">Manage platform businesses, users, and system operations.</p>
+            
+            <!-- Admin Management Dashboard -->
+            <div class="admin-management-grid">
+              <div class="management-card">
+                <div class="card-header">
+                  <i class="fas fa-building"></i>
+                  <h4>Business Management</h4>
+                </div>
+                <div class="card-stats">
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().platformBusinesses?.totalBusinesses || 0 }}</span>
+                    <span class="stat-label">Total Businesses</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().platformBusinesses?.pendingVerification || 0 }}</span>
+                    <span class="stat-label">Pending Verification</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-primary" (click)="navigateToAdminDashboard()">Manage Businesses</button>
+                </div>
+              </div>
+
+              <div class="management-card">
+                <div class="card-header">
+                  <i class="fas fa-users"></i>
+                  <h4>User Management</h4>
+                </div>
+                <div class="card-stats">
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().platformOverview?.totalUsers || 0 }}</span>
+                    <span class="stat-label">Total Users</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().securityModeration?.flaggedUsers || 0 }}</span>
+                    <span class="stat-label">Flagged Users</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-primary" (click)="navigateToAdminDashboard()">Manage Users</button>
+                </div>
+              </div>
+
+              <div class="management-card">
+                <div class="card-header">
+                  <i class="fas fa-shield-alt"></i>
+                  <h4>Security & Moderation</h4>
+                </div>
+                <div class="card-stats">
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().securityModeration?.pendingFraudReports || 0 }}</span>
+                    <span class="stat-label">Pending Reports</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().securityModeration?.moderationQueue || 0 }}</span>
+                    <span class="stat-label">Review Queue</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-primary" (click)="navigateToAdminDashboard()">Review Reports</button>
+                </div>
+              </div>
+
+              <div class="management-card">
+                <div class="card-header">
+                  <i class="fas fa-chart-line"></i>
+                  <h4>System Analytics</h4>
+                </div>
+                <div class="card-stats">
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().systemHealth?.systemStatus || 'Healthy' }}</span>
+                    <span class="stat-label">System Status</span>
+                  </div>
+                  <div class="stat">
+                    <span class="stat-number">{{ getAdminStats().systemHealth?.uptime || '99.9%' }}</span>
+                    <span class="stat-label">Uptime</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-primary" (click)="navigateToAdminDashboard()">View Analytics</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        } @else if (isBusinessOwner()) {
           <div class="content-panel">
             <h3 class="panel-title">Business Management</h3>
             <p class="panel-description">Manage your business profiles and verification status.</p>
@@ -402,7 +563,7 @@
           <p class="panel-description">Detailed breakdown of your trust score and reputation.</p>
           <!-- Trust score content will go here -->
         </div>
-      </div>
+        </div>
       }
 
       <!-- Settings Tab -->
@@ -622,8 +783,9 @@
             </div>
           </div>
         </div>
-      </div>
+        </div>
       }
+
     </div>
   </div>
 </div>

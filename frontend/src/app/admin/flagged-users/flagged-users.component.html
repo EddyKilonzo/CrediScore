@@ -1,0 +1,87 @@
+<div class="admin-page">
+  <div class="page-header fade-in-up">
+    <div class="header-content">
+      <h1 class="flagged-title slide-in-left">Flagged Users Management</h1>
+      <p class="slide-in-right">Review and manage users who have been flagged for suspicious activity</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+      </button>
+    </div>
+  </div>
+  
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">Flagged Users</h2>
+      <div class="header-actions slide-in-right">
+        <button class="btn-primary hover-lift">
+          <i class="fas fa-filter"></i>
+          Filter
+        </button>
+        <button class="btn-secondary hover-lift">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+      </div>
+    </div>
+    
+    <div class="users-grid">
+      <div class="user-card animated-card hover-lift" *ngFor="let user of mockFlaggedUsers; let i = index" [style.animation-delay]="(i * 0.1) + 's'">
+        <div class="user-header">
+          <div class="user-info">
+            <div class="user-avatar">
+              {{ user.name.charAt(0) }}
+            </div>
+            <div class="user-details">
+              <h3>{{ user.name }}</h3>
+              <p>{{ user.email }}</p>
+            </div>
+          </div>
+          <span class="flag-badge" [class]="'flag-' + user.flagReason">
+            {{ user.flagReason | titlecase }}
+          </span>
+        </div>
+        
+        <div class="user-content">
+          <div class="user-stats">
+            <div class="stat">
+              <span class="stat-label">Reviews:</span>
+              <span class="stat-value">{{ user.totalReviews }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Reports:</span>
+              <span class="stat-value">{{ user.reportsCount }}</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Joined:</span>
+              <span class="stat-value">{{ user.joinDate | date:'MMM y' }}</span>
+            </div>
+          </div>
+          
+          <div class="flag-details">
+            <p><strong>Flag Reason:</strong> {{ user.flagDescription }}</p>
+            <p><strong>Flagged By:</strong> {{ user.flaggedBy }}</p>
+            <p><strong>Date Flagged:</strong> {{ user.flaggedDate | date:'MMM d, y' }}</p>
+          </div>
+        </div>
+        
+        <div class="user-actions">
+          <button class="btn-danger hover-lift" (click)="suspendUser(user.id)">
+            <i class="fas fa-ban"></i>
+            Suspend
+          </button>
+          <button class="btn-warning hover-lift" (click)="warnUser(user.id)">
+            <i class="fas fa-exclamation-triangle"></i>
+            Warn
+          </button>
+          <button class="btn-secondary hover-lift" (click)="clearFlag(user.id)">
+            <i class="fas fa-check"></i>
+            Clear Flag
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,57 @@
+<div class="admin-page">
+  <div class="page-header fade-in-up">
+    <div class="header-content">
+      <h1 class="fraud-title slide-in-left">Fraud Reports Management</h1>
+      <p class="slide-in-right">Review and manage fraud reports submitted by users</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+      </button>
+    </div>
+  </div>
+  
+  <div class="content-panel animated-panel fade-in-up">
+    <div class="panel-header">
+      <h2 class="section-title slide-in-left">Pending Fraud Reports</h2>
+      <div class="header-actions slide-in-right">
+        <button class="btn-primary hover-lift">
+          <i class="fas fa-filter"></i>
+          Filter
+        </button>
+        <button class="btn-secondary hover-lift">
+          <i class="fas fa-download"></i>
+          Export
+        </button>
+      </div>
+    </div>
+    
+    <div class="reports-grid">
+      <div class="report-card animated-card hover-lift" *ngFor="let report of reports; let i = index" [style.animation-delay]="(i * 0.1) + 's'">
+        <div class="report-header">
+          <h3>{{ report.reason }}</h3>
+          <span class="priority-badge" [class]="'priority-' + report.status">
+            {{ report.status | titlecase }}
+          </span>
+        </div>
+        <div class="report-content">
+          <p><strong>Reported by:</strong> {{ report.reporter.name }}</p>
+          <p><strong>Target:</strong> {{ report.business.name }}</p>
+          <p><strong>Date:</strong> {{ report.createdAt | date:'MMM d, y' }}</p>
+          <p class="report-description">{{ report.description }}</p>
+        </div>
+        <div class="report-actions">
+          <button class="btn-danger hover-lift" (click)="reviewReport(report.id)">
+            <i class="fas fa-eye"></i>
+            Review
+          </button>
+          <button class="btn-secondary hover-lift" (click)="dismissReport(report.id)">
+            <i class="fas fa-times"></i>
+            Dismiss
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

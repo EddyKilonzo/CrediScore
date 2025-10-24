@@ -33,6 +33,20 @@ export interface AdminDashboardStats {
   };
 }
 
+export interface MonthlyData {
+  month: string;
+  year: number;
+  userCount: number;
+  businessCount: number;
+  fraudReportCount: number;
+}
+
+export interface HistoricalData {
+  monthlyData: MonthlyData[];
+  totalGrowth: number;
+  averageMonthlyGrowth: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -212,6 +226,22 @@ export class AdminService {
           this.isLoading.set(false);
           return this.handleError(error);
         })
+      );
+  }
+
+  // Historical Data
+  getHistoricalData(): Observable<HistoricalData> {
+    this.clearError();
+    
+    const token = localStorage.getItem('token');
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    return this.http.get<HistoricalData>(`${this.API_URL}/admin/historical-data`, { headers })
+      .pipe(
+        catchError(error => this.handleError(error))
       );
   }
 

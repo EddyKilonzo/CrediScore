@@ -110,6 +110,36 @@ export const routes: Routes = [
         data: { roles: ['ADMIN', 'admin'] }
       },
       {
+        path: 'fraud-reports',
+        loadComponent: () => import('./admin/fraud-reports/fraud-reports.component').then(m => m.FraudReportsComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'flagged-users',
+        loadComponent: () => import('./admin/flagged-users/flagged-users.component').then(m => m.FlaggedUsersComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'reviews',
+        loadComponent: () => import('./admin/moderate-reviews/moderate-reviews.component').then(m => m.ModerateReviewsComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'documents',
+        loadComponent: () => import('./admin/verify-documents/verify-documents.component').then(m => m.VerifyDocumentsComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'system',
+        loadComponent: () => import('./admin/system-maintenance/system-maintenance.component').then(m => m.SystemMaintenanceComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'
