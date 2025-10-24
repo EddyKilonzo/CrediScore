@@ -123,82 +123,148 @@
       @if (activeTab() === 'overview') {
         <div class="tab-content animated-content fade-in-up">
         <!-- Business Information (only for business/admin users) -->
-        @if (currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER' || currentUser()?.role === 'admin') {
+        @if (isBusinessOwner() || isAdmin()) {
           <div class="content-panel animated-panel">
           <div class="panel-header">
             <h3 class="panel-title">Business Information</h3>
-            <button class="add-info-btn hover-lift">+ Add Info</button>
-          </div>
-          <div class="business-table">
-            <div class="table-header">
-              <div class="table-cell">BUSINESS</div>
-              <div class="table-cell">CATEGORY</div>
-              <div class="table-cell">TRUST SCORE</div>
-              <div class="table-cell">STATUS</div>
-              <div class="table-cell">ACTIONS</div>
-            </div>
-            @for (business of mockData.businesses; track business.name) {
-              <div class="table-row animated-row">
-              <div class="table-cell">{{ business.name }}</div>
-              <div class="table-cell">{{ business.category }}</div>
-              <div class="table-cell">{{ business.trustScore }}%</div>
-              <div class="table-cell">
-                <span class="status-badge" [class.verified]="business.status === 'Verified'">
-                  {{ business.status }}
-                </span>
-              </div>
-              <div class="table-cell">
-                <i class="fas fa-ellipsis-v"></i>
-              </div>
-              </div>
+            @if (canRegisterBusiness()) {
+              <button class="add-info-btn hover-lift" (click)="navigateToMyBusiness()">+ Register Business</button>
+            } @else {
+              <button class="manage-business-btn hover-lift" (click)="navigateToMyBusiness()">Manage Business</button>
             }
           </div>
+          @if (getUserBusinesses().length > 0) {
+            <div class="business-table">
+              <div class="table-header">
+                <div class="table-cell">BUSINESS</div>
+                <div class="table-cell">CATEGORY</div>
+                <div class="table-cell">TRUST SCORE</div>
+                <div class="table-cell">STATUS</div>
+                <div class="table-cell">REVIEWS</div>
+                <div class="table-cell">ACTIONS</div>
+              </div>
+              @for (business of getUserBusinesses(); track business.id) {
+                <div class="table-row animated-row">
+                <div class="table-cell">{{ business.name }}</div>
+                <div class="table-cell">{{ business.category }}</div>
+                <div class="table-cell">{{ business.trustScore }}% ({{ business.trustGrade }})</div>
+                <div class="table-cell">
+                  <span class="status-badge" [class.verified]="business.isVerified">
+                    {{ business.isVerified ? 'Verified' : 'Pending' }}
+                  </span>
+                </div>
+                <div class="table-cell">{{ business.totalReviews }}</div>
+                <div class="table-cell">
+                  <i class="fas fa-ellipsis-v"></i>
+                </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-state">
+              <i class="fas fa-building"></i>
+              <h4>No Business Registered</h4>
+              <p>You can register one business per account. Start by registering your business to manage your profile.</p>
+              <button class="btn-primary" (click)="navigateToMyBusiness()">Register Your Business</button>
+            </div>
+          }
         </div>
         }
 
         <!-- Activity Panel -->
         <div class="content-panel">
           <div class="panel-header">
-            <h3 class="panel-title">Activity</h3>
+            <h3 class="panel-title">Recent Activity</h3>
           </div>
-          <div class="activity-list">
-            @for (activity of mockData.recentActivity; track activity.action) {
-              <div class="activity-item">
-                <div class="activity-avatar">
-                  @if (getProfileImageUrl()) {
-                    <img [src]="getProfileImageUrl()" alt="User">
-                  }
+          @if (getRecentActivity().length > 0) {
+            <div class="activity-list">
+              @for (activity of getRecentActivity(); track activity.date) {
+                <div class="activity-item">
+                  <div class="activity-avatar">
+                    @if (getProfileImageUrl()) {
+                      <img [src]="getProfileImageUrl()" alt="User">
+                    } @else {
+                      <div class="avatar-initials">{{ getUserInitials(currentUser()!) }}</div>
+                    }
+                  </div>
+                  <div class="activity-content">
+                    <p class="activity-text">
+                      {{ activity.action }} 
+                      @if (activity.target) {
+                        for <strong>{{ activity.target }}</strong>
+                      }
+                      @if (activity.verified !== undefined) {
+                        <span class="verification-badge" [class.verified]="activity.verified">
+                          {{ activity.verified ? '✓ Verified' : '⚠ Unverified' }}
+                        </span>
+                      }
+                    </p>
+                    <p class="activity-date">{{ activity.date | date:'MMM d, y' }}</p>
+                  </div>
                 </div>
-                <div class="activity-content">
-                  <p class="activity-text">{{ activity.action }} for <strong>{{ activity.business }}</strong></p>
-                  <p class="activity-date">{{ activity.date }}</p>
-                </div>
-              </div>
-            }
-          </div>
-          <a href="#" class="view-all-link">View all</a>
+              }
+            </div>
+          } @else {
+            <div class="empty-state">
+              <i class="fas fa-history"></i>
+              <p>No recent activity</p>
+            </div>
+          }
+          <a href="#" class="view-all-link">View all activity</a>
         </div>
 
         <!-- Trust Score Panel -->
         <div class="content-panel">
           <div class="panel-header">
-            <h3 class="panel-title">Trust Score</h3>
+            <h3 class="panel-title">
+              @if (isBusinessOwner()) {
+                Business Trust Score
+              } @else if (isCustomer()) {
+                Reviewer Credibility
+              } @else {
+                Trust Score
+              }
+            </h3>
           </div>
           <div class="trust-score-content">
+            @if (isBusinessOwner()) {
+              <div class="score-item">
+                <span class="score-value">{{ getTrustScore() | number:'1.0-0' }}%</span>
+                <span class="score-label">Average Business Trust Score</span>
+              </div>
+              <div class="score-item">
+                <span class="score-value">{{ getUserStats().totalBusinesses }}</span>
+                <span class="score-label">Total Businesses</span>
+              </div>
+              <div class="score-item">
+                <span class="score-value">{{ getVerifiedBusinessesCount() }}</span>
+                <span class="score-label">Verified Businesses</span>
+              </div>
+            } @else if (isCustomer()) {
+              <div class="score-item">
+                <span class="score-value">{{ getTrustScore() | number:'1.0-0' }}</span>
+                <span class="score-label">Credibility Score</span>
+              </div>
+              <div class="score-item">
+                <span class="score-value">{{ getAverageRating() | number:'1.1-1' }}/5</span>
+                <span class="score-label">Average Rating Given</span>
+              </div>
+              <div class="score-item">
+                <span class="score-value">{{ getVerifiedReviewsCount() }}</span>
+                <span class="score-label">Verified Reviews</span>
+              </div>
+            } @else {
+              <div class="score-item">
+                <span class="score-value">{{ getTrustScore() | number:'1.0-0' }}</span>
+                <span class="score-label">Overall Score</span>
+              </div>
+            }
             <div class="score-item">
-              <span class="score-value">{{ mockData.trustScore }}%</span>
-              <span class="score-label">Overall Trust Score</span>
-            </div>
-            <div class="score-item">
-              <span class="score-value">{{ mockData.reputation }}/5</span>
-              <span class="score-label">Average Rating</span>
-            </div>
-            <div class="score-item">
-              <span class="score-value">{{ mockData.reviewsCount }}</span>
-              <span class="score-label">Reviews Posted</span>
+              <span class="score-value">{{ getUserStats().totalReviews }}</span>
+              <span class="score-label">Total Reviews</span>
             </div>
           </div>
-          <a href="#" class="view-all-link">View all</a>
+          <a href="#" class="view-all-link">View detailed breakdown</a>
         </div>
       </div>
       }
@@ -206,23 +272,126 @@
       <!-- Business Info Tab -->
       @if (activeTab() === 'business') {
         <div class="tab-content animated-content fade-in-up">
-        <div class="content-panel">
-          <h3 class="panel-title">Business Information</h3>
-          <p class="panel-description">Manage your business profiles and verification status.</p>
-          <!-- Business info content will go here -->
+        @if (isBusinessOwner() || isAdmin()) {
+          <div class="content-panel">
+            <h3 class="panel-title">Business Management</h3>
+            <p class="panel-description">Manage your business profiles and verification status.</p>
+            
+            @if (getUserBusinesses().length > 0) {
+              <div class="business-grid">
+                @for (business of getUserBusinesses(); track business.id) {
+                  <div class="business-card">
+                    <div class="business-header">
+                      <h4>{{ business.name }}</h4>
+                      <span class="status-badge" [class.verified]="business.isVerified">
+                        {{ business.isVerified ? 'Verified' : 'Pending' }}
+                      </span>
+                    </div>
+                    <div class="business-details">
+                      <p><strong>Category:</strong> {{ business.category }}</p>
+                      <p><strong>Trust Score:</strong> {{ business.trustScore }}% ({{ business.trustGrade }})</p>
+                      <p><strong>Reviews:</strong> {{ business.totalReviews }}</p>
+                      <p><strong>Documents:</strong> {{ business.totalDocuments }}</p>
+                      <p><strong>Payments:</strong> {{ business.totalPayments }}</p>
+                      <p><strong>Created:</strong> {{ business.createdAt | date:'MMM d, y' }}</p>
+                    </div>
+                    <div class="business-actions">
+                      <button class="btn-secondary">Edit</button>
+                      <button class="btn-primary">View Details</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                <i class="fas fa-building"></i>
+                <h4>No Business Registered</h4>
+                <p>You can register one business per account. Start by registering your business to manage your profile.</p>
+                <button class="btn-primary" (click)="navigateToMyBusiness()">Register Your Business</button>
+              </div>
+            }
+          </div>
+        }
         </div>
-      </div>
       }
 
       <!-- Reviews Tab -->
       @if (activeTab() === 'reviews') {
         <div class="tab-content animated-content fade-in-up">
-        <div class="content-panel">
-          <h3 class="panel-title">Your Reviews</h3>
-          <p class="panel-description">View and manage your business reviews.</p>
-          <!-- Reviews content will go here -->
+        @if (isCustomer() || isBusinessOwner()) {
+          <div class="content-panel">
+            <h3 class="panel-title">Your Reviews</h3>
+            <p class="panel-description">View and manage your business reviews.</p>
+            
+            @if (getUserStats().totalReviews > 0) {
+              <div class="reviews-summary">
+                <div class="summary-card">
+                  <h4>Review Summary</h4>
+                  <div class="summary-stats">
+                    <div class="stat-item">
+                      <span class="stat-value">{{ getUserStats().totalReviews }}</span>
+                      <span class="stat-label">Total Reviews</span>
+                    </div>
+                    @if (isCustomer()) {
+                      <div class="stat-item">
+                        <span class="stat-value">{{ getVerifiedReviewsCount() }}</span>
+                        <span class="stat-label">Verified Reviews</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ getAverageRating() | number:'1.1-1' }}/5</span>
+                        <span class="stat-label">Average Rating</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+              
+              <div class="reviews-list">
+                <h4>Recent Reviews</h4>
+                @for (activity of getReviewActivities(); track activity.date) {
+                  <div class="review-item">
+                    <div class="review-header">
+                      <h5>{{ activity.target }}</h5>
+                      <span class="verification-badge" [class.verified]="activity.verified">
+                        {{ activity.verified ? '✓ Verified' : '⚠ Unverified' }}
+                      </span>
+                    </div>
+                    <p class="review-text">{{ activity.action }}</p>
+                    <p class="review-date">{{ activity.date | date:'MMM d, y' }}</p>
+                    @if (activity.credibility) {
+                      <div class="credibility-score">
+                        <span>Credibility: {{ activity.credibility }}%</span>
+                      </div>
+                    }
+                    
+                    <!-- Review Replies (only for business owners) -->
+                    @if (isBusinessOwner() || isAdmin()) {
+                      <app-review-reply 
+                        [reviewId]="activity.id"
+                        [replies]="getReviewReplies(activity.id)"
+                        (replyAdded)="onReplyAdded($event)"
+                        (replyUpdated)="onReplyUpdated($event)"
+                        (replyDeleted)="onReplyDeleted($event)">
+                      </app-review-reply>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="empty-state">
+                <i class="fas fa-star"></i>
+                <h4>No Reviews Yet</h4>
+                @if (isCustomer()) {
+                  <p>Start reviewing businesses to build your credibility score.</p>
+                  <button class="btn-primary">Write Your First Review</button>
+                } @else {
+                  <p>As a business owner, you can reply to reviews but cannot write reviews yourself.</p>
+                }
+              </div>
+            }
+          </div>
+        }
         </div>
-      </div>
       }
 
       <!-- Trust Score Tab -->

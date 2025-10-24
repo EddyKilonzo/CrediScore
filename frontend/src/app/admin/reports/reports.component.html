@@ -1,4 +1,4 @@
-<div class="reports">
+<div class="fraud-reports">
   <!-- Welcome Section - Matching dashboard -->
   <div class="welcome-section">
     <div class="dashboard-container">
@@ -23,27 +23,141 @@
     </div>
   </div>
 
+  <!-- Stats Cards Section -->
+  <div class="stats-section">
+    <div class="dashboard-container">
+      <div class="stats-grid">
+        <div class="stats-card hover-lift">
+          <div class="flex items-start justify-between">
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div class="flex-1 ml-4">
+              <div class="card-number">{{ getTotalReports() }}</div>
+              <div class="card-label">Total Reports</div>
+              <div class="card-growth">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                All time reports
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card hover-lift">
+          <div class="flex items-start justify-between">
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1 ml-4">
+              <div class="card-number">{{ getPendingReports() }}</div>
+              <div class="card-label">Pending Review</div>
+              <div class="card-growth">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Awaiting action
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card hover-lift">
+          <div class="flex items-start justify-between">
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1 ml-4">
+              <div class="card-number">{{ getResolvedReports() }}</div>
+              <div class="card-label">Resolved</div>
+              <div class="card-growth">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Successfully handled
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card hover-lift">
+          <div class="flex items-start justify-between">
+            <div class="card-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div class="flex-1 ml-4">
+              <div class="card-number">{{ getThisMonthReports() }}</div>
+              <div class="card-label">This Month</div>
+              <div class="card-growth">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                Recent activity
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters Section -->
   <div class="filters-section">
-    <div class="filters-content">
-      <div class="filter-controls">
-        <select 
-          [(ngModel)]="statusFilter"
-          (ngModelChange)="onFilterChange()"
-          class="filter-select">
-          <option value="">All Status</option>
-          <option value="PENDING">Pending</option>
-          <option value="UNDER_REVIEW">Under Review</option>
-          <option value="RESOLVED">Resolved</option>
-          <option value="DISMISSED">Dismissed</option>
-        </select>
+    <div class="dashboard-container">
+      <div class="filters-grid">
+        <div class="search-box">
+          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Search reports by business name, reporter name, or reason..."
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearch()"
+            class="search-input">
+        </div>
         
-        <input 
-          type="text" 
-          placeholder="Filter by business ID..."
-          [(ngModel)]="businessFilter"
-          (ngModelChange)="onFilterChange()"
-          class="filter-input">
+        <div class="filter-controls">
+          <select 
+            [(ngModel)]="statusFilter"
+            (ngModelChange)="onFilterChange()"
+            class="filter-select"
+            data-filter="status">
+            <option value="">All Status</option>
+            <option value="PENDING">Pending</option>
+            <option value="UNDER_REVIEW">Under Review</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="DISMISSED">Dismissed</option>
+          </select>
+          
+        </div>
+        
+        <div class="clear-filters-container">
+          <button 
+            (click)="clearFilters()"
+            class="clear-filters-btn"
+            title="Clear all filters">
+            <svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear Filters
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -67,36 +181,51 @@
     </div>
   </div>
 
-  <!-- Reports Table -->
+  <!-- Reports Cards -->
   <div *ngIf="!getLoadingState() && !getErrorState()" class="reports-content">
-    <div class="reports-table-container">
-      <table class="reports-table">
-        <thead>
-          <tr>
-            <th>Report Details</th>
-            <th>Reporter</th>
-            <th>Business</th>
-            <th>Status</th>
-            <th>Reported</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let report of getFraudReports()" class="report-row">
-            <td class="report-info">
-              <div class="report-reason">{{ report.reason }}</div>
-              <div class="report-description">{{ report.description }}</div>
-            </td>
-            <td class="reporter-info">
-              <div class="reporter-name">{{ report.reporter.name }}</div>
-              <div class="reporter-email">{{ report.reporter.email }}</div>
-              <div class="reporter-reputation">
-                Reputation: {{ report.reporter.reputation }}
+    <div class="reports-cards-container">
+      <!-- Reports Grid -->
+      <div class="reports-grid" *ngIf="getFraudReports().length > 0">
+        <div *ngFor="let report of getFraudReports()" class="report-card hover-lift">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="report-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div class="report-info">
+              <h3 class="report-reason">{{ report.reason }}</h3>
+              <p class="report-date">{{ formatDateTime(report.createdAt) }}</p>
+            </div>
+            <div class="status-indicator" [class]="getStatusIndicatorClass(report.status)"></div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="card-body">
+            <div class="report-description">
+              <p>{{ report.description }}</p>
+            </div>
+
+            <div class="report-details">
+              <div class="detail-item">
+                <span class="detail-label">Reporter</span>
+                <span class="detail-value">{{ report.reporter.name }}</span>
               </div>
-            </td>
-            <td class="business-info">
-              <div class="business-name">{{ report.business.name }}</div>
-              <div class="business-status">
+              <div class="detail-item">
+                <span class="detail-label">Business</span>
+                <span class="detail-value">{{ report.business.name }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Reporter Reputation</span>
+                <span class="detail-value">{{ report.reporter.reputation }}</span>
+              </div>
+            </div>
+
+            <!-- Business Status -->
+            <div class="business-status">
+              <div class="status-badges">
                 <span [class]="report.business.isVerified ? 'verification-badge verified' : 'verification-badge pending'">
                   {{ report.business.isVerified ? 'Verified' : 'Pending' }}
                 </span>
@@ -104,40 +233,60 @@
                   {{ report.business.isActive ? 'Active' : 'Inactive' }}
                 </span>
               </div>
-            </td>
-            <td>
-              <span [class]="getStatusBadgeClass(report.status)">
-                {{ getStatusText(report.status) }}
-              </span>
-            </td>
-            <td class="date-cell">{{ formatDateTime(report.createdAt) }}</td>
-            <td class="actions-cell">
-              <div class="action-buttons">
-                <button 
-                  (click)="openReportModal(report)"
-                  class="action-btn view-btn"
-                  title="View Details">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-                <button 
-                  (click)="openStatusModal(report)"
-                  class="action-btn edit-btn"
-                  title="Update Status">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          </div>
+
+          <!-- Card Footer -->
+          <div class="card-footer">
+            <div class="action-buttons">
+              <button 
+                (click)="openReportModal(report)"
+                class="action-btn view-btn"
+                title="View Details">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span>View</span>
+              </button>
+              <button 
+                (click)="openStatusModal(report)"
+                class="action-btn edit-btn"
+                title="Update Status">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Update</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="getFraudReports().length === 0" class="empty-state">
+        <div class="empty-content">
+          <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <h3 class="empty-title">No Fraud Reports Found</h3>
+          <p class="empty-message">
+            {{ searchTerm() || statusFilter() 
+              ? 'Try adjusting your search or filter criteria' 
+              : 'No fraud reports have been submitted yet' }}
+          </p>
+          <button 
+            *ngIf="searchTerm() || statusFilter()"
+            (click)="clearFilters()"
+            class="clear-filters-btn">
+            Clear Filters
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Pagination -->
@@ -163,9 +312,16 @@
           Previous
         </button>
         
-        <span class="pagination-page">
-          Page {{ getPagination().page }} of {{ getPagination().totalPages }}
-        </span>
+        <!-- Page Numbers -->
+        <div class="page-numbers">
+          <button 
+            *ngFor="let page of getPageNumbers()"
+            (click)="onPageChange(page)"
+            [class.active]="page === getPagination().page"
+            class="page-btn">
+            {{ page }}
+          </button>
+        </div>
         
         <button 
           (click)="onPageChange(getPagination().page + 1)"

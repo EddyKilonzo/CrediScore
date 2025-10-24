@@ -23,6 +23,85 @@
     </div>
   </div>
 
+  <!-- Stats Section -->
+  <div class="stats-section">
+    <div class="dashboard-container">
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div class="card-number">{{ getTotalBusinesses() }}</div>
+          <div class="card-label">Total Businesses</div>
+          <div class="card-growth">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            All time
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="card-number">{{ getVerifiedBusinesses() }}</div>
+          <div class="card-label">Verified</div>
+          <div class="card-growth">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            {{ getVerificationRate() }}% rate
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div class="card-number">{{ getPendingBusinesses() }}</div>
+          <div class="card-label">Pending Review</div>
+          <div class="card-growth">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Awaiting verification
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <div class="card-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <div class="card-number">{{ getThisMonthBusinesses() }}</div>
+          <div class="card-label">This Month</div>
+          <div class="card-growth">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            New registrations
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters Section -->
   <div class="filters-section">
     <div class="dashboard-container">

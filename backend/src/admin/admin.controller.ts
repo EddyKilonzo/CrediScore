@@ -619,7 +619,10 @@ export class AdminController {
   })
   async testEmail(@Request() req: { user: UserWithoutPassword }) {
     try {
-      await this.adminService.testEmailFunctionality(req.user.email, req.user.name);
+      await this.adminService.testEmailFunctionality(
+        req.user.email,
+        req.user.name,
+      );
       return { message: 'Test email sent successfully' };
     } catch (error) {
       throw error;

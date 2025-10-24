@@ -265,9 +265,10 @@ export class MailerService {
       'http://localhost:3000',
     );
 
-    const subject = status === 'activated' 
-      ? 'Your Account Has Been Activated - CrediScore'
-      : 'Your Account Has Been Deactivated - CrediScore';
+    const subject =
+      status === 'activated'
+        ? 'Your Account Has Been Activated - CrediScore'
+        : 'Your Account Has Been Deactivated - CrediScore';
 
     try {
       await this.mailerService.sendMail({

@@ -182,3 +182,19 @@ export class CreateFraudReportDto {
   @IsString()
   description?: string;
 }
+
+export class CreateReviewReplyDto {
+  @ApiProperty({ description: 'Review ID' })
+  @IsString()
+  reviewId: string;
+
+  @ApiProperty({ description: 'Reply content' })
+  @IsString()
+  content: string;
+}
+
+export class UpdateReviewReplyDto {
+  @ApiProperty({ description: 'Reply content' })
+  @IsString()
+  content: string;
+}

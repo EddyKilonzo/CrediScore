@@ -33,6 +33,7 @@ export class ReportsComponent implements OnInit {
   // Filters
   statusFilter = signal('');
   businessFilter = signal('');
+  searchTerm = signal('');
   
   // Pagination
   currentPage = signal(1);
@@ -46,6 +47,9 @@ export class ReportsComponent implements OnInit {
   adminNotes = signal('');
 
   ngOnInit() {
+    // Scroll to top when component loads
+    window.scrollTo(0, 0);
+    
     // Check if user is admin
     if (!this.isAuthenticated() || !this.isAdmin()) {
       window.location.href = '/dashboard';
@@ -77,6 +81,9 @@ export class ReportsComponent implements OnInit {
         this.pagination.set(response.pagination);
       }
       
+      // Ensure page stays at top after loading
+      setTimeout(() => window.scrollTo(0, 0), 100);
+      
       this.isLoading.set(false);
     } catch (error) {
       console.error('Error loading fraud reports:', error);
@@ -87,17 +94,36 @@ export class ReportsComponent implements OnInit {
   }
 
   async onFilterChange(): Promise<void> {
-    this.currentPage.set(1);
-    await this.loadFraudReports();
+    try {
+      this.currentPage.set(1);
+      await this.loadFraudReports();
+      // Scroll to top when filters are applied
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      this.toastService.error('Failed to apply filters');
+    }
   }
 
   async onPageChange(page: number): Promise<void> {
-    this.currentPage.set(page);
-    await this.loadFraudReports();
+    try {
+      this.currentPage.set(page);
+      await this.loadFraudReports();
+      // Scroll to top when page changes
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error changing page:', error);
+      this.toastService.error('Failed to change page');
+    }
   }
 
   async refreshReports(): Promise<void> {
-    await this.loadFraudReports();
+    try {
+      await this.loadFraudReports();
+    } catch (error) {
+      console.error('Error refreshing reports:', error);
+      this.toastService.error('Failed to refresh reports');
+    }
   }
 
   openReportModal(report: FraudReport): void {
@@ -224,4 +250,91 @@ export class ReportsComponent implements OnInit {
   setAdminNotes(notes: string): void {
     this.adminNotes.set(notes);
   }
+
+  // Statistics methods
+  getTotalReports(): number {
+    return this.getPagination()?.total || 0;
+  }
+
+  getPendingReports(): number {
+    return this.getFraudReports().filter(report => report.status === 'PENDING').length;
+  }
+
+  getResolvedReports(): number {
+    return this.getFraudReports().filter(report => report.status === 'RESOLVED').length;
+  }
+
+  getThisMonthReports(): number {
+    const thisMonth = new Date();
+    thisMonth.setDate(1);
+    return this.getFraudReports().filter(report => 
+      new Date(report.createdAt) >= thisMonth
+    ).length;
+  }
+
+  // Search functionality
+  async onSearch(): Promise<void> {
+    try {
+      this.currentPage.set(1);
+      await this.loadFraudReports();
+      // Scroll to top when searching
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error searching reports:', error);
+      this.toastService.error('Failed to search reports');
+    }
+  }
+
+  // Clear filters
+  async clearFilters(): Promise<void> {
+    try {
+      this.statusFilter.set('');
+      this.businessFilter.set('');
+      this.searchTerm.set('');
+      this.currentPage.set(1);
+      await this.loadFraudReports();
+      // Scroll to top when clearing filters
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error clearing filters:', error);
+      this.toastService.error('Failed to clear filters');
+    }
+  }
+
+  // Status indicator class
+  getStatusIndicatorClass(status: string): string {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'status-indicator pending';
+      case 'under_review':
+        return 'status-indicator under-review';
+      case 'resolved':
+        return 'status-indicator resolved';
+      case 'dismissed':
+        return 'status-indicator dismissed';
+      default:
+        return 'status-indicator default';
+    }
+  }
+
+  // Page numbers for pagination
+  getPageNumbers(): number[] {
+    const pagination = this.getPagination();
+    if (!pagination) return [];
+    
+    const currentPage = pagination.page;
+    const totalPages = pagination.totalPages;
+    const pages: number[] = [];
+    
+    // Show up to 5 page numbers
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(totalPages, start + 4);
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  }
+
 }

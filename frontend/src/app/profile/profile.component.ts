@@ -1,10 +1,12 @@
-import { Component, signal, OnInit, computed } from '@angular/core';
+import { Component, signal, OnInit, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
 import { CloudinaryService } from '../core/services/cloudinary.service';
 import { ImageService } from '../shared/services/image.service';
+import { ReviewReplyComponent } from '../shared/components/review-reply/review-reply.component';
 
 interface Tab {
   id: string;
@@ -14,50 +16,48 @@ interface Tab {
 }
 
 interface Business {
+  id: string;
   name: string;
-  status: string;
-  rating: number;
   category: string;
+  isVerified: boolean;
   trustScore: number;
+  trustGrade: string;
+  totalReviews: number;
+  totalDocuments: number;
+  totalPayments: number;
+  createdAt: string;
 }
 
 interface Activity {
+  id: string;
+  type: 'review' | 'business' | 'fraud_report';
   action: string;
+  target: string;
   date: string;
-  time: string;
-  business: string;
+  verified?: boolean;
+  credibility?: number;
+  trustScore?: number;
+  category?: string;
+  status?: string;
 }
 
-interface MockData {
-  businesses: Business[];
+interface RoleBasedData {
+  user: any;
+  stats: any;
   recentActivity: Activity[];
-  trustScore: number;
-  reputation: number;
-  reviewsCount: number;
+  roleSpecificData: any;
 }
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ReviewReplyComponent],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css'
 })
 export class ProfileComponent implements OnInit {
-  // Mock data for display
-  mockData: MockData = {
-    businesses: [
-      { name: 'Sample Business 1', status: 'Verified', rating: 4.5, category: 'Restaurant', trustScore: 85 },
-      { name: 'Sample Business 2', status: 'Pending', rating: 4.2, category: 'Retail', trustScore: 78 }
-    ],
-    recentActivity: [
-      { action: 'Updated profile', date: '2024-01-15', time: '10:30 AM', business: 'Sample Business 1' },
-      { action: 'Added business', date: '2024-01-14', time: '2:15 PM', business: 'Sample Business 2' }
-    ],
-    trustScore: 85,
-    reputation: 4.3,
-    reviewsCount: 12
-  };
+  // Real data from backend
+  profileData: RoleBasedData | null = null;
 
   profileForm: FormGroup;
   activeTab = signal('overview');
@@ -87,10 +87,20 @@ export class ProfileComponent implements OnInit {
     if (!user) return this.allTabs.filter(tab => tab.id === 'overview');
 
     return this.allTabs.filter(tab => {
-      if (tab.id === 'business') {
-        return user.role === 'business' || user.role === 'BUSINESS_OWNER' || user.role === 'admin';
+      switch (tab.id) {
+        case 'business':
+          return this.isBusinessOwner() || this.isAdmin();
+        case 'reviews':
+          return this.isCustomer() || this.isBusinessOwner();
+        case 'trust':
+          return true; // All roles can see trust score
+        case 'settings':
+          return true; // All roles can access settings
+        case 'overview':
+          return true; // All roles can see overview
+        default:
+          return true;
       }
-      return true;
     });
   });
 
@@ -99,7 +109,8 @@ export class ProfileComponent implements OnInit {
     private authService: AuthService,
     private toastService: ToastService,
     private cloudinaryService: CloudinaryService,
-    public imageService: ImageService
+    public imageService: ImageService,
+    private router: Router
   ) {
     this.profileForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -128,6 +139,9 @@ export class ProfileComponent implements OnInit {
       this.populateForm(user);
     }
 
+    // Load role-based profile data
+    this.loadProfileData();
+
     // Load settings from localStorage
     this.loadSettings();
   }
@@ -140,6 +154,21 @@ export class ProfileComponent implements OnInit {
       email: user.email,
       phone: user.phone || '',
       bio: user.bio || ''
+    });
+  }
+
+  private loadProfileData(): void {
+    this.isLoading.set(true);
+    this.authService.getRoleBasedProfileData().subscribe({
+      next: (data) => {
+        this.profileData = data;
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading profile data:', error);
+        this.isLoading.set(false);
+        this.toastService.error('Failed to load profile data');
+      }
     });
   }
 
@@ -189,26 +218,126 @@ export class ProfileComponent implements OnInit {
   }
 
   getUserAddress(): string {
-    // Mock address - in real app, this would come from user data
-    return '123 Main Street, Nairobi';
+    // For now, return a placeholder - would need address fields in user model
+    return 'Address not provided';
   }
 
   getUserCity(): string {
-    // Mock city - in real app, this would come from user data
-    return 'Nairobi, Kenya';
+    // For now, return a placeholder - would need location fields in user model
+    return 'Location not provided';
   }
 
   getUserPostalCode(): string {
-    // Mock postal code - in real app, this would come from user data
-    return '00100';
+    // For now, return a placeholder - would need postal code in user model
+    return 'Not provided';
   }
 
   getJoinDate(): string {
     const user = this.currentUser();
-    if (!user) return 'Unknown';
+    if (!user?.createdAt) return 'Unknown';
     
-    // Mock join date - in real app, this would come from user data
-    return 'January 2024';
+    const date = new Date(user.createdAt);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    });
+  }
+
+  // Role-based data getters
+  getUserBusinesses(): Business[] {
+    if (!this.profileData?.roleSpecificData?.businesses) return [];
+    return this.profileData.roleSpecificData.businesses;
+  }
+
+  getRecentActivity(): Activity[] {
+    if (!this.profileData?.recentActivity) return [];
+    return this.profileData.recentActivity;
+  }
+
+  getUserStats(): any {
+    if (!this.profileData?.stats) return {};
+    return this.profileData.stats;
+  }
+
+  getRoleSpecificData(): any {
+    if (!this.profileData?.roleSpecificData) return {};
+    return this.profileData.roleSpecificData;
+  }
+
+  // Role-specific methods
+  isCustomer(): boolean {
+    const user = this.currentUser();
+    return user?.role === 'CUSTOMER' || user?.role === 'user';
+  }
+
+  isBusinessOwner(): boolean {
+    const user = this.currentUser();
+    return user?.role === 'BUSINESS_OWNER' || user?.role === 'business';
+  }
+
+  isAdmin(): boolean {
+    const user = this.currentUser();
+    return user?.role === 'ADMIN' || user?.role === 'admin';
+  }
+
+  getTrustScore(): number {
+    if (this.isBusinessOwner()) {
+      return this.getRoleSpecificData().averageTrustScore || 0;
+    }
+    return this.getUserStats().reputation || 0;
+  }
+
+  getAverageRating(): number {
+    if (this.isCustomer()) {
+      return this.getRoleSpecificData().averageRating || 0;
+    }
+    return 0;
+  }
+
+  getVerifiedReviewsCount(): number {
+    if (this.isCustomer()) {
+      return this.getRoleSpecificData().verifiedReviews || 0;
+    }
+    return 0;
+  }
+
+  getVerifiedBusinessesCount(): number {
+    return this.getUserBusinesses().filter(b => b.isVerified).length;
+  }
+
+  getReviewActivities(): Activity[] {
+    return this.getRecentActivity().filter(a => a.type === 'review');
+  }
+
+  // Navigation methods
+  navigateToMyBusiness(): void {
+    this.router.navigate(['/business/my-business']);
+  }
+
+  canRegisterBusiness(): boolean {
+    return this.getUserBusinesses().length === 0;
+  }
+
+  // Review Reply Methods
+  onReplyAdded(reply: any): void {
+    // Refresh profile data to show updated replies
+    this.loadProfileData();
+  }
+
+  onReplyUpdated(reply: any): void {
+    // Refresh profile data to show updated replies
+    this.loadProfileData();
+  }
+
+  onReplyDeleted(replyId: string): void {
+    // Refresh profile data to show updated replies
+    this.loadProfileData();
+  }
+
+  getReviewReplies(reviewId: string): any {
+    // For now, return empty array signal - this would be populated from the backend
+    // In a real implementation, you'd fetch replies for each review
+    return signal([]);
   }
 
   triggerFileUpload(): void {

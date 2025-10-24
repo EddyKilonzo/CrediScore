@@ -46,6 +46,9 @@ export class ManageBusinessesComponent implements OnInit {
   verificationAction = signal('');
 
   ngOnInit() {
+    // Scroll to top when component loads
+    window.scrollTo(0, 0);
+    
     // Check if user is admin
     if (!this.isAuthenticated() || !this.isAdmin()) {
       window.location.href = '/dashboard';
@@ -78,6 +81,9 @@ export class ManageBusinessesComponent implements OnInit {
         this.pagination.set(response.pagination);
       }
       
+      // Ensure page stays at top after loading
+      setTimeout(() => window.scrollTo(0, 0), 100);
+      
       this.isLoading.set(false);
     } catch (error) {
       console.error('Error loading businesses:', error);
@@ -88,18 +94,39 @@ export class ManageBusinessesComponent implements OnInit {
   }
 
   async onSearch(): Promise<void> {
-    this.currentPage.set(1);
-    await this.loadBusinesses();
+    try {
+      this.currentPage.set(1);
+      await this.loadBusinesses();
+      // Scroll to top when searching
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error searching businesses:', error);
+      this.toastService.error('Failed to search businesses');
+    }
   }
 
   async onFilterChange(): Promise<void> {
-    this.currentPage.set(1);
-    await this.loadBusinesses();
+    try {
+      this.currentPage.set(1);
+      await this.loadBusinesses();
+      // Scroll to top when filters are applied
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      this.toastService.error('Failed to apply filters');
+    }
   }
 
   async onPageChange(page: number): Promise<void> {
-    this.currentPage.set(page);
-    await this.loadBusinesses();
+    try {
+      this.currentPage.set(page);
+      await this.loadBusinesses();
+      // Scroll to top when page changes
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error changing page:', error);
+      this.toastService.error('Failed to change page');
+    }
   }
 
   async refreshBusinesses(): Promise<void> {
@@ -248,11 +275,18 @@ export class ManageBusinessesComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.searchTerm.set('');
-    this.verificationFilter.set('');
-    this.statusFilter.set('');
-    this.currentPage.set(1);
-    this.loadBusinesses();
+    try {
+      this.searchTerm.set('');
+      this.verificationFilter.set('');
+      this.statusFilter.set('');
+      this.currentPage.set(1);
+      this.loadBusinesses();
+      // Scroll to top when clearing filters
+      window.scrollTo(0, 0);
+    } catch (error) {
+      console.error('Error clearing filters:', error);
+      this.toastService.error('Failed to clear filters');
+    }
   }
 
   getPageNumbers(): number[] {
@@ -272,5 +306,34 @@ export class ManageBusinessesComponent implements OnInit {
     }
     
     return pages;
+  }
+
+  // Statistics methods
+  getTotalBusinesses(): number {
+    return this.getPagination()?.total || 0;
+  }
+
+  getVerifiedBusinesses(): number {
+    return this.getBusinesses().filter(business => business.isVerified).length;
+  }
+
+  getPendingBusinesses(): number {
+    return this.getBusinesses().filter(business => !business.isVerified).length;
+  }
+
+  getThisMonthBusinesses(): number {
+    const thisMonth = new Date();
+    thisMonth.setDate(1);
+    thisMonth.setHours(0, 0, 0, 0);
+    
+    return this.getBusinesses().filter(business => 
+      new Date(business.createdAt) >= thisMonth
+    ).length;
+  }
+
+  getVerificationRate(): number {
+    const total = this.getTotalBusinesses();
+    if (total === 0) return 0;
+    return Math.round((this.getVerifiedBusinesses() / total) * 100);
   }
 }

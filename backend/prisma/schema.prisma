@@ -39,6 +39,7 @@ model User {
   businesses                   Business[]
   fraudReports                 FraudReport[]
   reviews                      Review[]
+  reviewReplies                ReviewReply[]
 }
 
 model Business {
@@ -97,23 +98,35 @@ model Document {
 }
 
 model Review {
-  id               String    @id @default(uuid())
+  id               String       @id @default(uuid())
   rating           Int
   comment          String?
   userId           String
   businessId       String
-  credibility      Int       @default(0)
-  isVerified       Boolean   @default(false)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  credibility      Int          @default(0)
+  isVerified       Boolean      @default(false)
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
   amount           Float?
   receiptData      Json?
   receiptUrl       String?
   reviewDate       DateTime?
   validationResult Json?
-  business         Business  @relation(fields: [businessId], references: [id])
-  user             User      @relation(fields: [userId], references: [id])
+  business         Business     @relation(fields: [businessId], references: [id])
+  user             User         @relation(fields: [userId], references: [id])
+  replies          ReviewReply[]
+}
+
+model ReviewReply {
+  id        String   @id @default(uuid())
+  content   String
+  reviewId  String
+  userId    String   // Business owner who replied
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  review    Review   @relation(fields: [reviewId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Payment {

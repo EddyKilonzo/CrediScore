@@ -77,8 +77,8 @@
     <ng-container *ngIf="!isLoading">
       <div class="space-y-8">
       
-      <!-- Business Verification Progress - Moved to Top -->
-      <div class="dashboard-card">
+      <!-- Business Verification Progress - Enhanced with Arrows -->
+      <div class="dashboard-card verification-progress-card">
         <div class="px-6 py-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Business Verification Progress</h2>
           <p class="text-sm text-gray-600">Complete these steps to get your business verified</p>
@@ -86,47 +86,52 @@
         
         <div class="p-6">
           <!-- Progress Bar -->
-          <div class="mb-6">
-            <div class="flex items-center justify-between mb-2">
+          <div class="mb-8">
+            <div class="flex items-center justify-between mb-3">
               <span class="text-sm font-medium text-gray-700">Overall Progress</span>
               <span class="text-sm text-gray-500">{{ getCompletedStepsCount() }}/{{ getTotalStepsCount() }} completed</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div class="verification-progress-bar h-3 rounded-full transition-all duration-500 ease-out" 
                    [style.width.%]="getOnboardingProgress()"></div>
             </div>
           </div>
 
-          <!-- Onboarding Steps -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div *ngFor="let step of onboardingSteps" 
-                 class="border rounded-lg p-4"
-                 [class.bg-green-50]="step.completed"
-                 [class.border-green-200]="step.completed"
-                 [class.bg-gray-50]="!step.completed"
-                 [class.border-gray-200]="!step.completed">
+          <!-- Onboarding Steps with Arrows -->
+          <div class="verification-steps-container">
+            <div *ngFor="let step of onboardingSteps; let i = index" 
+                 class="verification-step-card"
+                 [class.completed]="step.completed"
+                 [class.current]="!step.completed && (i === 0 || onboardingSteps[i-1]?.completed)">
               
-              <div class="flex items-center mb-3">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center"
-                       [class.bg-green-500]="step.completed"
-                       [class.bg-gray-300]="!step.completed">
-                    <i class="fas fa-check text-white text-sm" *ngIf="step.completed"></i>
-                    <i [class]="step.icon + ' text-gray-600 text-sm'" *ngIf="!step.completed"></i>
-                  </div>
-                </div>
-                <div class="ml-3">
-                  <h3 class="text-sm font-medium text-gray-900">{{ step.title }}</h3>
+              <!-- Step Icon -->
+              <div class="step-icon-container">
+                <div class="step-icon"
+                     [class.completed]="step.completed"
+                     [class.current]="!step.completed && (i === 0 || onboardingSteps[i-1]?.completed)">
+                  <i class="fas fa-check text-white" *ngIf="step.completed"></i>
+                  <i [class]="step.icon + ' text-white'" *ngIf="!step.completed"></i>
                 </div>
               </div>
               
-              <p class="text-xs text-gray-600 mb-3">{{ step.description }}</p>
+              <!-- Step Content -->
+              <div class="step-content">
+                <h3 class="step-title">{{ step.title }}</h3>
+                <p class="step-description">{{ step.description }}</p>
+                <div class="step-status">
+                  <span class="status-badge"
+                        [class.completed]="step.completed"
+                        [class.pending]="!step.completed">
+                    {{ step.completed ? 'Completed' : 'Pending' }}
+                  </span>
+                </div>
+              </div>
               
-              <div class="flex items-center">
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                      [class]="getStatusColor(step.completed ? 'completed' : 'pending')">
-                  {{ step.completed ? 'Completed' : 'Pending' }}
-                </span>
+              <!-- Arrow Connector -->
+              <div *ngIf="i < onboardingSteps.length - 1" 
+                   class="step-arrow"
+                   [class.completed]="step.completed">
+                <i class="fas fa-arrow-right"></i>
               </div>
             </div>
           </div>
@@ -349,56 +354,118 @@
       </div>
 
       <!-- Payment Methods -->
-      <div class="dashboard-card mb-8">
+      <div id="payment-methods-section" class="dashboard-card mb-8">
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-lg font-semibold text-gray-900">Payment Methods</h2>
-              <p class="text-sm text-gray-600">Manage your business payment options</p>
+              <h2 class="section-heading">
+                <i class="fas fa-credit-card mr-2"></i>
+                Payment Methods
+              </h2>
+              <p class="text-sm text-gray-600">Manage your business payment options for customer transactions</p>
             </div>
             <button (click)="openAddPaymentModal()" 
-                    class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                    class="btn-primary">
               <i class="fas fa-plus mr-2"></i>
               Add Payment Method
             </button>
           </div>
         </div>
         <div class="p-6">
-          <div *ngIf="paymentMethods.length === 0" class="text-center py-8">
-            <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <i class="fas fa-credit-card text-2xl text-gray-400"></i>
+          <div *ngIf="paymentMethods.length === 0" class="text-center py-12">
+            <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full flex items-center justify-center border-2 border-dashed border-blue-200">
+              <i class="fas fa-credit-card text-3xl text-blue-400"></i>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No Payment Methods</h3>
-            <p class="text-gray-600 mb-4">Add payment methods to accept payments from customers</p>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">No Payment Methods Added</h3>
+            <p class="text-gray-600 mb-6 max-w-md mx-auto">Add payment methods to enable customers to pay for your services. Support M-Pesa Till, Paybill, and Bank transfers.</p>
             <button (click)="openAddPaymentModal()" 
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    class="btn-primary">
               <i class="fas fa-plus mr-2"></i>
               Add Your First Payment Method
             </button>
           </div>
 
           <div *ngIf="paymentMethods.length > 0" class="space-y-4">
-            <div *ngFor="let payment of paymentMethods" 
-                 class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div *ngFor="let payment of getPaginatedPaymentMethods()" 
+                 class="payment-method-card flex items-center justify-between p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:border-gray-300 transition-all duration-200">
               <div class="flex items-center space-x-4">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg"
                      [class]="getPaymentTypeColor(payment.type)">
-                  <i [class]="getPaymentTypeIcon(payment.type)"></i>
+                  <i [class]="getPaymentTypeIcon(payment.type) + ' text-lg'"></i>
                 </div>
                 <div>
-                  <h3 class="text-sm font-medium text-gray-900">{{ payment.type }}</h3>
-                  <p class="text-sm text-gray-600">{{ payment.number }}</p>
+                  <h3 class="text-base font-semibold text-gray-900">{{ payment.type }}</h3>
+                  <p class="text-sm text-gray-600 font-mono">{{ payment.number }}</p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Added {{ formatTimeAgo(getPaymentAddedDate(payment)) }}
+                  </p>
                 </div>
               </div>
-              <div class="flex items-center space-x-2">
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                      [class]="payment.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
-                  <i [class]="payment.verified ? 'fas fa-check mr-1' : 'fas fa-clock mr-1'"></i>
-                  {{ payment.verified ? 'Verified' : 'Pending' }}
+              <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                      [class]="payment.verified ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'">
+                  <i [class]="payment.verified ? 'fas fa-check-circle mr-1' : 'fas fa-clock mr-1'"></i>
+                  {{ payment.verified ? 'Verified' : 'Pending Verification' }}
                 </span>
                 <button (click)="removePaymentMethod(payment.id)" 
-                        class="text-red-600 hover:text-red-800">
-                  <i class="fas fa-trash"></i>
+                        class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                        title="Remove payment method">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            </div>
+            
+            <!-- Add More Button -->
+            <div class="pt-4 border-t border-gray-200">
+              <button (click)="openAddPaymentModal()" 
+                      class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200">
+                <i class="fas fa-plus mr-2"></i>
+                Add Another Payment Method
+              </button>
+            </div>
+
+            <!-- Payment Methods Pagination -->
+            <div *ngIf="getPaymentMethodsPagination().totalPages > 1" class="pagination-container mt-6">
+              <div class="pagination-info">
+                <span class="pagination-text">
+                  Showing {{ (getPaymentMethodsPagination().page - 1) * getPaymentMethodsPagination().limit + 1 }} to 
+                  {{ getMinValue(getPaymentMethodsPagination().page * getPaymentMethodsPagination().limit, getPaymentMethodsPagination().total) }} 
+                  of {{ getPaymentMethodsPagination().total }} payment methods
+                </span>
+                <div class="pagination-stats">
+                  <span class="page-info">Page {{ getPaymentMethodsPagination().page }} of {{ getPaymentMethodsPagination().totalPages }}</span>
+                </div>
+              </div>
+              <div class="pagination-controls">
+                <button 
+                  (click)="onPaymentMethodsPageChange(getPaymentMethodsPagination().page - 1)"
+                  [disabled]="getPaymentMethodsPagination().page <= 1"
+                  class="pagination-btn prev-btn">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Previous
+                </button>
+                
+                <!-- Page Numbers -->
+                <div class="page-numbers">
+                  <button 
+                    *ngFor="let page of getPaymentMethodsPageNumbers()"
+                    (click)="onPaymentMethodsPageChange(page)"
+                    [class.active]="page === getPaymentMethodsPagination().page"
+                    class="page-btn">
+                    {{ page }}
+                  </button>
+                </div>
+                
+                <button
+                  (click)="onPaymentMethodsPageChange(getPaymentMethodsPagination().page + 1)"
+                  [disabled]="getPaymentMethodsPagination().page >= getPaymentMethodsPagination().totalPages"
+                  class="pagination-btn next-btn">
+                  Next
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -407,10 +474,13 @@
       </div>
 
       <!-- Document Upload Section -->
-      <div class="dashboard-card">
+      <div id="documents-section" class="dashboard-card">
         <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Required Documents</h2>
-          <p class="text-sm text-gray-600">Upload these documents to verify your business</p>
+          <h2 class="section-heading">
+            <i class="fas fa-file-upload mr-2"></i>
+            Business Documents
+          </h2>
+          <p class="text-sm text-gray-600">Upload at least one document to verify your business (Business Registration Certificate or Tax Certificate)</p>
         </div>
         
         <div class="p-6">
@@ -450,7 +520,7 @@
               <div class="flex items-center">
                 <i class="fas fa-clock text-yellow-500 text-lg"></i>
                 <div class="ml-3">
-                  <p class="text-sm font-medium text-yellow-900">Required</p>
+                  <p class="text-sm font-medium text-yellow-900">Optional</p>
                   <p class="text-2xl font-bold text-yellow-600">{{ getRequiredDocumentsCount() }}</p>
                 </div>
               </div>
@@ -458,118 +528,435 @@
           </div>
 
           <!-- Document List -->
-          <div class="space-y-4">
-            <div *ngFor="let document of requiredDocuments" 
-                 class="document-card border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all duration-300 cursor-pointer">
+          <div class="space-y-6">
+            <div *ngFor="let document of getPaginatedDocuments()" 
+                 class="document-section">
               
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                      <i class="fas fa-file-alt text-gray-400 text-lg"></i>
-                    </div>
-                    <div class="ml-3">
-                      <h3 class="text-sm font-medium text-gray-900">{{ document.name }}</h3>
-                      <p class="text-xs text-gray-600">{{ document.description }}</p>
+              <!-- Document Upload Card (Left Side) -->
+              <div class="document-upload-card">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0">
+                        <i class="fas fa-file-alt text-gray-400 text-lg"></i>
+                      </div>
+                      <div class="ml-3">
+                        <h3 class="text-sm font-medium text-gray-900">{{ document.name }}</h3>
+                        <p class="text-xs text-gray-600">{{ document.description }}</p>
+                      </div>
                     </div>
                   </div>
+                  
+                  <div class="flex items-center space-x-3">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                          [class]="getDocumentStatusColor(document)">
+                      <i *ngIf="document.scanning" class="fas fa-spinner fa-spin mr-1"></i>
+                      <i *ngIf="document.verified" class="fas fa-check mr-1"></i>
+                      <i *ngIf="document.uploaded && !document.scanning && !document.verified" class="fas fa-clock mr-1"></i>
+                      {{ getDocumentStatusText(document) }}
+                    </span>
+                    
+                    <button *ngIf="!document.uploaded" 
+                            type="button"
+                            (click)="openUploadModal(document)"
+                            class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                      <i class="fas fa-upload mr-1"></i>
+                      Upload
+                    </button>
+                    
+                    <button *ngIf="document.uploaded && !document.scanning" 
+                            type="button"
+                            class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                      <i class="fas fa-eye mr-1"></i>
+                      View
+                    </button>
+                  </div>
                 </div>
-                
-                <div class="flex items-center space-x-3">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                        [class]="getDocumentStatusColor(document)">
-                    <i *ngIf="document.scanning" class="fas fa-spinner fa-spin mr-1"></i>
-                    <i *ngIf="document.verified" class="fas fa-check mr-1"></i>
-                    <i *ngIf="document.uploaded && !document.scanning && !document.verified" class="fas fa-clock mr-1"></i>
-                    {{ getDocumentStatusText(document) }}
-                  </span>
-                  
-                  <button *ngIf="!document.uploaded" 
-                          type="button"
-                          (click)="openUploadModal(document)"
-                          class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fas fa-upload mr-1"></i>
-                    Upload
-                  </button>
-                  
-                  <button *ngIf="document.uploaded && !document.scanning" 
-                          type="button"
-                          class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fas fa-eye mr-1"></i>
-                    View
-                  </button>
+
+                <!-- Document Preview (when uploaded) -->
+                <div *ngIf="document.uploaded" class="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <i class="fas fa-file-pdf text-blue-600 text-lg"></i>
+                    </div>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900">{{ document.name }}</p>
+                      <p class="text-xs text-gray-500">Uploaded successfully</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-xs text-gray-500">Ready for AI scan</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Scanning Animation -->
-              <div *ngIf="document.scanning" class="mt-4 p-3 bg-blue-50 rounded-lg scanning-pulse">
-                <div class="flex items-center justify-between mb-2">
+              <!-- AI Scanning Card (Right Side) -->
+              <div *ngIf="document.uploaded" class="ai-scanning-card">
+                <div class="scanning-header">
                   <div class="flex items-center space-x-2">
-                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span class="text-sm text-blue-700 font-medium">AI Scanning in Progress</span>
+                    <i class="fas fa-robot text-green-600 text-lg"></i>
+                    <h4 class="text-sm font-semibold text-gray-900">AI Document Scanner</h4>
                   </div>
-                  <span class="text-sm text-blue-600 font-bold">{{ scanningProgress }}%</span>
+                  <div class="scanning-status">
+                    <span *ngIf="document.scanning" class="text-xs text-green-600 font-medium">Scanning...</span>
+                    <span *ngIf="document.verified" class="text-xs text-green-600 font-medium">Verified</span>
+                    <span *ngIf="document.uploaded && !document.scanning && !document.verified" class="text-xs text-yellow-600 font-medium">Pending</span>
+                  </div>
                 </div>
-                <div class="w-full bg-blue-200 rounded-full h-2">
-                  <div class="bg-blue-600 h-2 rounded-full transition-all duration-500 progress-bar-animated" 
-                       [style.width.%]="scanningProgress"></div>
-                </div>
-                <div class="mt-2 text-xs text-blue-600">
-                  <i class="fas fa-robot mr-1"></i>
-                  OCR + AI Verification
+
+                <!-- Scanning Animation Container -->
+                <div class="scanning-container" 
+                     [class.scanning-active]="document.scanning"
+                     [class.scanning-complete]="document.verified">
+                  
+                  <!-- Document Preview Area -->
+                  <div class="document-preview-area">
+                    <div class="document-placeholder">
+                      <i class="fas fa-file-alt text-gray-300 text-2xl"></i>
+                    </div>
+                    
+                    <!-- Green Scanning Line -->
+                    <div *ngIf="document.scanning" class="scanning-line"></div>
+                    
+                    <!-- Scanning Progress Overlay -->
+                    <div *ngIf="document.scanning" class="scanning-overlay">
+                      <div class="scanning-progress">
+                        <div class="progress-circle">
+                          <span class="progress-text">{{ scanningProgress }}%</span>
+                        </div>
+                        <p class="progress-label">AI Analysis</p>
+                      </div>
+                    </div>
+                    
+                    <!-- Success State -->
+                    <div *ngIf="document.verified" class="scanning-success">
+                      <div class="success-icon">
+                        <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                      </div>
+                      <p class="success-text">Document Verified</p>
+                    </div>
+                  </div>
+
+                  <!-- Scanning Details -->
+                  <div class="scanning-details">
+                    <div *ngIf="document.scanning" class="scanning-info">
+                      <div class="info-item">
+                        <i class="fas fa-eye text-blue-500"></i>
+                        <span>OCR Processing</span>
+                      </div>
+                      <div class="info-item">
+                        <i class="fas fa-brain text-purple-500"></i>
+                        <span>AI Verification</span>
+                      </div>
+                      <div class="info-item">
+                        <i class="fas fa-shield-alt text-green-500"></i>
+                        <span>Security Check</span>
+                      </div>
+                    </div>
+                    
+                    <div *ngIf="document.verified" class="verification-summary">
+                      <div class="summary-item">
+                        <i class="fas fa-check text-green-500"></i>
+                        <span>Authenticity: {{ document.scanResult?.authenticityScore || 0 }}%</span>
+                      </div>
+                      <div class="summary-item">
+                        <i class="fas fa-clock text-blue-500"></i>
+                        <span>Processed in {{ getScanningTime() }}s</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Document Verification Explanation -->
+                  <div class="verification-explanation mt-4 p-3 bg-blue-50 rounded-lg">
+                    <h5 class="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                      <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                      How Document Verification Works
+                    </h5>
+                    <div class="text-xs text-blue-700 space-y-1">
+                      <div class="flex items-start">
+                        <i class="fas fa-search text-blue-500 mr-2 mt-1"></i>
+                        <span><strong>OCR Analysis:</strong> Extracts text and data from your document</span>
+                      </div>
+                      <div class="flex items-start">
+                        <i class="fas fa-brain text-purple-500 mr-2 mt-1"></i>
+                        <span><strong>AI Verification:</strong> Validates document format, authenticity, and security features</span>
+                      </div>
+                      <div class="flex items-start">
+                        <i class="fas fa-shield-alt text-green-500 mr-2 mt-1"></i>
+                        <span><strong>Fraud Detection:</strong> Checks for suspicious patterns and fake indicators</span>
+                      </div>
+                      <div class="flex items-start">
+                        <i class="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                        <span><strong>Authenticity Score:</strong> Documents scoring 60%+ are considered verified</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- Scan Results -->
-              <div *ngIf="document.scanResult && !document.scanning" class="mt-4 p-3 rounded-lg scan-result-enter"
-                   [class.bg-green-50]="document.scanResult.aiVerified"
-                   [class.bg-red-50]="!document.scanResult.aiVerified">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center space-x-2">
-                    <i [class]="document.scanResult.aiVerified ? 'fas fa-check-circle text-green-600' : 'fas fa-exclamation-triangle text-red-600'"></i>
-                    <span class="text-sm font-medium"
-                          [class]="document.scanResult.aiVerified ? 'text-green-800' : 'text-red-800'">
-                      {{ document.scanResult.aiVerified ? 'Verification Successful' : 'Verification Failed' }}
-                    </span>
+              <!-- AI Analysis Results -->
+              <div *ngIf="document.scanResult && !document.scanning" class="mt-4 rounded-lg overflow-hidden scan-result-enter">
+                <!-- Header -->
+                <div class="p-4" 
+                     [class.bg-green-50]="document.scanResult.aiVerified"
+                     [class.bg-red-50]="!document.scanResult.aiVerified">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-3">
+                      <div class="p-2 rounded-full"
+                           [class.bg-green-100]="document.scanResult.aiVerified"
+                           [class.bg-red-100]="!document.scanResult.aiVerified">
+                        <i [class]="document.scanResult.aiVerified ? 'fas fa-check-circle text-green-600' : 'fas fa-exclamation-triangle text-red-600'"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-sm font-semibold"
+                            [class.text-green-800]="document.scanResult.aiVerified"
+                            [class.text-red-800]="!document.scanResult.aiVerified">
+                          {{ document.scanResult.aiVerified ? 'Document Verified' : 'Verification Issues Detected' }}
+                        </h4>
+                        <p class="text-xs text-gray-600">{{ document.scanResult.documentType || 'Business Document' }}</p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-lg font-bold"
+                           [class.text-green-600]="document.scanResult.aiVerified"
+                           [class.text-red-600]="!document.scanResult.aiVerified">
+                        {{ document.scanResult.authenticityScore }}%
+                      </div>
+                      <div class="text-xs text-gray-500">Authenticity Score</div>
+                    </div>
                   </div>
-                  <span class="text-sm font-bold"
-                        [class]="document.scanResult.aiVerified ? 'text-green-600' : 'text-red-600'">
-                    {{ document.scanResult.authenticityScore }}%
-                  </span>
+                  
+                  <!-- Progress Bar -->
+                  <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
+                    <div class="h-2 rounded-full transition-all duration-500"
+                         [class.bg-green-500]="document.scanResult.authenticityScore >= 80"
+                         [class.bg-yellow-500]="document.scanResult.authenticityScore >= 60 && document.scanResult.authenticityScore < 80"
+                         [class.bg-red-500]="document.scanResult.authenticityScore < 60"
+                         [style.width.%]="document.scanResult.authenticityScore"></div>
+                  </div>
                 </div>
-                
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">OCR Confidence:</span>
-                    <span class="font-medium">{{ document.scanResult.ocrConfidence }}%</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">AI Verified:</span>
-                    <span class="font-medium"
-                          [class]="document.scanResult.aiVerified ? 'text-green-600' : 'text-red-600'">
-                      {{ document.scanResult.aiVerified ? 'Yes' : 'No' }}
-                    </span>
+
+                <!-- Verification Checklist -->
+                <div class="p-4 bg-white border-t border-gray-200">
+                  <h5 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-clipboard-check text-blue-500 mr-2"></i>
+                    Verification Checklist
+                  </h5>
+                  <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex items-center space-x-2" 
+                         [class.text-green-600]="document.scanResult.verificationChecklist?.businessNameFound"
+                         [class.text-red-600]="!document.scanResult.verificationChecklist?.businessNameFound">
+                      <i [class]="document.scanResult.verificationChecklist?.businessNameFound ? 'fas fa-check' : 'fas fa-times'"></i>
+                      <span>Business Name</span>
+                    </div>
+                    <div class="flex items-center space-x-2"
+                         [class.text-green-600]="document.scanResult.verificationChecklist?.validRegistrationFormat"
+                         [class.text-red-600]="!document.scanResult.verificationChecklist?.validRegistrationFormat">
+                      <i [class]="document.scanResult.verificationChecklist?.validRegistrationFormat ? 'fas fa-check' : 'fas fa-times'"></i>
+                      <span>Registration Format</span>
+                    </div>
+                    <div class="flex items-center space-x-2"
+                         [class.text-green-600]="document.scanResult.verificationChecklist?.validTaxFormat"
+                         [class.text-red-600]="!document.scanResult.verificationChecklist?.validTaxFormat">
+                      <i [class]="document.scanResult.verificationChecklist?.validTaxFormat ? 'fas fa-check' : 'fas fa-times'"></i>
+                      <span>Tax Number Format</span>
+                    </div>
+                    <div class="flex items-center space-x-2"
+                         [class.text-green-600]="document.scanResult.verificationChecklist?.officialAuthorityPresent"
+                         [class.text-red-600]="!document.scanResult.verificationChecklist?.officialAuthorityPresent">
+                      <i [class]="document.scanResult.verificationChecklist?.officialAuthorityPresent ? 'fas fa-check' : 'fas fa-times'"></i>
+                      <span>Official Authority</span>
+                    </div>
+                    <div class="flex items-center space-x-2"
+                         [class.text-green-600]="document.scanResult.verificationChecklist?.securityFeaturesDetected"
+                         [class.text-red-600]="!document.scanResult.verificationChecklist?.securityFeaturesDetected">
+                      <i [class]="document.scanResult.verificationChecklist?.securityFeaturesDetected ? 'fas fa-check' : 'fas fa-times'"></i>
+                      <span>Security Features</span>
+                    </div>
+                    <div class="flex items-center space-x-2"
+                         [class.text-green-600]="document.scanResult.verificationChecklist?.noFraudIndicators"
+                         [class.text-red-600]="!document.scanResult.verificationChecklist?.noFraudIndicators">
+                      <i [class]="document.scanResult.verificationChecklist?.noFraudIndicators ? 'fas fa-check' : 'fas fa-times'"></i>
+                      <span>No Fraud Indicators</span>
+                    </div>
                   </div>
                 </div>
 
                 <!-- Extracted Data -->
-                <div *ngIf="document.scanResult.extractedData" class="mt-2 pt-2 border-t border-gray-200">
-                  <div class="text-xs text-gray-600">
-                    <div class="flex justify-between">
-                      <span>Issue Date:</span>
-                      <span class="font-medium">{{ document.scanResult.extractedData.issueDate }}</span>
+                <div *ngIf="document.scanResult.extractedData" class="p-4 bg-gray-50 border-t border-gray-200">
+                  <h5 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-database text-purple-500 mr-2"></i>
+                    Extracted Information
+                  </h5>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div *ngIf="document.scanResult.extractedData.businessName" class="flex justify-between">
+                      <span class="text-gray-600">Business Name:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.businessName }}</span>
                     </div>
-                    <div class="flex justify-between">
-                      <span>Expiry Date:</span>
-                      <span class="font-medium">{{ document.scanResult.extractedData.expiryDate }}</span>
+                    <div *ngIf="document.scanResult.extractedData.registrationNumber" class="flex justify-between">
+                      <span class="text-gray-600">Registration:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.registrationNumber }}</span>
                     </div>
-                    <div class="flex justify-between">
-                      <span>Issuer:</span>
-                      <span class="font-medium">{{ document.scanResult.extractedData.issuer }}</span>
+                    <div *ngIf="document.scanResult.extractedData.taxNumber" class="flex justify-between">
+                      <span class="text-gray-600">Tax Number:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.taxNumber }}</span>
+                    </div>
+                    <div *ngIf="document.scanResult.extractedData.businessType" class="flex justify-between">
+                      <span class="text-gray-600">Business Type:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.businessType }}</span>
+                    </div>
+                    <div *ngIf="document.scanResult.extractedData.issueDate" class="flex justify-between">
+                      <span class="text-gray-600">Issue Date:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.issueDate }}</span>
+                    </div>
+                    <div *ngIf="document.scanResult.extractedData.expiryDate" class="flex justify-between">
+                      <span class="text-gray-600">Expiry Date:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.expiryDate }}</span>
+                    </div>
+                    <div *ngIf="document.scanResult.extractedData.issuingAuthority" class="flex justify-between">
+                      <span class="text-gray-600">Issuing Authority:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.issuingAuthority }}</span>
+                    </div>
+                    <div *ngIf="document.scanResult.extractedData.businessAddress" class="flex justify-between">
+                      <span class="text-gray-600">Address:</span>
+                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.businessAddress }}</span>
                     </div>
                   </div>
                 </div>
+
+                <!-- Technical Details -->
+                <div class="p-4 bg-white border-t border-gray-200">
+                  <h5 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                    <i class="fas fa-cogs text-gray-500 mr-2"></i>
+                    Technical Analysis
+                  </h5>
+                  <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">OCR Confidence:</span>
+                      <span class="font-medium"
+                            [class.text-green-600]="document.scanResult.ocrConfidence >= 80"
+                            [class.text-yellow-600]="document.scanResult.ocrConfidence >= 60 && document.scanResult.ocrConfidence < 80"
+                            [class.text-red-600]="document.scanResult.ocrConfidence < 60">
+                        {{ document.scanResult.ocrConfidence }}%
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">AI Confidence:</span>
+                      <span class="font-medium"
+                            [class.text-green-600]="document.scanResult.confidence >= 80"
+                            [class.text-yellow-600]="document.scanResult.confidence >= 60 && document.scanResult.confidence < 80"
+                            [class.text-red-600]="document.scanResult.confidence < 60">
+                        {{ document.scanResult.confidence }}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Warnings and Errors -->
+                <div *ngIf="document.scanResult.warnings && document.scanResult.warnings.length > 0" 
+                     class="p-4 bg-yellow-50 border-t border-yellow-200">
+                  <h5 class="text-sm font-semibold text-yellow-800 mb-2 flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                    Warnings
+                  </h5>
+                  <ul class="text-xs text-yellow-700 space-y-1">
+                    <li *ngFor="let warning of document.scanResult.warnings" class="flex items-start">
+                      <i class="fas fa-dot-circle text-yellow-500 mr-2 mt-1 text-xs"></i>
+                      {{ warning }}
+                    </li>
+                  </ul>
+                </div>
+
+                <div *ngIf="document.scanResult.validationErrors && document.scanResult.validationErrors.length > 0" 
+                     class="p-4 bg-red-50 border-t border-red-200">
+                  <h5 class="text-sm font-semibold text-red-800 mb-2 flex items-center">
+                    <i class="fas fa-times-circle text-red-600 mr-2"></i>
+                    Validation Errors
+                  </h5>
+                  <ul class="text-xs text-red-700 space-y-1">
+                    <li *ngFor="let error of document.scanResult.validationErrors" class="flex items-start">
+                      <i class="fas fa-dot-circle text-red-500 mr-2 mt-1 text-xs"></i>
+                      {{ error }}
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- Security Features -->
+                <div *ngIf="document.scanResult.securityFeatures && document.scanResult.securityFeatures.length > 0" 
+                     class="p-4 bg-green-50 border-t border-green-200">
+                  <h5 class="text-sm font-semibold text-green-800 mb-2 flex items-center">
+                    <i class="fas fa-shield-alt text-green-600 mr-2"></i>
+                    Security Features Detected
+                  </h5>
+                  <ul class="text-xs text-green-700 space-y-1">
+                    <li *ngFor="let feature of document.scanResult.securityFeatures" class="flex items-start">
+                      <i class="fas fa-check-circle text-green-500 mr-2 mt-1 text-xs"></i>
+                      {{ feature }}
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- Fraud Indicators -->
+                <div *ngIf="document.scanResult.fraudIndicators && document.scanResult.fraudIndicators.length > 0" 
+                     class="p-4 bg-red-50 border-t border-red-200">
+                  <h5 class="text-sm font-semibold text-red-800 mb-2 flex items-center">
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                    Fraud Indicators
+                  </h5>
+                  <ul class="text-xs text-red-700 space-y-1">
+                    <li *ngFor="let indicator of document.scanResult.fraudIndicators" class="flex items-start">
+                      <i class="fas fa-times-circle text-red-500 mr-2 mt-1 text-xs"></i>
+                      {{ indicator }}
+                    </li>
+                  </ul>
+                </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Documents Pagination -->
+          <div *ngIf="getDocumentsPagination().totalPages > 1" class="pagination-container mt-6">
+            <div class="pagination-info">
+              <span class="pagination-text">
+                Showing {{ (getDocumentsPagination().page - 1) * getDocumentsPagination().limit + 1 }} to 
+                {{ getMinValue(getDocumentsPagination().page * getDocumentsPagination().limit, getDocumentsPagination().total) }} 
+                of {{ getDocumentsPagination().total }} documents
+              </span>
+              <div class="pagination-stats">
+                <span class="page-info">Page {{ getDocumentsPagination().page }} of {{ getDocumentsPagination().totalPages }}</span>
+              </div>
+            </div>
+            <div class="pagination-controls">
+              <button 
+                (click)="onDocumentsPageChange(getDocumentsPagination().page - 1)"
+                [disabled]="getDocumentsPagination().page <= 1"
+                class="pagination-btn prev-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+              
+              <!-- Page Numbers -->
+              <div class="page-numbers">
+                <button 
+                  *ngFor="let page of getDocumentsPageNumbers()"
+                  (click)="onDocumentsPageChange(page)"
+                  [class.active]="page === getDocumentsPagination().page"
+                  class="page-btn">
+                  {{ page }}
+                </button>
+              </div>
+              
+              <button
+                (click)="onDocumentsPageChange(getDocumentsPagination().page + 1)"
+                [disabled]="getDocumentsPagination().page >= getDocumentsPagination().totalPages"
+                class="pagination-btn next-btn">
+                Next
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -629,12 +1016,12 @@
               <!-- Location Actions -->
               <div class="flex space-x-2">
                 <button (click)="updateLocation()" 
-                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        class="btn-primary flex-1">
                   <i class="fas fa-save mr-2"></i>
                   Update Location
                 </button>
                 <button (click)="viewOnMap()" 
-                        class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        class="btn-secondary flex-1">
                   <i class="fas fa-external-link-alt mr-2"></i>
                   View on Map
                 </button>
@@ -717,12 +1104,12 @@
               <!-- Social Media Actions -->
               <div class="flex space-x-2 pt-4">
                 <button (click)="updateSocialLinks()" 
-                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        class="btn-primary flex-1">
                   <i class="fas fa-save mr-2"></i>
                   Save Social Links
                 </button>
                 <button (click)="previewSocialLinks()" 
-                        class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+                        class="btn-secondary flex-1">
                   <i class="fas fa-eye mr-2"></i>
                   Preview
                 </button>
@@ -806,7 +1193,10 @@
       <!-- File Upload Area -->
       <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors"
            [class.border-blue-500]="isDocumentUploading"
-           [class.bg-blue-50]="isDocumentUploading">
+           [class.bg-blue-50]="isDocumentUploading"
+           (dragover)="onDragOver($event)"
+           (dragleave)="onDragLeave($event)"
+           (drop)="onDrop($event)">
         
         <!-- Upload Animation -->
         <div *ngIf="isDocumentUploading" class="text-center">
@@ -821,16 +1211,35 @@
         
         <!-- Default Upload State -->
         <div *ngIf="!isDocumentUploading">
-        <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-4"></i>
-        <p class="text-sm text-gray-600 mb-2">Drag and drop your file here, or</p>
+          <i class="fas fa-cloud-upload-alt text-gray-400 text-3xl mb-4"></i>
+          <p class="text-sm text-gray-600 mb-2">Drag and drop your file here, or</p>
           <label for="file-input-{{ selectedDocumentType?.id }}" class="text-blue-600 text-sm font-medium hover:text-blue-700 cursor-pointer">
-          Browse files
+            Browse files
           </label>
           <input type="file" 
                  id="file-input-{{ selectedDocumentType?.id }}"
                  accept="image/*,.pdf"
-                 class="hidden">
-        <p class="text-xs text-gray-500 mt-2">PDF, JPG, PNG up to 10MB</p>
+                 class="hidden"
+                 (change)="onFileSelected($event)">
+          <p class="text-xs text-gray-500 mt-2">PDF, JPG, PNG up to 10MB</p>
+          
+          <!-- Selected File Display -->
+          <div *ngIf="selectedFile" class="mt-4 p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-file text-blue-600 text-sm"></i>
+              </div>
+              <div class="flex-1 text-left">
+                <p class="text-sm font-medium text-gray-900">{{ selectedFile.name }}</p>
+                <p class="text-xs text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+              </div>
+              <button type="button" 
+                      (click)="clearSelectedFile()"
+                      class="text-gray-400 hover:text-red-600">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -839,12 +1248,12 @@
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
           Cancel
         </button>
-        <button (click)="onDocumentUploaded(selectedDocumentType!.id)" 
-                [disabled]="isDocumentUploading"
+        <button (click)="testUpload()" 
+                [disabled]="isDocumentUploading || !selectedFile"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
           <i class="fas fa-spinner fa-spin mr-2" *ngIf="isDocumentUploading"></i>
           <i class="fas fa-upload mr-2" *ngIf="!isDocumentUploading"></i>
-          {{ isDocumentUploading ? 'Uploading...' : 'Upload' }}
+          {{ isDocumentUploading ? 'Uploading...' : (!selectedFile ? 'Select File First' : 'Upload') }}
         </button>
       </div>
     </div>
@@ -852,57 +1261,118 @@
 </div>
 
 <!-- Add Payment Method Modal -->
-<div *ngIf="showAddPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-  <div class="relative top-20 mx-auto p-5 border w-96 shadow-2xl rounded-md bg-white">
+<div *ngIf="showAddPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 modal-backdrop">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-2xl rounded-md bg-white modal-content">
     <div class="mt-3">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Add Payment Method</h3>
-        <button (click)="closeAddPaymentModal()" class="text-gray-400 hover:text-gray-600">
-          <i class="fas fa-times"></i>
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h3 class="text-xl font-semibold text-gray-900">Add Payment Method</h3>
+          <p class="text-sm text-gray-600 mt-1">Add a new payment method for your business</p>
+        </div>
+        <button (click)="closeAddPaymentModal()" 
+                class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100">
+          <i class="fas fa-times text-lg"></i>
         </button>
       </div>
       
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type</label>
-          <select [(ngModel)]="newPaymentMethod.type" 
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="TILL">M-Pesa Till</option>
-            <option value="PAYBILL">Paybill</option>
-            <option value="BANK">Bank Account</option>
-          </select>
+      <div class="space-y-6">
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-credit-card mr-2 text-blue-500"></i>
+            Payment Type
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="relative">
+            <select [(ngModel)]="newPaymentMethod.type" 
+                    class="form-input"
+                    [class.error]="!newPaymentMethod.type && paymentFormTouched">
+              <option value="">Select payment type</option>
+              <option value="TILL">M-Pesa Till</option>
+              <option value="PAYBILL">Paybill</option>
+              <option value="BANK">Bank Account</option>
+            </select>
+            <div class="form-input-icon">
+              <i class="fas fa-credit-card text-gray-400"></i>
+            </div>
+          </div>
+          <div *ngIf="!newPaymentMethod.type && paymentFormTouched" class="form-error">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            Please select a payment type
+          </div>
         </div>
         
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Number/Account</label>
-          <input type="text" 
-                 [(ngModel)]="newPaymentMethod.number" 
-                 placeholder="Enter payment number or account"
-                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <div class="form-group">
+          <label class="form-label">
+            <i [class]="getPaymentTypeIcon(newPaymentMethod.type) + ' mr-2'" 
+               [class.text-green-500]="newPaymentMethod.type === 'TILL'"
+               [class.text-blue-500]="newPaymentMethod.type === 'PAYBILL'"
+               [class.text-purple-500]="newPaymentMethod.type === 'BANK'"></i>
+            {{ getPaymentNumberLabel() }}
+            <span class="required-indicator">*</span>
+          </label>
+          <div class="relative">
+            <input type="text" 
+                   [(ngModel)]="newPaymentMethod.number" 
+                   (blur)="onPaymentFieldBlur('number')"
+                   (input)="onPaymentFieldInput('number')"
+                   [placeholder]="getPaymentNumberPlaceholder()"
+                   class="form-input"
+                   [class.error]="!isValidPaymentNumber() && paymentFieldTouched['number']"
+                   [class.success]="isValidPaymentNumber() && paymentFieldTouched['number']">
+            <div class="form-input-icon">
+              <i [class]="getPaymentTypeIcon(newPaymentMethod.type) + ' text-gray-400'"></i>
+            </div>
+          </div>
+          <div *ngIf="!newPaymentMethod.number && paymentFieldTouched['number']" class="form-error">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            {{ getPaymentNumberLabel() }} is required
+          </div>
+          <div *ngIf="newPaymentMethod.number && !isValidPaymentNumber() && paymentFieldTouched['number']" class="form-error">
+            <i class="fas fa-exclamation-circle mr-1"></i>
+            Please enter a valid {{ getPaymentNumberLabel().toLowerCase() }}
+          </div>
+          <div *ngIf="isValidPaymentNumber() && paymentFieldTouched['number']" class="form-help">
+            <i class="fas fa-check-circle text-green-500 mr-1"></i>
+            Valid {{ getPaymentNumberLabel().toLowerCase() }}
+          </div>
         </div>
         
-        <div class="bg-blue-50 p-3 rounded-lg">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
           <div class="flex items-start">
-            <i class="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
-            <div class="text-sm text-blue-700">
-              <p class="font-medium mb-1">Payment Method Guidelines:</p>
-              <ul class="text-xs space-y-1">
-                <li>• <strong>TILL:</strong> Your M-Pesa Till number (e.g., 123456)</li>
-                <li>• <strong>Paybill:</strong> Your Paybill number (e.g., 123456)</li>
-                <li>• <strong>Bank:</strong> Your bank account number</li>
-              </ul>
+            <div class="flex-shrink-0">
+              <i class="fas fa-info-circle text-blue-500 text-lg mt-1"></i>
+            </div>
+            <div class="ml-3">
+              <h4 class="text-sm font-semibold text-blue-800 mb-2">Payment Method Guidelines</h4>
+              <div class="text-sm text-blue-700 space-y-2">
+                <div class="flex items-center">
+                  <i class="fas fa-store text-green-500 mr-2 w-4"></i>
+                  <span><strong>TILL:</strong> M-Pesa Till number (6 digits, e.g., 123456)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-mobile-alt text-blue-500 mr-2 w-4"></i>
+                  <span><strong>Paybill:</strong> Paybill number (5-7 digits, e.g., 123456)</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-university text-purple-500 mr-2 w-4"></i>
+                  <span><strong>Bank:</strong> Bank account number (8-20 digits)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
       
-      <div class="flex justify-end space-x-3 mt-6">
+      <div class="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
         <button (click)="closeAddPaymentModal()" 
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                class="btn-secondary">
+          <i class="fas fa-times mr-2"></i>
           Cancel
         </button>
         <button (click)="addPaymentMethod()" 
-                class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                [disabled]="!isPaymentFormValid()"
+                class="btn-primary"
+                [class.btn-disabled]="!isPaymentFormValid()">
           <i class="fas fa-plus mr-2"></i>
           Add Payment Method
         </button>

@@ -12,7 +12,10 @@ import {
   HttpCode,
   HttpStatus,
   ValidationPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -23,17 +26,15 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { BusinessService, BusinessSearchDto } from './business.service';
+import { OCRService } from '../shared/ocr/ocr.service';
 import {
   CreateBusinessDto,
   UpdateBusinessDto,
-  UploadDocumentDto,
   AddPaymentMethodDto,
   CreateBusinessCategoryDto,
   UpdateBusinessCategoryDto,
   SubmitForReviewDto,
-  UpdateBusinessStatusDto,
   UpdateOnboardingStepDto,
-  VerifyDocumentDto,
 } from './dto/business.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -46,7 +47,73 @@ import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class BusinessController {
-  constructor(private readonly businessService: BusinessService) {}
+  constructor(
+    private readonly businessService: BusinessService,
+    private readonly ocrService: OCRService,
+  ) {}
+
+  // Health Check Endpoints
+  @Get('health/ocr')
+  @ApiOperation({ summary: 'Check OCR service health' })
+  @ApiResponse({ status: 200, description: 'OCR service health status' })
+  checkOcrHealth() {
+    return this.ocrService.healthCheck();
+  }
+
+  @Get('health/google-vision')
+  @ApiOperation({ summary: 'Check Google Vision service health' })
+  @ApiResponse({
+    status: 200,
+    description: 'Google Vision service health status',
+  })
+  checkGoogleVisionHealth() {
+    return this.ocrService.healthCheck();
+  }
+
+  @Post('test/document-processing')
+  @ApiOperation({ summary: 'Test document processing with sample URL' })
+  @ApiResponse({ status: 200, description: 'Document processing test result' })
+  async testDocumentProcessing(@Body() body: { imageUrl: string }) {
+    try {
+      const { imageUrl } = body;
+
+      // Test OCR extraction
+      const ocrResult = await this.ocrService.extractText(imageUrl);
+
+      // Test AI analysis
+      const analysisResult = await this.ocrService.analyzeDocument(ocrResult);
+
+      // Test authenticity verification
+      const authenticityResult = this.ocrService.verifyDocumentAuthenticity(
+        ocrResult,
+        analysisResult,
+      );
+
+      return {
+        success: true,
+        ocrResult: {
+          text: ocrResult.text.substring(0, 200) + '...', // Truncate for response
+          confidence: ocrResult.confidence,
+        },
+        analysisResult: {
+          documentType: analysisResult.documentType,
+          isValid: analysisResult.isValid,
+          authenticityScore: analysisResult.authenticityScore,
+          validationErrors: analysisResult.validationErrors,
+        },
+        authenticityResult: {
+          isAuthentic: authenticityResult.isAuthentic,
+          confidence: authenticityResult.confidence,
+          reasons: authenticityResult.reasons,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 
   // Business CRUD Operations
   @Post()
@@ -221,12 +288,12 @@ export class BusinessController {
   // Document Management
   @Post(':id/documents')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Upload business document to Cloudinary' })
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload business document with AI processing' })
   @ApiParam({ name: 'id', description: 'Business ID' })
-  @ApiBody({ type: UploadDocumentDto })
   @ApiResponse({
     status: 201,
-    description: 'Document uploaded successfully to Cloudinary',
+    description: 'Document uploaded successfully and AI processing started',
   })
   @ApiResponse({
     status: 403,
@@ -244,12 +311,14 @@ export class BusinessController {
   async uploadDocument(
     @Request() req: { user: UserWithoutPassword },
     @Param('id') businessId: string,
-    @Body(ValidationPipe) documentData: UploadDocumentDto,
+    @UploadedFile() file: any,
+    @Body('type') documentType: string,
   ) {
     return this.businessService.uploadDocument(
       req.user.id,
       businessId,
-      documentData,
+      file,
+      documentType,
     );
   }
 

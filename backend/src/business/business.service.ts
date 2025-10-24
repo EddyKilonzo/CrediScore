@@ -9,10 +9,10 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
 import { OCRService } from '../shared/ocr/ocr.service';
+import { CloudinaryService } from '../shared/cloudinary/cloudinary.service';
 import {
   CreateBusinessDto,
   UpdateBusinessDto,
-  UploadDocumentDto,
   AddPaymentMethodDto,
   CreateBusinessCategoryDto,
   UpdateBusinessCategoryDto,
@@ -39,6 +39,7 @@ export class BusinessService {
     private readonly prisma: PrismaService,
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly ocrService: OCRService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   // Business CRUD Operations
@@ -528,7 +529,8 @@ export class BusinessService {
   async uploadDocument(
     userId: string,
     businessId: string,
-    documentData: UploadDocumentDto,
+    file: any,
+    documentType: string,
   ) {
     try {
       const business = await this.prisma.business.findUnique({
@@ -545,27 +547,61 @@ export class BusinessService {
         );
       }
 
-      // Create document first
+      // Validate file parameter
+      if (!file || typeof file !== 'object') {
+        throw new BadRequestException('Invalid file provided');
+      }
+
+      const fileObj = file as {
+        originalname: string;
+        size: number;
+        mimetype: string;
+        buffer: Buffer;
+      };
+
+      if (
+        !fileObj.originalname ||
+        !fileObj.size ||
+        !fileObj.mimetype ||
+        !fileObj.buffer
+      ) {
+        throw new BadRequestException('Invalid file properties');
+      }
+
+      // Upload file to Cloudinary
+      this.logger.log(`Uploading file to Cloudinary: ${fileObj.originalname}`);
+      const cloudinaryResult = await this.cloudinaryService.uploadFile(
+        fileObj,
+        {
+          folder: `businesses/${businessId}/documents`,
+          tags: ['business-document', documentType.toLowerCase()],
+          resource_type: 'auto',
+        },
+      );
+
+      // Create document record in database
       const document = await this.prisma.document.create({
         data: {
-          type: documentData.type,
-          url: documentData.url,
-          name: documentData.name,
-          size: documentData.size,
-          mimeType: documentData.mimeType,
+          type: documentType as DocumentType,
+          url: cloudinaryResult.secure_url,
+          name: fileObj.originalname,
+          size: fileObj.size,
+          mimeType: fileObj.mimetype,
           businessId: businessId,
+          uploadedAt: new Date(),
         },
       });
 
       // Process document with OCR and AI verification asynchronously
-      this.processDocumentWithAI(document.id, documentData.url).catch(
-        (error) => {
-          this.logger.error(
-            `Failed to process document ${document.id} with AI:`,
-            error,
-          );
-        },
-      );
+      this.processDocumentWithAI(
+        document.id,
+        cloudinaryResult.secure_url,
+      ).catch((error) => {
+        this.logger.error(
+          `Failed to process document ${document.id} with AI:`,
+          error,
+        );
+      });
 
       this.logger.log(
         `Document uploaded: ${document.id} for business: ${businessId}`,
@@ -590,18 +626,26 @@ export class BusinessService {
     try {
       this.logger.log(`Processing document ${documentId} with AI`);
 
-      // Step 1: Extract text using OCR
-      const ocrResult = await this.ocrService.extractText(documentUrl);
+      // Check OCR service health first
+      const healthCheck = this.ocrService.healthCheck();
+      if (!healthCheck.configured) {
+        this.logger.warn(
+          `OCR service not properly configured: ${healthCheck.message}`,
+        );
+      }
+
+      // Step 1: Extract text using OCR with fallback (Google Vision -> OCR.space)
+      const ocrResult =
+        await this.ocrService.extractTextWithFallback(documentUrl);
 
       // Step 2: Analyze document content
       const analysisResult = await this.ocrService.analyzeDocument(ocrResult);
 
       // Step 3: Verify document authenticity
-      const authenticityResult =
-        await this.ocrService.verifyDocumentAuthenticity(
-          ocrResult,
-          analysisResult,
-        );
+      const authenticityResult = this.ocrService.verifyDocumentAuthenticity(
+        ocrResult,
+        analysisResult,
+      );
 
       // Update document with OCR and AI results
       await this.prisma.document.update({
@@ -614,6 +658,11 @@ export class BusinessService {
             confidence: analysisResult.confidence,
             isValid: analysisResult.isValid,
             validationErrors: analysisResult.validationErrors,
+            warnings: analysisResult.warnings,
+            authenticityScore: analysisResult.authenticityScore,
+            fraudIndicators: analysisResult.fraudIndicators,
+            securityFeatures: analysisResult.securityFeatures,
+            verificationChecklist: analysisResult.verificationChecklist,
             authenticity: authenticityResult,
             ocrText: ocrResult.text, // Store OCR text in aiAnalysis
           },
@@ -895,6 +944,133 @@ export class BusinessService {
         throw error;
       }
       throw new InternalServerErrorException('Failed to delete payment method');
+    }
+  }
+
+  // Onboarding Status Management
+  async getOnboardingStatus(userId: string, businessId: string) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          documents: {
+            select: {
+              id: true,
+              type: true,
+              name: true,
+              aiVerified: true,
+              uploadedAt: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              type: true,
+              number: true,
+              addedAt: true,
+            },
+          },
+        },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException(
+          'You can only view onboarding status for your own businesses',
+        );
+      }
+
+      const businessWithRelations = business as typeof business & {
+        documents: Array<{ aiVerified?: boolean }>;
+        payments: Array<unknown>;
+      };
+
+      // Calculate onboarding progress
+      const totalSteps = 4;
+      let completedSteps = 0;
+
+      // Step 1: Business Profile (basic info completed)
+      if (business.name && business.description && business.phone) {
+        completedSteps++;
+      }
+
+      // Step 2: At least one document uploaded and verified (flexible requirement)
+      const verifiedDocuments = businessWithRelations.documents.filter(
+        (doc) => doc.aiVerified,
+      );
+      if (verifiedDocuments.length > 0) {
+        completedSteps++;
+      }
+
+      // Step 3: Payment methods added
+      if (businessWithRelations.payments.length > 0) {
+        completedSteps++;
+      }
+
+      // Step 4: Submitted for review
+      if (
+        business.status === 'UNDER_REVIEW' ||
+        business.status === 'VERIFIED'
+      ) {
+        completedSteps++;
+      }
+
+      const progressPercentage = Math.round(
+        (completedSteps / totalSteps) * 100,
+      );
+
+      return {
+        businessId: business.id,
+        currentStep: business.onboardingStep || 1,
+        totalSteps,
+        completedSteps,
+        progressPercentage,
+        status: business.status,
+        submittedForReview: business.submittedForReview || false,
+        documents: {
+          total: businessWithRelations.documents.length,
+          verified: verifiedDocuments.length,
+          pending: businessWithRelations.documents.filter(
+            (doc) => !doc.aiVerified,
+          ).length,
+        },
+        paymentMethods: {
+          total: businessWithRelations.payments.length,
+        },
+        canSubmit: completedSteps >= 3, // Can submit after 3 steps
+        nextAction: this.getNextOnboardingAction(business, completedSteps),
+      };
+    } catch (error) {
+      this.logger.error('Error fetching onboarding status:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to fetch onboarding status',
+      );
+    }
+  }
+
+  private getNextOnboardingAction(
+    business: any,
+    completedSteps: number,
+  ): string {
+    if (completedSteps === 0) {
+      return 'Complete your business profile information';
+    } else if (completedSteps === 1) {
+      return 'Upload and verify at least one business document (Business Registration Certificate or Tax Certificate)';
+    } else if (completedSteps === 2) {
+      return 'Add payment methods for transactions';
+    } else if (completedSteps === 3) {
+      return 'Submit your business for verification review';
+    } else {
+      return 'Onboarding completed!';
     }
   }
 
@@ -1380,10 +1556,10 @@ export class BusinessService {
         payments: Array<unknown>;
       };
 
-      // Check if business has at least one document (changed from requiring specific documents)
+      // Check if business has at least one document (flexible requirement - either business registration OR tax certificate)
       if (businessWithRelations.documents.length === 0) {
         throw new BadRequestException(
-          'At least one business document is required',
+          'At least one business document is required (Business Registration Certificate or Tax Certificate)',
         );
       }
 
@@ -1437,91 +1613,6 @@ export class BusinessService {
       }
       throw new InternalServerErrorException(
         'Failed to submit business for review',
-      );
-    }
-  }
-
-  async getOnboardingStatus(userId: string, businessId: string) {
-    try {
-      const business = await this.prisma.business.findUnique({
-        where: { id: businessId },
-        include: {
-          documents: {
-            orderBy: { uploadedAt: 'desc' },
-            select: {
-              id: true,
-              type: true,
-              name: true,
-              url: true,
-              verified: true,
-              aiVerified: true,
-              uploadedAt: true,
-            },
-          },
-          payments: {
-            orderBy: { addedAt: 'desc' },
-          },
-          businessCategory: true,
-        },
-      });
-
-      if (!business) {
-        throw new NotFoundException('Business not found');
-      }
-
-      if (business.ownerId !== userId) {
-        throw new ForbiddenException('You can only view your own businesses');
-      }
-
-      // Calculate onboarding progress
-      const businessWithRelations = business as typeof business & {
-        documents: Array<{ verified: boolean; aiVerified: boolean }>;
-        payments: Array<{ verified: boolean }>;
-      };
-
-      const progress = {
-        currentStep: business.onboardingStep,
-        status: business.status,
-        submittedForReview: business.submittedForReview,
-        documents: {
-          uploaded: businessWithRelations.documents.length,
-          verified: businessWithRelations.documents.filter(
-            (doc) => doc.verified,
-          ).length,
-          aiVerified: businessWithRelations.documents.filter(
-            (doc) => doc.aiVerified,
-          ).length,
-          required: 1, // Only one document required now
-          missing:
-            businessWithRelations.documents.length === 0
-              ? ['BUSINESS_DOCUMENT']
-              : [],
-        },
-        payments: {
-          uploaded: businessWithRelations.payments.length,
-          verified: businessWithRelations.payments.filter(
-            (payment) => payment.verified,
-          ).length,
-        },
-        canSubmit:
-          businessWithRelations.documents.length > 0 &&
-          businessWithRelations.payments.length > 0,
-      };
-
-      return {
-        business,
-        progress,
-      };
-    } catch (error) {
-      this.logger.error('Error fetching onboarding status:', error);
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Failed to fetch onboarding status',
       );
     }
   }

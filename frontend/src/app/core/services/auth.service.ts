@@ -304,6 +304,44 @@ export class AuthService {
     return this.http.patch<User>(`${this.API_URL}/user/profile`, updateData, { headers });
   }
 
+  getRoleBasedProfileData(): Observable<any> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    return this.http.get(`${this.API_URL}/user/profile-data`, { headers });
+  }
+
+  // Review Reply Methods
+  createReviewReply(reviewId: string, content: string): Observable<any> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    return this.http.post(`${this.API_URL}/user/reviews/${reviewId}/replies`, 
+      { content }, { headers });
+  }
+
+  updateReviewReply(replyId: string, content: string): Observable<any> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    return this.http.put(`${this.API_URL}/user/replies/${replyId}`, 
+      { content }, { headers });
+  }
+
+  deleteReviewReply(replyId: string): Observable<any> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    return this.http.delete(`${this.API_URL}/user/replies/${replyId}`, { headers });
+  }
+
+  getReviewReplies(reviewId: string): Observable<any> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    
+    return this.http.get(`${this.API_URL}/user/reviews/${reviewId}/replies`, { headers });
+  }
+
   // Email verification methods
   verifyEmail(code: string): Observable<{ message: string }> {
     return this.http.post<{ message: string }>(`${this.API_URL}/auth/verify-email`, {

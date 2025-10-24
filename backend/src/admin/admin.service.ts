@@ -309,15 +309,19 @@ export class AdminService {
       // Send account status change email
       try {
         const status = updatedUser.isActive ? 'activated' : 'deactivated';
-        this.logger.log(`Attempting to send account status change email to ${updatedUser.email} - Status: ${status}`);
-        
+        this.logger.log(
+          `Attempting to send account status change email to ${updatedUser.email} - Status: ${status}`,
+        );
+
         await this.mailerService.sendAccountStatusChangeEmail(
           updatedUser.email,
           updatedUser.name,
           status,
         );
-        
-        this.logger.log(`✅ Account status change email sent successfully to ${updatedUser.email}`);
+
+        this.logger.log(
+          `✅ Account status change email sent successfully to ${updatedUser.email}`,
+        );
       } catch (emailError) {
         this.logger.error(
           `❌ Failed to send account status change email to ${updatedUser.email}:`,
