@@ -11,6 +11,7 @@ import { Subject, takeUntil, interval } from 'rxjs';
 enum PaymentType {
   TILL = 'TILL',
   PAYBILL = 'PAYBILL',
+  SEND_MONEY = 'SEND_MONEY',
   BANK = 'BANK',
 }
 
@@ -176,6 +177,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   // Logo Upload
   isLogoUploading = false;
   logoUploadProgress = 0;
+  selectedLogoFile: File | null = null;
+  logoPreview: string | null = null;
 
   // Location and Social Media
   businessLocation: string = '';
@@ -217,12 +220,14 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   showAddPaymentModal = false;
   newPaymentMethod = {
     type: PaymentType.TILL,
-    number: ''
+    number: '',
+    accountNumber: '' // For Paybill
   };
   paymentFormTouched = false;
   paymentFieldTouched: { [key: string]: boolean } = {
     type: false,
-    number: false
+    number: false,
+    accountNumber: false
   };
 
   ngOnInit() {
@@ -996,6 +1001,15 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Show preview
+    this.selectedLogoFile = file;
+    this.logoPreview = URL.createObjectURL(file);
+    this.toastService.show('Logo preview generated. Click "Upload" to proceed.', 'info');
+  }
+
+  uploadLogoConfirm() {
+    if (!this.selectedLogoFile) return;
+
     // Start upload animation
     this.isLogoUploading = true;
     this.logoUploadProgress = 0;
@@ -1010,7 +1024,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     const uploadOptions = this.cloudinaryService.createProfileImageOptions(this.currentBusiness?.id);
     uploadOptions.folder = 'crediscore/business-logos';
 
-    this.cloudinaryService.uploadFile(file, uploadOptions)
+    this.cloudinaryService.uploadFile(this.selectedLogoFile, uploadOptions)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response: any) => {
@@ -1021,6 +1035,13 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             if (response.body?.secure_url) {
               this.businessProfile.logo = response.body.secure_url;
               this.toastService.show('Logo uploaded successfully', 'success');
+              
+              // Clear preview
+              if (this.logoPreview) {
+                URL.revokeObjectURL(this.logoPreview);
+                this.logoPreview = null;
+              }
+              this.selectedLogoFile = null;
               
               // Update business profile with new logo
               if (this.currentBusiness) {
@@ -1044,19 +1065,30 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       });
   }
 
+  cancelLogoUpload() {
+    // Clear preview
+    if (this.logoPreview) {
+      URL.revokeObjectURL(this.logoPreview);
+      this.logoPreview = null;
+    }
+    this.selectedLogoFile = null;
+    this.toastService.show('Logo upload cancelled', 'info');
+  }
+
   // Payment Methods Methods
   openAddPaymentModal() {
     this.showAddPaymentModal = true;
-    this.newPaymentMethod = { type: PaymentType.TILL, number: '' };
+    this.newPaymentMethod = { type: PaymentType.TILL, number: '', accountNumber: '' };
   }
 
   closeAddPaymentModal() {
     this.showAddPaymentModal = false;
-    this.newPaymentMethod = { type: PaymentType.TILL, number: '' };
+    this.newPaymentMethod = { type: PaymentType.TILL, number: '', accountNumber: '' };
     this.paymentFormTouched = false;
     this.paymentFieldTouched = {
       type: false,
-      number: false
+      number: false,
+      accountNumber: false
     };
   }
 
@@ -1080,13 +1112,21 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   isPaymentFormValid(): boolean {
-    return !!(this.newPaymentMethod.type && this.newPaymentMethod.number && this.isValidPaymentNumber());
+    const baseValid = !!(this.newPaymentMethod.type && this.newPaymentMethod.number && this.isValidPaymentNumber());
+    
+    // If Paybill, also validate account number
+    if (this.needsAccountNumber()) {
+      return baseValid && this.isValidAccountNumber();
+    }
+    
+    return baseValid;
   }
 
   getPaymentNumberLabel(): string {
     switch (this.newPaymentMethod.type) {
       case 'TILL': return 'Till Number';
       case 'PAYBILL': return 'Paybill Number';
+      case 'SEND_MONEY': return 'Phone Number';
       case 'BANK': return 'Account Number';
       default: return 'Number';
     }
@@ -1096,13 +1136,35 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     switch (this.newPaymentMethod.type) {
       case 'TILL': return 'Enter 6-digit Till number (e.g., 123456)';
       case 'PAYBILL': return 'Enter Paybill number (e.g., 123456)';
+      case 'SEND_MONEY': return 'Enter phone number (e.g., 0712345678)';
       case 'BANK': return 'Enter bank account number';
       default: return 'Enter payment number';
     }
   }
 
+  needsAccountNumber(): boolean {
+    return this.newPaymentMethod.type === 'PAYBILL';
+  }
+
+  isValidAccountNumber(): boolean {
+    if (!this.needsAccountNumber()) return true;
+    if (!this.newPaymentMethod.accountNumber?.trim()) return false;
+    // Account number validation (alphanumeric, 1-20 characters)
+    return /^[A-Za-z0-9]{1,20}$/.test(this.newPaymentMethod.accountNumber.trim());
+  }
+
   addPaymentMethod() {
-    if (!this.currentBusiness) return;
+    console.log('addPaymentMethod called', {
+      currentBusiness: this.currentBusiness?.id,
+      paymentMethod: this.newPaymentMethod,
+      isValid: this.isPaymentFormValid()
+    });
+
+    if (!this.currentBusiness) {
+      console.log('No current business');
+      this.toastService.show('No business found. Please create a business first.', 'error');
+      return;
+    }
 
     if (!this.newPaymentMethod.number.trim()) {
       this.toastService.show('Payment method number is required', 'warning');
@@ -1115,13 +1177,28 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // For Paybill, format the number to include account number
+    let formattedNumber = this.newPaymentMethod.number.trim();
+    if (this.newPaymentMethod.type === 'PAYBILL' && this.newPaymentMethod.accountNumber?.trim()) {
+      formattedNumber = `${formattedNumber}#${this.newPaymentMethod.accountNumber.trim()}`;
+    }
+
+    console.log('Calling businessService.addPaymentMethod with:', {
+      businessId: this.currentBusiness.id,
+      paymentData: {
+        type: this.newPaymentMethod.type,
+        number: formattedNumber
+      }
+    });
+
     this.businessService.addPaymentMethod(this.currentBusiness.id, {
       type: this.newPaymentMethod.type,
-      number: this.newPaymentMethod.number.trim()
+      number: formattedNumber
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (paymentMethod) => {
+          console.log('Payment method added successfully:', paymentMethod);
           this.paymentMethods.push(paymentMethod);
           this.toastService.show('Payment method added successfully', 'success');
           this.closeAddPaymentModal();
@@ -1133,7 +1210,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error adding payment method:', error);
-          this.toastService.show('Failed to add payment method. Please try again.', 'error');
+          console.error('Error details:', error.error, error.message, error.status);
+          this.toastService.show(
+            error.error?.message || 'Failed to add payment method. Please try again.', 
+            'error'
+          );
         }
       });
   }
@@ -1165,6 +1246,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       case 'PAYBILL':
         // Paybill numbers are typically 5-7 digits
         return /^\d{5,7}$/.test(trimmedNumber);
+      case 'SEND_MONEY':
+        // Phone numbers in Kenya format: 0XXXXXXXXX or +254XXXXXXXXX
+        return /^(?:\+254|0)?[17]\d{8}$/.test(trimmedNumber.replace(/\s/g, ''));
       case 'BANK':
         // Bank account numbers vary, but typically 8-20 digits
         return /^\d{8,20}$/.test(trimmedNumber);
@@ -1177,6 +1261,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     switch (type) {
       case 'TILL': return 'fas fa-store';
       case 'PAYBILL': return 'fas fa-mobile-alt';
+      case 'SEND_MONEY': return 'fas fa-paper-plane';
       case 'BANK': return 'fas fa-university';
       default: return 'fas fa-credit-card';
     }
@@ -1186,6 +1271,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     switch (type) {
       case 'TILL': return 'bg-green-500';
       case 'PAYBILL': return 'bg-blue-500';
+      case 'SEND_MONEY': return 'bg-orange-500';
       case 'BANK': return 'bg-purple-500';
       default: return 'bg-gray-500';
     }

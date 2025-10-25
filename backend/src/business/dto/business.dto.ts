@@ -159,10 +159,10 @@ export class UploadDocumentDto {
 export class AddPaymentMethodDto {
   @ApiProperty({
     description: 'Payment method type',
-    enum: ['TILL', 'PAYBILL', 'BANK'],
+    enum: ['TILL', 'PAYBILL', 'SEND_MONEY', 'BANK'],
   })
-  @IsEnum(['TILL', 'PAYBILL', 'BANK'])
-  type: 'TILL' | 'PAYBILL' | 'BANK';
+  @IsEnum(['TILL', 'PAYBILL', 'SEND_MONEY', 'BANK'])
+  type: 'TILL' | 'PAYBILL' | 'SEND_MONEY' | 'BANK';
 
   @ApiProperty({ description: 'Payment method number' })
   @IsString()

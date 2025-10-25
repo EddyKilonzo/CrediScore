@@ -368,6 +368,42 @@
   transform: translateX(2px);
 }
 
+/* Management Card Icons with Theme Colors */
+.quick-action-item .card-icon {
+  background: linear-gradient(135deg, rgba(62, 106, 138, 0.15), rgba(92, 139, 165, 0.15));
+  color: #3E6A8A;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-action-item:hover .card-icon {
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
+  color: white;
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.3);
+}
+
+.quick-action-item .card-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Theme Colors for Management Cards */
+.quick-action-item div[class*="border-gray-200"] {
+  border-color: rgba(62, 106, 138, 0.1) !important;
+}
+
+.quick-action-item:hover div[class*="border-gray-200"] {
+  border-color: rgba(62, 106, 138, 0.3) !important;
+  background: linear-gradient(135deg, rgba(232, 238, 243, 0.5), rgba(248, 250, 252, 0.8));
+}
+
 /* Dashboard Cards - Enhanced Style matching user/business dashboard */
 .dashboard-card {
   background: white;
@@ -409,12 +445,12 @@
 }
 
 .businesses-icon {
-  background: linear-gradient(135deg, #10b981, #34d399);
+  background: linear-gradient(135deg, #5C8BA5, #79A4BF);
   color: white;
 }
 
 .reports-icon {
-  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
   color: white;
 }
 

@@ -1,8 +1,8 @@
 <div class="admin-page">
   <div class="page-header fade-in-up">
     <div class="header-content">
-      <h1 class="flagged-title slide-in-left">Flagged Users Management</h1>
-      <p class="slide-in-right">Review and manage users who have been flagged for suspicious activity</p>
+      <h1 class="flagged-title slide-in-left">AI-Powered Flagged Users Management</h1>
+      <p class="slide-in-right">Intelligent review and management of users flagged for suspicious activity</p>
     </div>
     <div class="header-actions">
       <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
@@ -11,77 +11,168 @@
       </button>
     </div>
   </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-container fade-in-up">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading flagged users...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !isLoading()) {
+    <div class="error-banner fade-in-up">
+      <div class="error-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error() }}</span>
+        <button class="error-close" (click)="error.set(null)">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
   
   <div class="content-panel animated-panel fade-in-up">
     <div class="panel-header">
-      <h2 class="section-title slide-in-left">Flagged Users</h2>
+      <h2 class="section-title slide-in-left">Flagged Users ({{ flaggedUsers().length }})</h2>
       <div class="header-actions slide-in-right">
-        <button class="btn-primary hover-lift">
-          <i class="fas fa-filter"></i>
-          Filter
+        <select class="filter-select" [value]="selectedFilter()" (change)="onFilterChange($event)">
+          <option value="all">All Risk Levels</option>
+          <option value="low">Low Risk</option>
+          <option value="medium">Medium Risk</option>
+          <option value="high">High Risk</option>
+          <option value="critical">Critical Risk</option>
+        </select>
+        <button class="btn-primary hover-lift" (click)="loadFlaggedUsers()">
+          <i class="fas fa-sync-alt"></i>
+          Refresh
         </button>
-        <button class="btn-secondary hover-lift">
+        <button class="btn-secondary hover-lift" (click)="exportData()">
           <i class="fas fa-download"></i>
           Export
         </button>
       </div>
     </div>
     
-    <div class="users-grid">
-      <div class="user-card animated-card hover-lift" *ngFor="let user of mockFlaggedUsers; let i = index" [style.animation-delay]="(i * 0.1) + 's'">
-        <div class="user-header">
-          <div class="user-info">
-            <div class="user-avatar">
-              {{ user.name.charAt(0) }}
-            </div>
-            <div class="user-details">
-              <h3>{{ user.name }}</h3>
-              <p>{{ user.email }}</p>
-            </div>
-          </div>
-          <span class="flag-badge" [class]="'flag-' + user.flagReason">
-            {{ user.flagReason | titlecase }}
-          </span>
-        </div>
-        
-        <div class="user-content">
-          <div class="user-stats">
-            <div class="stat">
-              <span class="stat-label">Reviews:</span>
-              <span class="stat-value">{{ user.totalReviews }}</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">Reports:</span>
-              <span class="stat-value">{{ user.reportsCount }}</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">Joined:</span>
-              <span class="stat-value">{{ user.joinDate | date:'MMM y' }}</span>
-            </div>
-          </div>
-          
-          <div class="flag-details">
-            <p><strong>Flag Reason:</strong> {{ user.flagDescription }}</p>
-            <p><strong>Flagged By:</strong> {{ user.flaggedBy }}</p>
-            <p><strong>Date Flagged:</strong> {{ user.flaggedDate | date:'MMM d, y' }}</p>
-          </div>
-        </div>
-        
-        <div class="user-actions">
-          <button class="btn-danger hover-lift" (click)="suspendUser(user.id)">
-            <i class="fas fa-ban"></i>
-            Suspend
-          </button>
-          <button class="btn-warning hover-lift" (click)="warnUser(user.id)">
-            <i class="fas fa-exclamation-triangle"></i>
-            Warn
-          </button>
-          <button class="btn-secondary hover-lift" (click)="clearFlag(user.id)">
-            <i class="fas fa-check"></i>
-            Clear Flag
-          </button>
-        </div>
+    @if (flaggedUsers().length === 0 && !isLoading()) {
+      <div class="empty-state fade-in-up">
+        <i class="fas fa-check-circle"></i>
+        <h3>No Flagged Users</h3>
+        <p>Great! There are currently no flagged users requiring review.</p>
       </div>
-    </div>
+    } @else {
+      <div class="users-grid">
+        @for (user of flaggedUsers(); track user.id; let i = $index) {
+          <div class="user-card animated-card hover-lift" [style.animation-delay]="(i * 0.1) + 's'">
+            <div class="user-header">
+              <div class="user-info">
+                <div class="user-avatar" [class]="'risk-' + (user.riskLevel || 'low')">
+                  {{ user.name.charAt(0) }}
+                </div>
+                <div class="user-details">
+                  <h3>{{ user.name }}</h3>
+                  <p>{{ user.email }}</p>
+                </div>
+              </div>
+              <div class="risk-badges">
+                <span class="risk-badge" [class]="'risk-' + (user.riskLevel || 'low')">
+                  {{ (user.riskLevel || 'low').toUpperCase() }} RISK
+                </span>
+                @if (user.flagCount && user.flagCount > 0) {
+                  <span class="flag-count-badge">
+                    {{ user.flagCount }} {{ user.flagCount === 1 ? 'flag' : 'flags' }}
+                  </span>
+                }
+              </div>
+            </div>
+            
+            <div class="user-content">
+              <!-- User Stats -->
+              <div class="user-stats">
+                <div class="stat">
+                  <span class="stat-label">Reviews:</span>
+                  <span class="stat-value">{{ user._count.reviews || 0 }}</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Reports:</span>
+                  <span class="stat-value">{{ user._count.fraudReports || 0 }}</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Reputation:</span>
+                  <span class="stat-value" [class.low-reputation]="user.reputation < 30">
+                    {{ user.reputation }}/100
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Flag Details -->
+              @if (user.flagReason) {
+                <div class="flag-details">
+                  <p><strong>Reason:</strong> {{ user.flagReason }}</p>
+                  @if (user.lastFlaggedAt) {
+                    <p><strong>Last Flagged:</strong> {{ user.lastFlaggedAt | date:'MMM d, y' }}</p>
+                  }
+                </div>
+              }
+
+              <!-- AI Analysis Insights -->
+              @if (user.aiAnalysis) {
+                <div class="ai-insights">
+                  <div class="insight-header">
+                    <i class="fas fa-brain"></i>
+                    <strong>AI Analysis</strong>
+                    <span class="confidence-score">{{ user.aiAnalysis.confidenceScore }}% confidence</span>
+                  </div>
+                  
+                  @if (user.aiAnalysis.suspiciousActivities && user.aiAnalysis.suspiciousActivities.length > 0) {
+                    <div class="insight-section">
+                      <strong>Suspicious Activities:</strong>
+                      <ul>
+                        @for (activity of user.aiAnalysis.suspiciousActivities; track activity) {
+                          <li>{{ activity }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+
+                  @if (user.aiAnalysis.recommendations && user.aiAnalysis.recommendations.length > 0) {
+                    <div class="insight-section recommendations">
+                      <strong>AI Recommendations:</strong>
+                      <ul>
+                        @for (rec of user.aiAnalysis.recommendations; track rec) {
+                          <li>{{ rec }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+            
+            <div class="user-actions">
+              <button class="btn-info hover-lift" (click)="viewUserDetails(user)">
+                <i class="fas fa-eye"></i>
+                View Details
+              </button>
+              @if (user.riskLevel === 'critical' || user.riskLevel === 'high') {
+                <button class="btn-danger hover-lift" (click)="suspendUser(user.id)">
+                  <i class="fas fa-ban"></i>
+                  Suspend
+                </button>
+              }
+              <button class="btn-warning hover-lift" (click)="warnUser(user)">
+                <i class="fas fa-exclamation-triangle"></i>
+                Warn
+              </button>
+              <button class="btn-secondary hover-lift" (click)="clearFlag(user.id)">
+                <i class="fas fa-check"></i>
+                Clear Flag
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>

@@ -1057,23 +1057,25 @@ html, body {
 }
 
 .btn-success {
-  background: #10b981;
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
   color: white;
 }
 
 .btn-success:hover {
-  background: #059669;
+  background: linear-gradient(135deg, #2C5270, #4A7A95);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.3);
 }
 
 .btn-warning {
-  background: #f59e0b;
+  background: linear-gradient(135deg, #5C8BA5, #79A4BF);
   color: white;
 }
 
 .btn-warning:hover {
-  background: #d97706;
+  background: linear-gradient(135deg, #4A7A95, #6B9BC0);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(92, 139, 165, 0.3);
 }
 
 /* Animations */

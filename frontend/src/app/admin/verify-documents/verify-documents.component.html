@@ -13,12 +13,12 @@
   </div>
 
   <!-- Error Display -->
-  @if (error) {
+  @if (error()) {
     <div class="error-banner fade-in-up">
       <div class="error-content">
         <i class="fas fa-exclamation-triangle"></i>
-        <span>{{ error }}</span>
-        <button class="error-close" (click)="error = null">
+        <span>{{ error() }}</span>
+        <button class="error-close" (click)="error.set(null)">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -26,12 +26,12 @@
   }
 
   <!-- Success Display -->
-  @if (successMessage) {
+  @if (successMessage()) {
     <div class="success-banner fade-in-up">
       <div class="success-content">
         <i class="fas fa-check-circle"></i>
-        <span>{{ successMessage }}</span>
-        <button class="success-close" (click)="successMessage = null">
+        <span>{{ successMessage() }}</span>
+        <button class="success-close" (click)="successMessage.set(null)">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -39,7 +39,7 @@
   }
 
   <!-- Loading State -->
-  @if (isLoading) {
+  @if (isLoading()) {
     <div class="loading-container fade-in-up">
       <div class="loading-spinner"></div>
       <p class="loading-text">Loading documents...</p>
@@ -65,7 +65,7 @@
       </div>
     </div>
     
-    @if (documents.length === 0 && !isLoading) {
+    @if (documents().length === 0 && !isLoading()) {
       <div class="empty-state fade-in-up">
         <i class="fas fa-file-alt"></i>
         <h3>No Pending Documents</h3>
@@ -73,7 +73,7 @@
       </div>
     } @else {
       <div class="documents-grid">
-        @for (doc of documents; track doc.id) {
+        @for (doc of documents(); track doc.id) {
           <div class="document-card animated-card hover-lift" [style.animation-delay]="($index * 0.1) + 's'">
             <div class="document-header">
               <div class="business-info">
@@ -96,7 +96,7 @@
                   <i class="fas fa-file-alt"></i>
                   <span>{{ doc.fileName }}</span>
                 </div>
-                <button class="btn-secondary hover-lift" (click)="viewDocument(doc.id)">
+                <button class="btn-secondary hover-lift" (click)="viewDocument(doc)">
                   <i class="fas fa-eye"></i>
                   View Document
                 </button>
@@ -109,27 +109,62 @@
                 </div>
                 <div class="meta-item">
                   <span class="meta-label">File Size:</span>
-                  <span class="meta-value">{{ doc.fileSize }}</span>
+                  <span class="meta-value">{{ doc.fileSize }} bytes</span>
                 </div>
                 <div class="meta-item">
-                  <span class="meta-label">Status:</span>
-                  <span class="meta-value status-badge" [class]="'status-' + doc.status">
-                    {{ doc.status | titlecase }}
+                  <span class="meta-label">AI Verified:</span>
+                  <span class="meta-value" [class]="doc.aiVerified ? 'status-approved' : 'status-pending'">
+                    {{ doc.aiVerified ? 'Yes' : 'No' }}
                   </span>
                 </div>
+                @if (doc.ocrConfidence) {
+                  <div class="meta-item">
+                    <span class="meta-label">OCR Confidence:</span>
+                    <span class="meta-value" [class]="doc.ocrConfidence >= 80 ? 'status-approved' : doc.ocrConfidence >= 60 ? 'status-warning' : 'status-rejected'">
+                      {{ doc.ocrConfidence }}%
+                    </span>
+                  </div>
+                }
               </div>
+
+              <!-- AI Verification Insights -->
+              @if (doc.aiVerified || doc.ocrConfidence) {
+                <div class="ai-insights">
+                  <div class="insight-header">
+                    <i class="fas fa-brain"></i>
+                    <strong>AI Verification</strong>
+                    <span class="confidence-badge" [class]="getVerificationConfidence(doc) >= 80 ? 'confidence-high' : getVerificationConfidence(doc) >= 60 ? 'confidence-medium' : 'confidence-low'">
+                      {{ getVerificationConfidence(doc).toFixed(0) }}% Confidence
+                    </span>
+                  </div>
+                  <p class="ai-recommendation">{{ getVerificationRecommendation(doc) }}</p>
+                  
+                  @if (doc.extractedData) {
+                    <div class="extracted-data">
+                      <strong>Extracted Information:</strong>
+                      <pre>{{ doc.extractedData | json }}</pre>
+                    </div>
+                  }
+                </div>
+              }
             </div>
             
             <div class="document-actions">
-              <button class="btn-success hover-lift" (click)="approveDocument(doc.id)" [disabled]="isProcessing">
+              @if (shouldAutoApprove(doc)) {
+                <button class="btn-success hover-lift" (click)="approveWithAI(doc)" [disabled]="isProcessing()">
+                  <i class="fas fa-robot"></i>
+                  AI Approve
+                </button>
+              }
+              <button class="btn-success hover-lift" (click)="approveDocument(doc)" [disabled]="isProcessing()">
                 <i class="fas fa-check"></i>
                 Approve
               </button>
-              <button class="btn-warning hover-lift" (click)="requestRevision(doc.id)" [disabled]="isProcessing">
+              <button class="btn-warning hover-lift" (click)="requestRevision(doc)" [disabled]="isProcessing()">
                 <i class="fas fa-edit"></i>
                 Request Revision
               </button>
-              <button class="btn-danger hover-lift" (click)="rejectDocument(doc.id)" [disabled]="isProcessing">
+              <button class="btn-danger hover-lift" (click)="rejectDocument(doc)" [disabled]="isProcessing()">
                 <i class="fas fa-times"></i>
                 Reject
               </button>

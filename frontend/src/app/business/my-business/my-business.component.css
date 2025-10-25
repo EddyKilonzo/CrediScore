@@ -14,9 +14,12 @@
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: fadeInUp 0.6s ease-out;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-fill-mode: both;
   border: 1px solid rgba(62, 106, 138, 0.1);
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
 }
 
 .dashboard-card:hover {
@@ -146,11 +149,15 @@
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: fadeInUp 0.6s ease-out;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-fill-mode: both;
+  animation-delay: 0.2s;
   border: 1px solid rgba(62, 106, 138, 0.1);
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
 }
 
 .document-upload-card::before {
@@ -160,7 +167,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(62, 106, 138, 0.2), transparent);
+  background: rgba(62, 106, 138, 0.2);
   transition: left 0.6s ease;
 }
 
@@ -180,11 +187,15 @@
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: fadeInUp 0.6s ease-out;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-fill-mode: both;
+  animation-delay: 0.3s;
   border: 1px solid rgba(62, 106, 138, 0.1);
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
 }
 
 .ai-scanning-card::before {
@@ -194,7 +205,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.2), transparent);
+  background: rgba(16, 185, 129, 0.2);
   transition: left 0.6s ease;
 }
 
@@ -226,7 +237,7 @@
 .scanning-container {
   position: relative;
   height: 200px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: #f8fafc;
   border-radius: 0.75rem;
   overflow: hidden;
   border: 2px dashed #e5e7eb;
@@ -235,13 +246,13 @@
 
 .scanning-container.scanning-active {
   border-color: #10b981;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  background: #f0fdf4;
   animation: scanningPulse 2s ease-in-out infinite;
 }
 
 .scanning-container.scanning-complete {
   border-color: #10b981;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  background: #f0fdf4;
 }
 
 /* Document Preview Area */
@@ -273,7 +284,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #10b981, transparent);
+  background: #10b981;
   animation: scanningLineMove 2s ease-in-out infinite;
   z-index: 10;
 }
@@ -317,7 +328,7 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: #10b981;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -439,10 +450,19 @@
 
 /* Quick Action Cards - Enhanced hover effects */
 .quick-action-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
   overflow: hidden;
+  animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation-fill-mode: both;
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
 }
+
+.quick-action-card:nth-child(1) { animation-delay: 0.5s; }
+.quick-action-card:nth-child(2) { animation-delay: 0.55s; }
+.quick-action-card:nth-child(3) { animation-delay: 0.6s; }
+.quick-action-card:nth-child(4) { animation-delay: 0.65s; }
 
 .quick-action-card::before {
   content: '';
@@ -451,7 +471,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(62, 106, 138, 0.2), transparent);
+  background: rgba(62, 106, 138, 0.2);
   transition: left 0.6s ease;
 }
 
@@ -472,13 +492,13 @@
 }
 
 @keyframes fadeInUp {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(40px) scale(0.95);
   }
-  to {
+  100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -581,8 +601,7 @@
 }
 
 .upload-progress-bar {
-  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
-  background-size: 200% 100%;
+  background: #2D5A87;
   animation: progressShimmer 2s ease-in-out infinite;
 }
 
@@ -650,7 +669,7 @@
 
 /* Enhanced Verification Progress Styles */
 .verification-progress-card {
-  background: linear-gradient(135deg, rgba(45, 90, 135, 0.05) 0%, rgba(45, 90, 135, 0.02) 100%);
+  background: rgba(45, 90, 135, 0.05);
   border: 1px solid rgba(45, 90, 135, 0.15);
   overflow: visible;
 }
@@ -670,7 +689,7 @@
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #2D5A87 0%, #3B82F6 100%);
+  background: #2D5A87;
   border-radius: 2px;
 }
 
@@ -681,8 +700,7 @@
 }
 
 .verification-progress-bar {
-  background: linear-gradient(90deg, #2D5A87 0%, #3B82F6 50%, #2D5A87 100%);
-  background-size: 200% 100%;
+  background: #2D5A87;
   animation: progressShimmer 3s ease-in-out infinite;
   box-shadow: 0 2px 8px rgba(45, 90, 135, 0.3);
 }
@@ -719,12 +737,12 @@
 }
 
 .verification-step-card.completed {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+  background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.3);
 }
 
 .verification-step-card.current {
-  background: linear-gradient(135deg, rgba(45, 90, 135, 0.1) 0%, rgba(45, 90, 135, 0.05) 100%);
+  background: rgba(45, 90, 135, 0.1);
   border-color: rgba(45, 90, 135, 0.4);
   box-shadow: 0 4px 15px rgba(45, 90, 135, 0.2);
 }
@@ -743,18 +761,18 @@
   justify-content: center;
   font-size: 1.2rem;
   transition: all 0.3s ease;
-  background: linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%);
+  background: #9CA3AF;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .step-icon.completed {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: #10B981;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
   animation: successPulse 2s ease-in-out infinite;
 }
 
 .step-icon.current {
-  background: linear-gradient(135deg, #2D5A87 0%, #1E40AF 100%);
+  background: #2D5A87;
   box-shadow: 0 4px 15px rgba(45, 90, 135, 0.4);
   animation: currentPulse 2s ease-in-out infinite;
 }
@@ -1079,7 +1097,7 @@
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #2D5A87 0%, #3B82F6 100%);
+  background: #2D5A87;
   border-radius: 2px;
 }
 
@@ -1263,8 +1281,7 @@
 
 /* Progress Bar Animation */
 .progress-bar-animated {
-  background: linear-gradient(90deg, #3b82f6, #1d4ed8, #3b82f6);
-  background-size: 200% 100%;
+  background: #2D5A87;
   animation: progressShimmer 2s linear infinite;
 }
 
@@ -1448,8 +1465,7 @@
 
 /* Progress Bar Animations */
 .progress-bar-animated {
-  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
-  background-size: 200% 100%;
+  background: #2D5A87;
   animation: progressShimmer 2s ease-in-out infinite;
 }
 
@@ -1501,7 +1517,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: rgba(255, 255, 255, 0.2);
   animation: buttonShimmer 1.5s infinite;
 }
 
@@ -1638,7 +1654,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: #2D5A87;
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
@@ -1654,9 +1670,9 @@
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  background: #3E6A8A;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 90, 135, 0.3);
 }
 
 .btn-primary:disabled,

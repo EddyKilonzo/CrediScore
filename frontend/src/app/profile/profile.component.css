@@ -297,9 +297,10 @@
   transform: translateY(-2px);
 }
 .tab-button.active { 
-  color: #3E6A8A; 
-  border-bottom-color: #3E6A8A; 
-  background-color: rgba(62, 106, 138, 0.05);
+  color: white; 
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5); 
+  border-bottom-color: #5C8BA5; 
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.2);
 }
 
 /* Layout */
@@ -317,11 +318,24 @@
 
 /* Profile Card */
 .profile-card {
-  background: white;
+  background: linear-gradient(135deg, rgba(232, 238, 243, 0.8) 0%, rgba(248, 250, 252, 1) 100%);
   border-radius: 1rem;
   padding: 2rem;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
   text-align: center;
+  border: 1px solid rgba(62, 106, 138, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3E6A8A, #5C8BA5, #79A4BF);
 }
 
 .profile-avatar-container {
@@ -410,10 +424,23 @@
 
 /* Info Sections */
 .info-section {
-  background: white;
+  background: linear-gradient(135deg, rgba(232, 238, 243, 0.5) 0%, rgba(248, 250, 252, 0.8) 100%);
   border-radius: 1rem;
   padding: 1.5rem;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  border: 1px solid rgba(62, 106, 138, 0.1);
+  position: relative;
+}
+
+.info-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #3E6A8A, #5C8BA5, #79A4BF);
+  border-radius: 1rem 0 0 1rem;
 }
 
 .section-title {
@@ -1173,11 +1200,11 @@ input:checked + .slider:before {
 }
 
 .stat-card:nth-child(3) .stat-icon {
-  background: linear-gradient(135deg, rgba(220, 38, 38, 0.8), rgba(239, 68, 68, 0.8));
+  background: linear-gradient(135deg, rgba(92, 139, 165, 0.8), rgba(121, 164, 191, 0.8));
 }
 
 .stat-card:nth-child(4) .stat-icon {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.8), rgba(245, 158, 11, 0.8));
+  background: linear-gradient(135deg, rgba(121, 164, 191, 0.8), rgba(148, 184, 209, 0.8));
 }
 
 .stat-content h4 {
@@ -1235,21 +1262,21 @@ input:checked + .slider:before {
 }
 
 .action-btn.high-priority {
-  border-left: 4px solid rgba(220, 38, 38, 0.8);
+  border-left: 4px solid rgba(62, 106, 138, 0.8);
 }
 
 .action-btn.high-priority:hover {
-  background: rgba(254, 242, 242, 0.6);
-  border-color: rgba(220, 38, 38, 0.8);
+  background: rgba(232, 238, 243, 0.6);
+  border-color: rgba(62, 106, 138, 0.8);
 }
 
 .action-btn.medium-priority {
-  border-left: 4px solid rgba(217, 119, 6, 0.8);
+  border-left: 4px solid rgba(92, 139, 165, 0.8);
 }
 
 .action-btn.medium-priority:hover {
-  background: rgba(255, 251, 235, 0.6);
-  border-color: rgba(217, 119, 6, 0.8);
+  background: rgba(240, 247, 255, 0.6);
+  border-color: rgba(92, 139, 165, 0.8);
 }
 
 .action-btn.low-priority {
@@ -1317,19 +1344,19 @@ input:checked + .slider:before {
 }
 
 .management-card:nth-child(1) .card-header i {
-  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
 }
 
 .management-card:nth-child(2) .card-header i {
-  background: linear-gradient(135deg, #059669, #10b981);
+  background: linear-gradient(135deg, #5C8BA5, #79A4BF);
 }
 
 .management-card:nth-child(3) .card-header i {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+  background: linear-gradient(135deg, #79A4BF, #94B8D1);
 }
 
 .management-card:nth-child(4) .card-header i {
-  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  background: linear-gradient(135deg, #5C8BA5, #79A4BF);
 }
 
 .card-header h4 {
@@ -1369,7 +1396,7 @@ input:checked + .slider:before {
 }
 
 .card-actions .btn-primary {
-  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1381,7 +1408,7 @@ input:checked + .slider:before {
 }
 
 .card-actions .btn-primary:hover {
-  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  background: linear-gradient(135deg, #2C5270, #3E6A8A);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.3);
 }

@@ -11,47 +11,88 @@
       </button>
     </div>
   </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-container fade-in-up">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading fraud reports...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !isLoading()) {
+    <div class="error-banner fade-in-up">
+      <div class="error-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error() }}</span>
+        <button class="error-close" (click)="error.set(null)">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+  }
   
   <div class="content-panel animated-panel fade-in-up">
     <div class="panel-header">
-      <h2 class="section-title slide-in-left">Pending Fraud Reports</h2>
+      <h2 class="section-title slide-in-left">Pending Fraud Reports ({{ reports().length }})</h2>
       <div class="header-actions slide-in-right">
-        <button class="btn-primary hover-lift">
-          <i class="fas fa-filter"></i>
-          Filter
+        <select class="filter-select" [value]="selectedFilter()" (change)="onFilterChange($event)">
+          <option value="all">All Status</option>
+          <option value="PENDING">Pending</option>
+          <option value="UNDER_REVIEW">Under Review</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="DISMISSED">Dismissed</option>
+        </select>
+        <button class="btn-primary hover-lift" (click)="loadReports()">
+          <i class="fas fa-sync-alt"></i>
+          Refresh
         </button>
-        <button class="btn-secondary hover-lift">
+        <button class="btn-secondary hover-lift" (click)="exportData()">
           <i class="fas fa-download"></i>
           Export
         </button>
       </div>
     </div>
     
-    <div class="reports-grid">
-      <div class="report-card animated-card hover-lift" *ngFor="let report of reports; let i = index" [style.animation-delay]="(i * 0.1) + 's'">
-        <div class="report-header">
-          <h3>{{ report.reason }}</h3>
-          <span class="priority-badge" [class]="'priority-' + report.status">
-            {{ report.status | titlecase }}
-          </span>
-        </div>
-        <div class="report-content">
-          <p><strong>Reported by:</strong> {{ report.reporter.name }}</p>
-          <p><strong>Target:</strong> {{ report.business.name }}</p>
-          <p><strong>Date:</strong> {{ report.createdAt | date:'MMM d, y' }}</p>
-          <p class="report-description">{{ report.description }}</p>
-        </div>
-        <div class="report-actions">
-          <button class="btn-danger hover-lift" (click)="reviewReport(report.id)">
-            <i class="fas fa-eye"></i>
-            Review
-          </button>
-          <button class="btn-secondary hover-lift" (click)="dismissReport(report.id)">
-            <i class="fas fa-times"></i>
-            Dismiss
-          </button>
-        </div>
+    @if (reports().length === 0 && !isLoading()) {
+      <div class="empty-state fade-in-up">
+        <i class="fas fa-shield-alt"></i>
+        <h3>No Fraud Reports</h3>
+        <p>Great! There are currently no pending fraud reports requiring review.</p>
       </div>
-    </div>
+    } @else {
+      <div class="reports-grid">
+        @for (report of reports(); track report.id; let i = $index) {
+          <div class="report-card animated-card hover-lift" [style.animation-delay]="(i * 0.1) + 's'">
+            <div class="report-header">
+              <h3>{{ report.reason }}</h3>
+              <span class="priority-badge" [class]="'status-' + report.status.toLowerCase()">
+                {{ report.status | titlecase }}
+              </span>
+            </div>
+            <div class="report-content">
+              <p><strong>Reported by:</strong> {{ report.reporter.name }}</p>
+              <p><strong>Reporter Email:</strong> {{ report.reporter.email }}</p>
+              <p><strong>Target Business:</strong> {{ report.business.name }}</p>
+              <p><strong>Date:</strong> {{ report.createdAt | date:'MMM d, y' }}</p>
+              <p class="report-description">{{ report.description }}</p>
+            </div>
+            <div class="report-actions">
+              @if (report.status === 'PENDING') {
+                <button class="btn-primary hover-lift" (click)="reviewReport(report.id)">
+                  <i class="fas fa-eye"></i>
+                  Review
+                </button>
+              }
+              <button class="btn-secondary hover-lift" (click)="dismissReport(report.id)">
+                <i class="fas fa-times"></i>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>

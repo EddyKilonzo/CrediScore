@@ -207,6 +207,7 @@ enum AuthProvider {
 enum PaymentType {
   TILL
   PAYBILL
+  SEND_MONEY
   BANK
 }
 

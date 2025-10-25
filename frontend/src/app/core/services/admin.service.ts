@@ -60,6 +60,12 @@ export interface User {
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
+  flagCount?: number;
+  flagReason?: string;
+  isFlagged?: boolean;
+  lastFlaggedAt?: string;
+  reviewPattern?: any;
+  unverifiedReviewCount?: number;
   _count: {
     reviews: number;
     businesses: number;
@@ -486,6 +492,44 @@ export class AdminService {
   getUserAnalysis(userId: string): Observable<any> {
     this.clearError();
     return this.http.get<any>(`${this.API_URL}/admin/flagged-users/${userId}/analysis`)
+      .pipe(
+        catchError(error => this.handleError(error))
+      );
+  }
+
+  // Documents Management
+  getPendingDocuments(page: number = 1, limit: number = 10): Observable<PaginatedResponse<any>> {
+    this.clearError();
+    
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    return this.http.get<PaginatedResponse<any>>(`${this.API_URL}/admin/documents/pending`, { params })
+      .pipe(
+        catchError(error => this.handleError(error))
+      );
+  }
+
+  approveDocument(documentId: string, notes?: string): Observable<{ message: string }> {
+    this.clearError();
+    return this.http.post<{ message: string }>(`${this.API_URL}/admin/documents/${documentId}/approve`, { notes })
+      .pipe(
+        catchError(error => this.handleError(error))
+      );
+  }
+
+  rejectDocument(documentId: string, reason: string): Observable<{ message: string }> {
+    this.clearError();
+    return this.http.post<{ message: string }>(`${this.API_URL}/admin/documents/${documentId}/reject`, { reason })
+      .pipe(
+        catchError(error => this.handleError(error))
+      );
+  }
+
+  requestDocumentRevision(documentId: string, notes: string): Observable<{ message: string }> {
+    this.clearError();
+    return this.http.post<{ message: string }>(`${this.API_URL}/admin/documents/${documentId}/request-revision`, { notes })
       .pipe(
         catchError(error => this.handleError(error))
       );
