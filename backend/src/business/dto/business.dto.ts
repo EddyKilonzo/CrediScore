@@ -6,6 +6,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { PaymentType } from '@prisma/client';
 
 export enum BusinessStatus {
   PENDING = 'PENDING',
@@ -159,10 +160,10 @@ export class UploadDocumentDto {
 export class AddPaymentMethodDto {
   @ApiProperty({
     description: 'Payment method type',
-    enum: ['TILL', 'PAYBILL', 'SEND_MONEY', 'BANK'],
+    enum: PaymentType,
   })
-  @IsEnum(['TILL', 'PAYBILL', 'SEND_MONEY', 'BANK'])
-  type: 'TILL' | 'PAYBILL' | 'SEND_MONEY' | 'BANK';
+  @IsEnum(PaymentType)
+  type: PaymentType;
 
   @ApiProperty({ description: 'Payment method number' })
   @IsString()

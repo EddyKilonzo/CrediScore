@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
@@ -288,7 +289,51 @@ export class CloudinaryController {
   }
 
   /**
-   * Generate signed upload URL for direct client uploads
+   * Generate signed upload URL for direct client uploads (GET endpoint)
+   */
+  @Public()
+  @Get('signed-upload-url')
+  generateSignedUploadUrlGet(
+    @Query('folder') folder?: string,
+    @Query('resourceType') resourceType?: string,
+    @Query('maxFileSize') maxFileSize?: string,
+    @Query('tags') tags?: string,
+    @Query('transformation') transformation?: string,
+  ) {
+    try {
+      console.log('Generate signed URL request:', {
+        folder,
+        resourceType,
+        maxFileSize,
+        tags,
+        transformation
+      });
+      
+      const result = this.cloudinaryService.generateSignedUploadUrl(
+        folder || 'crediscore',
+        resourceType || 'image',
+        maxFileSize ? parseInt(maxFileSize) : 10 * 1024 * 1024,
+        tags ? tags.split(',') : undefined,
+        transformation ? JSON.parse(transformation) : undefined,
+      );
+      
+      const apiKey = this.cloudinaryService['configService']?.get<string>('CLOUDINARY_API_KEY');
+      console.log('Generated signed URL result:', {
+        uploadUrl: result.uploadUrl,
+        timestamp: result.timestamp,
+        signatureLength: result.signature?.length,
+        apiKeyPreview: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      throw new BadRequestException('Failed to generate signed URL');
+    }
+  }
+
+  /**
+   * Generate signed upload URL for direct client uploads (POST endpoint)
    */
   @Post('signed-url')
   generateSignedUploadUrl(

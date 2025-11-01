@@ -235,6 +235,21 @@ export class AdminService {
       );
   }
 
+  getMonthlyUserRegistrations(): Observable<{ month: string; count: number }[]> {
+    this.clearError();
+    
+    const token = localStorage.getItem('token');
+    let headers = new HttpHeaders();
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+    
+    return this.http.get<{ month: string; count: number }[]>(`${this.API_URL}/admin/monthly-user-registrations`, { headers })
+      .pipe(
+        catchError(error => this.handleError(error))
+      );
+  }
+
   // Historical Data
   getHistoricalData(): Observable<HistoricalData> {
     this.clearError();

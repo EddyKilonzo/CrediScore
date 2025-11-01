@@ -39,6 +39,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 
@@ -52,7 +53,8 @@ export class BusinessController {
     private readonly ocrService: OCRService,
   ) {}
 
-  // Health Check Endpoints
+  // Health Check Endpoints (Public - no authentication required)
+  @Public()
   @Get('health/ocr')
   @ApiOperation({ summary: 'Check OCR service health' })
   @ApiResponse({ status: 200, description: 'OCR service health status' })
@@ -60,6 +62,7 @@ export class BusinessController {
     return this.ocrService.healthCheck();
   }
 
+  @Public()
   @Get('health/google-vision')
   @ApiOperation({ summary: 'Check Google Vision service health' })
   @ApiResponse({

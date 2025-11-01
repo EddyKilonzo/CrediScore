@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { tap, catchError, map } from 'rxjs/operators';
 
 export interface Business {
   id: string;
@@ -111,6 +111,12 @@ export interface UpdateBusinessRequest extends Partial<CreateBusinessRequest> {
   id: string;
 }
 
+export interface OCRHealthStatus {
+  status: 'healthy' | 'warning' | 'error';
+  message: string;
+  configured: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -129,10 +135,22 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.get<Business[]>(`${this.API_URL}/businesses`)
+    // Use the authenticated endpoint to get current user's businesses
+    return this.http.get<any>(`${this.API_URL}/business/my-businesses`)
       .pipe(
-        tap(businesses => {
-          this.businesses.set(businesses);
+        map((response: any): Business[] => {
+          // Handle paginated response format from backend: { businesses: Business[], pagination: {...} }
+          // Or handle direct array response (for backward compatibility)
+          if (Array.isArray(response)) {
+            return response;
+          } else if (response?.businesses && Array.isArray(response.businesses)) {
+            return response.businesses;
+          } else {
+            return [];
+          }
+        }),
+        tap(businessList => {
+          this.businesses.set(businessList);
           this.isLoading.set(false);
         }),
         catchError(error => {
@@ -147,7 +165,7 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.get<Business>(`${this.API_URL}/businesses/${id}`)
+    return this.http.get<Business>(`${this.API_URL}/business/${id}`)
       .pipe(
         tap(business => {
           this.currentBusiness.set(business);
@@ -165,7 +183,7 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.post<Business>(`${this.API_URL}/businesses`, businessData)
+    return this.http.post<Business>(`${this.API_URL}/business`, businessData)
       .pipe(
         tap(business => {
           this.currentBusiness.set(business);
@@ -183,13 +201,18 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.put<Business>(`${this.API_URL}/businesses/${businessData.id}`, businessData)
+    // Extract id from businessData and remove it from the body
+    const { id, ...updateData } = businessData;
+    
+    // Use PATCH method to match backend endpoint
+    return this.http.patch<Business>(`${this.API_URL}/business/${id}`, updateData)
       .pipe(
         tap(business => {
           this.currentBusiness.set(business);
           this.isLoading.set(false);
         }),
         catchError(error => {
+          console.error('Business update error:', error);
           this.error.set('Failed to update business');
           this.isLoading.set(false);
           throw error;
@@ -201,7 +224,7 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.delete<void>(`${this.API_URL}/businesses/${id}`)
+    return this.http.delete<void>(`${this.API_URL}/business/${id}`)
       .pipe(
         tap(() => {
           this.isLoading.set(false);
@@ -218,7 +241,7 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.get<Business[]>(`${this.API_URL}/businesses/search?q=${encodeURIComponent(query)}`)
+    return this.http.get<Business[]>(`${this.API_URL}/business/search?q=${encodeURIComponent(query)}`)
       .pipe(
         tap(businesses => {
           this.businesses.set(businesses);
@@ -236,7 +259,7 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.get<Business[]>(`${this.API_URL}/businesses/category/${encodeURIComponent(category)}`)
+    return this.http.get<Business[]>(`${this.API_URL}/business/category/${encodeURIComponent(category)}`)
       .pipe(
         tap(businesses => {
           this.businesses.set(businesses);
@@ -331,6 +354,34 @@ export class BusinessService {
           this.error.set('Failed to submit for review');
           this.isLoading.set(false);
           throw error;
+        })
+      );
+  }
+
+  // OCR/AI Service Health Check
+  checkOCRHealth(): Observable<OCRHealthStatus> {
+    return this.http.get<OCRHealthStatus>(`${this.API_URL}/business/health/ocr`)
+      .pipe(
+        catchError(error => {
+          // Return error status if health check fails
+          return of({ 
+            status: 'error' as const, 
+            message: 'Unable to check OCR service status', 
+            configured: false 
+          });
+        })
+      );
+  }
+
+  checkGoogleVisionHealth(): Observable<OCRHealthStatus> {
+    return this.http.get<OCRHealthStatus>(`${this.API_URL}/business/health/google-vision`)
+      .pipe(
+        catchError(error => {
+          return of({ 
+            status: 'error' as const, 
+            message: 'Unable to check Google Vision service status', 
+            configured: false 
+          });
         })
       );
   }

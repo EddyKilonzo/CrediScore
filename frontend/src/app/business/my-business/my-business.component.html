@@ -552,6 +552,43 @@
             </div>
           </div>
 
+          <!-- OCR/AI Service Status Indicator - Compact Version -->
+          <div class="mb-4">
+            <div class="rounded-lg border p-3 transition-all duration-300 ocr-status-indicator"
+                 [ngClass]="getOCRStatusBadgeClass()">
+              <div class="flex items-center justify-between gap-3">
+                <!-- Left: Icon and Message -->
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                  <div *ngIf="isCheckingOCRStatus" class="flex-shrink-0">
+                    <div class="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
+                  </div>
+                  <i *ngIf="!isCheckingOCRStatus" 
+                     [class]="getOCRStatusIcon() + ' ' + getOCRStatusColor() + ' text-base flex-shrink-0'"></i>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs font-medium leading-tight truncate" [ngClass]="getOCRStatusColor()">
+                      {{ isCheckingOCRStatus ? 'Checking AI services...' : getOCRUserFriendlyMessage() }}
+                    </p>
+                  </div>
+                </div>
+                <!-- Right: Status Badge -->
+                <div *ngIf="!isCheckingOCRStatus && ocrHealthStatus" class="flex items-center gap-2 flex-shrink-0">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border"
+                        [ngClass]="getOCRStatusBadgeClass()">
+                    <i [class]="getOCRStatusIcon() + ' text-[10px]'"></i>
+                    <span>{{ getOCRShortMessage() }}</span>
+                  </span>
+                  <button *ngIf="ocrHealthStatus.status !== 'healthy'" 
+                          type="button"
+                          (click)="checkOCRServiceStatus()"
+                          class="text-[10px] text-gray-500 hover:text-gray-700 transition-colors"
+                          title="Refresh status">
+                    <i class="fas fa-sync-alt"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Document List -->
           <div class="space-y-6">
             <div *ngFor="let document of getPaginatedDocuments()" 
@@ -761,113 +798,111 @@
                   </div>
                 </div>
 
-                <!-- Verification Checklist -->
-                <div class="p-4 bg-white border-t border-gray-200">
-                  <h5 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
-                    <i class="fas fa-clipboard-check text-blue-500 mr-2"></i>
-                    Verification Checklist
-                  </h5>
-                  <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div class="flex items-center space-x-2" 
+                <!-- Verification Checklist - Compact -->
+                <div class="px-4 py-2.5 bg-white border-t border-gray-200">
+                  <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-clipboard-check text-blue-500 text-xs"></i>
+                    <h5 class="text-xs font-semibold text-gray-700">Verification Checklist</h5>
+                  </div>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1.5 text-xs">
+                    <div class="flex items-center gap-1.5" 
                          [class.text-green-600]="document.scanResult.verificationChecklist?.businessNameFound"
-                         [class.text-red-600]="!document.scanResult.verificationChecklist?.businessNameFound">
-                      <i [class]="document.scanResult.verificationChecklist?.businessNameFound ? 'fas fa-check' : 'fas fa-times'"></i>
+                         [class.text-gray-400]="!document.scanResult.verificationChecklist?.businessNameFound">
+                      <i [class]="(document.scanResult.verificationChecklist?.businessNameFound ? 'fas fa-check-circle' : 'fas fa-circle') + ' text-[10px]'"></i>
                       <span>Business Name</span>
                     </div>
-                    <div class="flex items-center space-x-2"
+                    <div class="flex items-center gap-1.5"
                          [class.text-green-600]="document.scanResult.verificationChecklist?.validRegistrationFormat"
-                         [class.text-red-600]="!document.scanResult.verificationChecklist?.validRegistrationFormat">
-                      <i [class]="document.scanResult.verificationChecklist?.validRegistrationFormat ? 'fas fa-check' : 'fas fa-times'"></i>
-                      <span>Registration Format</span>
+                         [class.text-gray-400]="!document.scanResult.verificationChecklist?.validRegistrationFormat">
+                      <i [class]="(document.scanResult.verificationChecklist?.validRegistrationFormat ? 'fas fa-check-circle' : 'fas fa-circle') + ' text-[10px]'"></i>
+                      <span>Registration</span>
                     </div>
-                    <div class="flex items-center space-x-2"
+                    <div class="flex items-center gap-1.5"
                          [class.text-green-600]="document.scanResult.verificationChecklist?.validTaxFormat"
-                         [class.text-red-600]="!document.scanResult.verificationChecklist?.validTaxFormat">
-                      <i [class]="document.scanResult.verificationChecklist?.validTaxFormat ? 'fas fa-check' : 'fas fa-times'"></i>
-                      <span>Tax Number Format</span>
+                         [class.text-gray-400]="!document.scanResult.verificationChecklist?.validTaxFormat">
+                      <i [class]="(document.scanResult.verificationChecklist?.validTaxFormat ? 'fas fa-check-circle' : 'fas fa-circle') + ' text-[10px]'"></i>
+                      <span>Tax Format</span>
                     </div>
-                    <div class="flex items-center space-x-2"
+                    <div class="flex items-center gap-1.5"
                          [class.text-green-600]="document.scanResult.verificationChecklist?.officialAuthorityPresent"
-                         [class.text-red-600]="!document.scanResult.verificationChecklist?.officialAuthorityPresent">
-                      <i [class]="document.scanResult.verificationChecklist?.officialAuthorityPresent ? 'fas fa-check' : 'fas fa-times'"></i>
-                      <span>Official Authority</span>
+                         [class.text-gray-400]="!document.scanResult.verificationChecklist?.officialAuthorityPresent">
+                      <i [class]="(document.scanResult.verificationChecklist?.officialAuthorityPresent ? 'fas fa-check-circle' : 'fas fa-circle') + ' text-[10px]'"></i>
+                      <span>Authority</span>
                     </div>
-                    <div class="flex items-center space-x-2"
+                    <div class="flex items-center gap-1.5"
                          [class.text-green-600]="document.scanResult.verificationChecklist?.securityFeaturesDetected"
-                         [class.text-red-600]="!document.scanResult.verificationChecklist?.securityFeaturesDetected">
-                      <i [class]="document.scanResult.verificationChecklist?.securityFeaturesDetected ? 'fas fa-check' : 'fas fa-times'"></i>
-                      <span>Security Features</span>
+                         [class.text-gray-400]="!document.scanResult.verificationChecklist?.securityFeaturesDetected">
+                      <i [class]="(document.scanResult.verificationChecklist?.securityFeaturesDetected ? 'fas fa-check-circle' : 'fas fa-circle') + ' text-[10px]'"></i>
+                      <span>Security</span>
                     </div>
-                    <div class="flex items-center space-x-2"
+                    <div class="flex items-center gap-1.5"
                          [class.text-green-600]="document.scanResult.verificationChecklist?.noFraudIndicators"
-                         [class.text-red-600]="!document.scanResult.verificationChecklist?.noFraudIndicators">
-                      <i [class]="document.scanResult.verificationChecklist?.noFraudIndicators ? 'fas fa-check' : 'fas fa-times'"></i>
-                      <span>No Fraud Indicators</span>
+                         [class.text-gray-400]="!document.scanResult.verificationChecklist?.noFraudIndicators">
+                      <i [class]="(document.scanResult.verificationChecklist?.noFraudIndicators ? 'fas fa-check-circle' : 'fas fa-circle') + ' text-[10px]'"></i>
+                      <span>No Fraud</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Extracted Data -->
-                <div *ngIf="document.scanResult.extractedData" class="p-4 bg-gray-50 border-t border-gray-200">
-                  <h5 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
-                    <i class="fas fa-database text-purple-500 mr-2"></i>
+                <!-- Extracted Data - Compact Display -->
+                <div *ngIf="document.scanResult.extractedData" class="p-3 bg-gray-50 border-t border-gray-200">
+                  <h5 class="text-xs font-semibold text-gray-700 mb-2 flex items-center">
+                    <i class="fas fa-database text-purple-500 mr-1.5 text-xs"></i>
                     Extracted Information
                   </h5>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div *ngIf="document.scanResult.extractedData.businessName" class="flex justify-between">
-                      <span class="text-gray-600">Business Name:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.businessName }}</span>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div *ngIf="document.scanResult.extractedData.businessName" class="flex items-start gap-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Business:</span>
+                      <span class="font-semibold text-gray-900 flex-1">{{ document.scanResult.extractedData.businessName }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.registrationNumber" class="flex justify-between">
-                      <span class="text-gray-600">Registration:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.registrationNumber }}</span>
+                    <div *ngIf="document.scanResult.extractedData.registrationNumber" class="flex items-start gap-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Reg. No:</span>
+                      <span class="font-semibold text-gray-900 flex-1 font-mono">{{ document.scanResult.extractedData.registrationNumber }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.taxNumber" class="flex justify-between">
-                      <span class="text-gray-600">Tax Number:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.taxNumber }}</span>
+                    <div *ngIf="document.scanResult.extractedData.taxNumber" class="flex items-start gap-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Tax PIN:</span>
+                      <span class="font-semibold text-gray-900 flex-1 font-mono">{{ document.scanResult.extractedData.taxNumber }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.businessType" class="flex justify-between">
-                      <span class="text-gray-600">Business Type:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.businessType }}</span>
+                    <div *ngIf="document.scanResult.extractedData.businessType" class="flex items-start gap-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Type:</span>
+                      <span class="font-semibold text-gray-900 flex-1">{{ document.scanResult.extractedData.businessType }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.issueDate" class="flex justify-between">
-                      <span class="text-gray-600">Issue Date:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.issueDate }}</span>
+                    <div *ngIf="document.scanResult.extractedData.issueDate" class="flex items-start gap-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Issued:</span>
+                      <span class="font-semibold text-gray-900 flex-1">{{ document.scanResult.extractedData.issueDate }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.expiryDate" class="flex justify-between">
-                      <span class="text-gray-600">Expiry Date:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.expiryDate }}</span>
+                    <div *ngIf="document.scanResult.extractedData.expiryDate" class="flex items-start gap-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Expires:</span>
+                      <span class="font-semibold text-gray-900 flex-1">{{ document.scanResult.extractedData.expiryDate }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.issuingAuthority" class="flex justify-between">
-                      <span class="text-gray-600">Issuing Authority:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.issuingAuthority }}</span>
+                    <div *ngIf="document.scanResult.extractedData.issuingAuthority" class="flex items-start gap-2 md:col-span-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Authority:</span>
+                      <span class="font-semibold text-gray-900 flex-1">{{ document.scanResult.extractedData.issuingAuthority }}</span>
                     </div>
-                    <div *ngIf="document.scanResult.extractedData.businessAddress" class="flex justify-between">
-                      <span class="text-gray-600">Address:</span>
-                      <span class="font-medium text-gray-900">{{ document.scanResult.extractedData.businessAddress }}</span>
+                    <div *ngIf="document.scanResult.extractedData.businessAddress" class="flex items-start gap-2 md:col-span-2">
+                      <span class="text-gray-500 font-medium min-w-[80px]">Address:</span>
+                      <span class="font-semibold text-gray-900 flex-1">{{ document.scanResult.extractedData.businessAddress }}</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Technical Details -->
-                <div class="p-4 bg-white border-t border-gray-200">
-                  <h5 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
-                    <i class="fas fa-cogs text-gray-500 mr-2"></i>
-                    Technical Analysis
-                  </h5>
-                  <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="flex justify-between">
-                      <span class="text-gray-600">OCR Confidence:</span>
-                      <span class="font-medium"
+                <!-- Technical Details - Compact -->
+                <div class="px-4 py-2 bg-white border-t border-gray-200 flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1.5">
+                      <i class="fas fa-search text-gray-400 text-[10px]"></i>
+                      <span class="text-gray-600">OCR:</span>
+                      <span class="font-semibold"
                             [class.text-green-600]="document.scanResult.ocrConfidence >= 80"
                             [class.text-yellow-600]="document.scanResult.ocrConfidence >= 60 && document.scanResult.ocrConfidence < 80"
                             [class.text-red-600]="document.scanResult.ocrConfidence < 60">
                         {{ document.scanResult.ocrConfidence }}%
                       </span>
                     </div>
-                    <div class="flex justify-between">
-                      <span class="text-gray-600">AI Confidence:</span>
-                      <span class="font-medium"
+                    <div class="flex items-center gap-1.5">
+                      <i class="fas fa-brain text-gray-400 text-[10px]"></i>
+                      <span class="text-gray-600">AI:</span>
+                      <span class="font-semibold"
                             [class.text-green-600]="document.scanResult.confidence >= 80"
                             [class.text-yellow-600]="document.scanResult.confidence >= 60 && document.scanResult.confidence < 80"
                             [class.text-red-600]="document.scanResult.confidence < 60">
@@ -877,63 +912,71 @@
                   </div>
                 </div>
 
-                <!-- Warnings and Errors -->
+                <!-- Warnings and Errors - Compact -->
                 <div *ngIf="document.scanResult.warnings && document.scanResult.warnings.length > 0" 
-                     class="p-4 bg-yellow-50 border-t border-yellow-200">
-                  <h5 class="text-sm font-semibold text-yellow-800 mb-2 flex items-center">
-                    <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
-                    Warnings
-                  </h5>
-                  <ul class="text-xs text-yellow-700 space-y-1">
-                    <li *ngFor="let warning of document.scanResult.warnings" class="flex items-start">
-                      <i class="fas fa-dot-circle text-yellow-500 mr-2 mt-1 text-xs"></i>
-                      {{ warning }}
-                    </li>
-                  </ul>
+                     class="px-4 py-2.5 bg-yellow-50 border-t border-yellow-200">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-exclamation-triangle text-yellow-600 text-xs mt-0.5 flex-shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold text-yellow-800 mb-1">Warnings</p>
+                      <ul class="text-xs text-yellow-700 space-y-0.5">
+                        <li *ngFor="let warning of document.scanResult.warnings" class="flex items-start">
+                          <span class="mr-1.5">•</span>
+                          <span class="flex-1">{{ warning }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
                 <div *ngIf="document.scanResult.validationErrors && document.scanResult.validationErrors.length > 0" 
-                     class="p-4 bg-red-50 border-t border-red-200">
-                  <h5 class="text-sm font-semibold text-red-800 mb-2 flex items-center">
-                    <i class="fas fa-times-circle text-red-600 mr-2"></i>
-                    Validation Errors
-                  </h5>
-                  <ul class="text-xs text-red-700 space-y-1">
-                    <li *ngFor="let error of document.scanResult.validationErrors" class="flex items-start">
-                      <i class="fas fa-dot-circle text-red-500 mr-2 mt-1 text-xs"></i>
-                      {{ error }}
-                    </li>
-                  </ul>
+                     class="px-4 py-2.5 bg-red-50 border-t border-red-200">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-times-circle text-red-600 text-xs mt-0.5 flex-shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold text-red-800 mb-1">Validation Issues</p>
+                      <ul class="text-xs text-red-700 space-y-0.5">
+                        <li *ngFor="let error of document.scanResult.validationErrors" class="flex items-start">
+                          <span class="mr-1.5">•</span>
+                          <span class="flex-1">{{ error }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Security Features -->
+                <!-- Security Features - Compact -->
                 <div *ngIf="document.scanResult.securityFeatures && document.scanResult.securityFeatures.length > 0" 
-                     class="p-4 bg-green-50 border-t border-green-200">
-                  <h5 class="text-sm font-semibold text-green-800 mb-2 flex items-center">
-                    <i class="fas fa-shield-alt text-green-600 mr-2"></i>
-                    Security Features Detected
-                  </h5>
-                  <ul class="text-xs text-green-700 space-y-1">
-                    <li *ngFor="let feature of document.scanResult.securityFeatures" class="flex items-start">
-                      <i class="fas fa-check-circle text-green-500 mr-2 mt-1 text-xs"></i>
-                      {{ feature }}
-                    </li>
-                  </ul>
+                     class="px-4 py-2.5 bg-green-50 border-t border-green-200">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-shield-alt text-green-600 text-xs mt-0.5 flex-shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold text-green-800 mb-1">Security Features</p>
+                      <ul class="text-xs text-green-700 space-y-0.5">
+                        <li *ngFor="let feature of document.scanResult.securityFeatures" class="flex items-start">
+                          <i class="fas fa-check text-green-500 mr-1.5 mt-0.5 text-[10px] flex-shrink-0"></i>
+                          <span class="flex-1">{{ feature }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Fraud Indicators -->
+                <!-- Fraud Indicators - Compact -->
                 <div *ngIf="document.scanResult.fraudIndicators && document.scanResult.fraudIndicators.length > 0" 
-                     class="p-4 bg-red-50 border-t border-red-200">
-                  <h5 class="text-sm font-semibold text-red-800 mb-2 flex items-center">
-                    <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
-                    Fraud Indicators
-                  </h5>
-                  <ul class="text-xs text-red-700 space-y-1">
-                    <li *ngFor="let indicator of document.scanResult.fraudIndicators" class="flex items-start">
-                      <i class="fas fa-times-circle text-red-500 mr-2 mt-1 text-xs"></i>
-                      {{ indicator }}
-                    </li>
-                  </ul>
+                     class="px-4 py-2.5 bg-red-50 border-t border-red-200">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-xs mt-0.5 flex-shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold text-red-800 mb-1">Fraud Indicators</p>
+                      <ul class="text-xs text-red-700 space-y-0.5">
+                        <li *ngFor="let indicator of document.scanResult.fraudIndicators" class="flex items-start">
+                          <span class="mr-1.5">⚠</span>
+                          <span class="flex-1">{{ indicator }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

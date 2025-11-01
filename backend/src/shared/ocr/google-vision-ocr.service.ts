@@ -34,7 +34,7 @@ export interface GoogleVisionOCRResult {
 @Injectable()
 export class GoogleVisionOCRService {
   private readonly logger = new Logger(GoogleVisionOCRService.name);
-  private readonly client: ImageAnnotatorClient;
+  private readonly client: ImageAnnotatorClient | null;
   private readonly projectId: string;
   private readonly keyFilename: string;
 
@@ -42,19 +42,25 @@ export class GoogleVisionOCRService {
     this.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || '';
     this.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
 
-    // Initialize Google Vision client
-    try {
-      this.client = new ImageAnnotatorClient({
-        projectId: this.projectId,
-        keyFilename: this.keyFilename,
-      });
-      this.logger.log('Google Vision API client initialized successfully');
-    } catch (error) {
-      this.logger.error(
-        'Failed to initialize Google Vision API client:',
-        error,
-      );
-      throw new Error('Google Vision API client initialization failed');
+    // Initialize Google Vision client only if credentials are provided
+    if (this.projectId && this.keyFilename) {
+      try {
+        this.client = new ImageAnnotatorClient({
+          projectId: this.projectId,
+          keyFilename: this.keyFilename,
+        });
+        this.logger.log('Google Vision API client initialized successfully');
+      } catch (error) {
+        this.logger.warn(
+          'Failed to initialize Google Vision API client - service will not be available:',
+          error instanceof Error ? error.message : error,
+        );
+        // Don't throw error - allow service to continue without Google Vision
+        this.client = null;
+      }
+    } else {
+      this.logger.log('Google Vision API credentials not configured - service will use fallback options');
+      this.client = null;
     }
   }
 
@@ -69,7 +75,7 @@ export class GoogleVisionOCRService {
     try {
       const hasProjectId = !!this.projectId;
       const hasKeyFile = !!this.keyFilename;
-      const hasClient = !!this.client;
+      const hasClient = !!this.client && this.client !== null;
 
       if (!hasProjectId) {
         return {
@@ -114,6 +120,11 @@ export class GoogleVisionOCRService {
    */
   async extractText(imageUrl: string): Promise<GoogleVisionOCRResult> {
     try {
+      // Check if client is available
+      if (!this.client) {
+        throw new Error('Google Vision client not initialized - credentials not configured');
+      }
+
       this.logger.log(
         `Extracting text from image using Google Vision: ${imageUrl}`,
       );
@@ -197,6 +208,11 @@ export class GoogleVisionOCRService {
    */
   async extractTextFromBuffer(buffer: Buffer): Promise<GoogleVisionOCRResult> {
     try {
+      // Check if client is available
+      if (!this.client) {
+        throw new Error('Google Vision client not initialized - credentials not configured');
+      }
+
       this.logger.log(`Extracting text from buffer using Google Vision`);
 
       // Perform text detection on buffer
@@ -288,6 +304,15 @@ export class GoogleVisionOCRService {
     features: string[];
   }> {
     try {
+      // Check if client is available
+      if (!this.client) {
+        return {
+          documentType: 'UNKNOWN',
+          confidence: 0,
+          features: [],
+        };
+      }
+
       this.logger.log(
         `Detecting document type using Google Vision: ${imageUrl}`,
       );

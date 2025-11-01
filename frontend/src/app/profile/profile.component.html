@@ -43,14 +43,21 @@
                 {{ getUserInitials(currentUser()!) }}
               </div>
             }
-            <div class="avatar-overlay">
-              <i class="fas fa-camera"></i>
-              <span>Edit Photo</span>
+            <div class="avatar-overlay" [class.uploading]="isLoading()">
+              @if (isLoading()) {
+                <div class="upload-progress">
+                  <div class="spinner"></div>
+                  <span>Uploading...</span>
+                </div>
+              } @else {
+                <i class="fas fa-camera"></i>
+                <span>Edit Photo</span>
+              }
             </div>
             <input
               type="file"
               (change)="onFileSelected($event)"
-              accept="image/png, image/jpeg, image/gif"
+              accept="image/png, image/jpeg, image/jpg, image/webp"
               class="hidden">
           </div>
         </div>

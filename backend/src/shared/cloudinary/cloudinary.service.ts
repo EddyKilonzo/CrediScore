@@ -178,21 +178,53 @@ export class CloudinaryService {
     folder: string = 'crediscore',
     resourceType: string = 'image',
     maxFileSize: number = 10 * 1024 * 1024, // 10MB
+    tags?: string[],
+    transformation?: Record<string, any>,
   ): { uploadUrl: string; signature: string; timestamp: number } {
     const timestamp = Math.round(new Date().getTime() / 1000);
-    const params = {
-      folder,
-      resource_type: resourceType,
-      max_file_size: maxFileSize,
-      timestamp,
+    
+    // Build parameters object for signature
+    // NOTE: resource_type is NOT included in signature - it's part of the URL path
+    // NOTE: max_file_size is NOT included in signature - Cloudinary doesn't validate it for signed uploads
+    // Only include parameters that Cloudinary will validate in the signature
+    // IMPORTANT: All values must be strings for Cloudinary signature generation
+    const params: Record<string, any> = {
+      timestamp: timestamp.toString(),
+      folder: folder,
     };
+
+    // max_file_size is sent in the upload but NOT included in signature
+    // Cloudinary validates uploads based on the signature, but max_file_size is not part of the validation
+
+    // Add tags if provided (must be comma-separated string for signature)
+    // IMPORTANT: Only include tags in signature if they are provided
+    if (tags && tags.length > 0) {
+      // Join tags with comma - must match exactly what we send in FormData
+      params.tags = tags.join(',');
+    }
+
+    // Note: Transformations are not included in signed uploads
+    // They should be applied on-the-fly when generating display URLs
+    // This avoids signature complexity and allows flexibility in transformations
 
     const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
     if (!apiSecret) {
       throw new Error('CLOUDINARY_API_SECRET is not configured');
     }
+    
+    // Log parameters that will be signed (important for debugging)
+    this.logger.debug('Generating signature with params:', JSON.stringify(params, null, 2));
+    
+    // Important: Cloudinary requires parameters to be sorted alphabetically for signature
+    // But cloudinary.utils.api_sign_request handles this internally, so we don't need to sort
     const signature = cloudinary.utils.api_sign_request(params, apiSecret);
-
+    this.logger.debug('Generated signature:', signature.substring(0, 10) + '...');
+    this.logger.debug('Full signature:', signature);
+    
+    // Also log the API key being used (partial) for verification
+    const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
+    this.logger.debug('API Key used (first 10 chars):', apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING');
+    
     return {
       uploadUrl: `https://api.cloudinary.com/v1_1/${this.configService.get<string>('CLOUDINARY_CLOUD_NAME') || 'your-cloud-name'}/${resourceType}/upload`,
       signature,

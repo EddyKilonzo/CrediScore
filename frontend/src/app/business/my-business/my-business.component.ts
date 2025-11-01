@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../core/services/auth.service';
-import { BusinessService, Business, DocumentType as BusinessDocumentType } from '../../core/services/business.service';
+import { BusinessService, Business, DocumentType as BusinessDocumentType, OCRHealthStatus } from '../../core/services/business.service';
 import { CloudinaryService } from '../../core/services/cloudinary.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { Subject, takeUntil, interval } from 'rxjs';
+import { HttpEventType } from '@angular/common/http';
+import { filter, map } from 'rxjs/operators';
 
 enum PaymentType {
   TILL = 'TILL',
@@ -174,6 +176,10 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   documentUploadProgress = 0;
   selectedFile: File | null = null;
 
+  // OCR/AI Service Status
+  ocrHealthStatus: OCRHealthStatus | null = null;
+  isCheckingOCRStatus = false;
+
   // Logo Upload
   isLogoUploading = false;
   logoUploadProgress = 0;
@@ -232,6 +238,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadBusinessData();
+    this.checkOCRServiceStatus();
   }
 
   ngOnDestroy() {
@@ -241,10 +248,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   private loadBusinessData() {
     const user = this.currentUser();
-    console.log('Loading business data for user:', user);
     
     if (!user) {
-      console.log('No user found');
       this.isLoading = false;
       return;
     }
@@ -254,24 +259,43 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (businesses: Business[]) => {
-          console.log('Loaded businesses:', businesses);
-          if (businesses.length > 0) {
+          if (businesses && businesses.length > 0) {
             this.currentBusiness = businesses[0];
-            console.log('Set current business:', this.currentBusiness);
+            this.isLoading = false;
             this.loadBusinessDocuments();
             this.loadBusinessLocation();
             this.loadSocialLinks();
             this.loadBusinessProfile();
             this.loadPaymentMethods();
           } else {
+            // No business found - this is normal during onboarding
             this.isLoading = false;
-            this.toastService.show('No business found. Please create a business first.', 'warning');
+            this.currentBusiness = null;
+            // Don't show error - this is expected during the creation process
+            // The user will create the business when they fill out the profile form
           }
         },
         error: (error: any) => {
-          console.error('Error loading businesses:', error);
-          this.toastService.show('Failed to load business data', 'error');
           this.isLoading = false;
+          
+          // Check if it's a connection error
+          if (error.status === 0 || error.statusText === 'Unknown Error' || error.message?.includes('Failed to fetch')) {
+            this.toastService.show(
+              'Cannot connect to server. Please make sure the backend server is running on http://localhost:3000', 
+              'error'
+            );
+          } else if (error.status === 401 || error.status === 403) {
+            this.toastService.show('Authentication required. Please log in again.', 'warning');
+          } else {
+            // For 404 or other errors when no business exists, treat it as normal during onboarding
+            if (error.status === 404) {
+              this.currentBusiness = null;
+              // Silent - this is expected during onboarding
+            } else {
+              const errorMessage = error.error?.message || error.message || 'Failed to load business data';
+              this.toastService.show(errorMessage, 'error');
+            }
+          }
         }
       });
   }
@@ -289,6 +313,82 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     
     // Load location from business data if available
     this.businessLocation = (this.currentBusiness as any).location || '';
+  }
+
+  private createBusinessIfNeeded(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Check if we already have a business
+      if (this.currentBusiness && this.currentBusiness.id) {
+        resolve();
+        return;
+      }
+
+      // Validate we have minimum required data
+      if (!this.businessProfile.name?.trim()) {
+        this.toastService.show('Business name is required to create your business profile.', 'warning');
+        reject(new Error('Business name required'));
+        return;
+      }
+
+      // Get current user
+      const user = this.currentUser();
+      if (!user) {
+        this.toastService.show('Authentication required. Please log in again.', 'warning');
+        reject(new Error('User not authenticated'));
+        return;
+      }
+
+      // Prepare business creation data
+      // Ensure all required fields have values
+      const phoneValue = this.businessProfile.phone?.trim() || user.phone || '';
+      const emailValue = this.businessProfile.email?.trim() || user.email || '';
+      
+      if (!phoneValue || !emailValue) {
+        this.toastService.show('Phone number and email are required to create your business profile.', 'warning');
+        reject(new Error('Phone and email required'));
+        return;
+      }
+
+      const businessData = {
+        name: this.businessProfile.name.trim(),
+        description: this.businessProfile.description?.trim() || 'Business description will be updated soon.',
+        address: this.businessLocation?.trim() || 'Address will be updated soon.',
+        phone: phoneValue,
+        email: emailValue,
+        website: this.businessProfile.website?.trim() || undefined,
+        category: 'General' // Default category - can be updated later
+      };
+
+      // Create the business
+      this.businessService.createBusiness(businessData)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (business) => {
+            this.currentBusiness = business;
+            this.toastService.show('Business profile created successfully!', 'success');
+            
+            // Update onboarding step
+            this.onboardingSteps[0].completed = true;
+            
+            // Load related data
+            this.loadBusinessProfile();
+            this.loadBusinessLocation();
+            this.loadSocialLinks();
+            
+            resolve();
+          },
+          error: (error) => {
+            let errorMessage = 'Failed to create business profile';
+            if (error.error?.message) {
+              errorMessage = error.error.message;
+            } else if (error.message) {
+              errorMessage = error.message;
+            }
+            this.toastService.show(errorMessage, 'error');
+            reject(error);
+          }
+        });
+    });
   }
 
   private loadSocialLinks() {
@@ -572,12 +672,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   testUpload() {
-    console.log('TEST UPLOAD BUTTON CLICKED!');
-    console.log('Selected file:', this.selectedFile);
-    console.log('Selected document type:', this.selectedDocumentType);
-    console.log('Current business:', this.currentBusiness);
-    console.log('Is document uploading:', this.isDocumentUploading);
-    
     if (!this.selectedFile) {
       this.toastService.show('Please select a file first!', 'warning');
       return;
@@ -589,27 +683,33 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     }
     
     if (!this.currentBusiness) {
-      this.toastService.show('No business found!', 'warning');
+      // Try to create business first if profile has minimum required data
+      if (this.businessProfile.name?.trim()) {
+        this.createBusinessIfNeeded().then(() => {
+          if (this.currentBusiness) {
+            this.uploadSelectedDocument();
+          }
+        });
+      } else {
+        this.toastService.show('Please complete your business profile first before uploading documents.', 'warning');
+      }
       return;
     }
     
-    this.toastService.show('Test upload initiated!', 'info');
     this.uploadSelectedDocument();
   }
 
   uploadSelectedDocument() {
-    console.log('Upload button clicked');
-    console.log('Selected file:', this.selectedFile);
-    console.log('Selected document type:', this.selectedDocumentType);
-    console.log('Current business:', this.currentBusiness);
-
-    if (!this.selectedFile || !this.selectedDocumentType || !this.currentBusiness) {
-      console.log('Missing required data for upload');
+    if (!this.selectedFile || !this.selectedDocumentType) {
       this.toastService.show('Please select a file to upload', 'warning');
       return;
     }
+    
+    if (!this.currentBusiness) {
+      this.toastService.show('Please complete your business profile first before uploading documents.', 'warning');
+      return;
+    }
 
-    console.log('Starting upload process...');
     this.isDocumentUploading = true;
     this.documentUploadProgress = 0;
 
@@ -621,12 +721,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     }, 300);
 
     // Upload document using the business service
-    console.log('Calling businessService.uploadDocument with:', {
-      businessId: this.currentBusiness.id,
-      file: this.selectedFile.name,
-      documentType: this.getDocumentTypeEnum(this.selectedDocumentType.id)
-    });
-
     this.businessService.uploadDocument(
       this.currentBusiness.id, 
       this.selectedFile, 
@@ -635,12 +729,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (document) => {
-          console.log('Upload successful:', document);
           clearInterval(progressInterval);
           this.documentUploadProgress = 100;
           
           setTimeout(() => {
-            this.toastService.show(`${this.selectedDocumentType!.name} uploaded successfully! Starting AI verification...`, 'success');
+            this.toastService.show(`Document uploaded! AI verification in progress...`, 'success');
             
             // Update document status
             const documentType = this.requiredDocuments.find(doc => doc.id === this.selectedDocumentType!.id);
@@ -658,15 +751,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
           }, 500);
         },
         error: (error) => {
-          console.error('Document upload error:', error);
-          console.error('Error details:', {
-            message: error.message,
-            status: error.status,
-            statusText: error.statusText,
-            url: error.url
-          });
           clearInterval(progressInterval);
-          this.toastService.show(`Failed to upload document: ${error.message || 'Unknown error'}. Please try again.`, 'error');
+          const errorMessage = error.error?.message || error.message || 'Unknown error';
+          this.toastService.show(`Failed to upload document: ${errorMessage}. Please try again.`, 'error');
           this.isDocumentUploading = false;
           this.documentUploadProgress = 0;
         }
@@ -686,12 +773,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
           .subscribe({
             next: (status) => {
               this.updateProcessingStatus(status);
-              if (status.status === 'completed' || status.status === 'failed') {
+              if (status.processingStatus === 'completed' || status.processingStatus === 'failed') {
                 pollInterval.unsubscribe();
               }
             },
             error: (error) => {
-              console.error('Error checking processing status:', error);
               pollInterval.unsubscribe();
             }
           });
@@ -699,12 +785,22 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   private updateProcessingStatus(status: any) {
-    this.scanningProgress = status.progress || 0;
+    // Update scanning progress - backend doesn't provide progress, so we simulate it
+    if (!status.processingStatus || status.processingStatus === 'processing') {
+      // Still processing - increment progress
+      if (this.scanningProgress < 90) {
+        this.scanningProgress += 10;
+      }
+      // Continue polling
+      return;
+    }
     
     if (status.processingStatus === 'completed') {
       this.completeDocumentScanning(status);
     } else if (status.processingStatus === 'failed') {
-      this.handleUploadError(this.requiredDocuments.find(d => d.scanning)!, 'Processing failed');
+      // Processing failed
+      const errorMessage = status.aiAnalysis?.error || 'Document processing failed. Please try again.';
+      this.handleUploadError(this.requiredDocuments.find(d => d.scanning)!, errorMessage);
     }
   }
 
@@ -734,13 +830,13 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.scanningProgress = 0;
 
     if (status.aiVerified) {
-      this.toastService.show(`✅ ${document.name} verified successfully by AI!`, 'success');
+      this.toastService.show(`✅ Document verified! AI found all required information.`, 'success');
     } else {
       const score = status.aiAnalysis?.authenticityScore || 0;
       if (score >= 60) {
-        this.toastService.show(`⚠️ ${document.name} needs manual review (Score: ${score}%)`, 'warning');
+        this.toastService.show(`⚠️ Document processed (${score}% score). Requires admin review for final approval.`, 'warning');
       } else {
-        this.toastService.show(`❌ ${document.name} verification failed (Score: ${score}%). Please upload a clearer document.`, 'error');
+        this.toastService.show(`❌ Low quality detected (${score}% score). Please upload a clearer, higher-resolution document.`, 'error');
       }
     }
   }
@@ -777,12 +873,16 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   canSubmitForReview(): boolean {
-    // Allow submission if at least one document is uploaded
+    // Need a business and at least one document uploaded
+    if (!this.currentBusiness) return false;
     return this.getUploadedDocumentsCount() >= 1;
   }
 
   submitForReview() {
-    if (!this.currentBusiness) return;
+    if (!this.currentBusiness) {
+      this.toastService.show('Please complete your business profile first before submitting for review.', 'warning');
+      return;
+    }
     
     if (this.canSubmitForReview()) {
       this.businessService.submitForReview(this.currentBusiness.id, 'Business submitted for verification review')
@@ -794,8 +894,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             this.onboardingSteps[3].completed = true;
           },
           error: (error) => {
-            console.error('Error submitting for review:', error);
-            this.toastService.show('Failed to submit for review. Please try again.', 'error');
+            const errorMessage = error.error?.message || 'Failed to submit for review. Please try again.';
+            this.toastService.show(errorMessage, 'error');
           }
         });
     } else {
@@ -907,43 +1007,114 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Business Profile Methods
   updateBusinessProfile() {
-    if (!this.currentBusiness) return;
+    // Check if business data is still loading
+    if (this.isLoading) {
+      this.toastService.show('Please wait while business data is loading...', 'info');
+      return;
+    }
 
     // Mark form as touched for validation
     this.profileFormTouched = true;
 
-    if (!this.businessProfile.name.trim()) {
+    if (!this.businessProfile.name?.trim()) {
       this.toastService.show('Business name is required', 'warning');
+      return;
+    }
+
+    // Validate email if provided
+    if (this.businessProfile.email && !this.isValidEmail(this.businessProfile.email)) {
+      this.toastService.show('Please enter a valid email address', 'warning');
+      return;
+    }
+
+    // If no business exists, create it first
+    if (!this.currentBusiness || !this.currentBusiness.id) {
+      this.createBusinessIfNeeded().then(() => {
+        if (this.currentBusiness) {
+          // Retry update after creation
+          this.updateBusinessProfile();
+        }
+      });
       return;
     }
 
     this.isUpdatingProfile = true;
 
-    const updateData = {
-      id: this.currentBusiness.id,
+    // Prepare update data matching backend UpdateBusinessDto
+    // Note: catchphrase and logo are not part of the standard business model
+    // They may need to be stored separately or added to the backend DTO
+    const updateData: any = {
       name: this.businessProfile.name.trim(),
-      description: this.businessProfile.description?.trim() || '',
-      website: this.businessProfile.website?.trim() || '',
-      phone: this.businessProfile.phone?.trim() || '',
-      email: this.businessProfile.email?.trim() || '',
-      catchphrase: this.businessProfile.catchphrase?.trim() || '',
-      logo: this.businessProfile.logo || ''
+      description: this.businessProfile.description?.trim() || undefined,
+      website: this.businessProfile.website?.trim() || undefined,
+      phone: this.businessProfile.phone?.trim() || undefined,
+      email: this.businessProfile.email?.trim() || undefined,
+      // location is mapped from businessLocation if needed
+      // category can be added if needed
     };
 
-    this.businessService.updateBusiness(updateData)
+    // Remove undefined values to avoid sending them
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined || updateData[key] === '') {
+        delete updateData[key];
+      }
+    });
+
+    // Ensure we have a valid business ID
+    if (!this.currentBusiness || !this.currentBusiness.id) {
+      this.isUpdatingProfile = false;
+      this.toastService.show('Cannot save: Business ID is missing. Please refresh the page.', 'error');
+      return;
+    }
+
+    // Create update request with id
+    const updateRequest = {
+      id: this.currentBusiness.id,
+      ...updateData
+    };
+
+    this.businessService.updateBusiness(updateRequest)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (updatedBusiness) => {
           this.currentBusiness = updatedBusiness;
+          
+          // Update local profile data to match response
+          this.businessProfile = {
+            name: updatedBusiness.name || '',
+            catchphrase: this.businessProfile.catchphrase || '', // Keep local-only fields
+            logo: this.businessProfile.logo || '', // Keep local-only fields
+            description: updatedBusiness.description || '',
+            website: updatedBusiness.website || '',
+            phone: updatedBusiness.phone || '',
+            email: updatedBusiness.email || ''
+          };
+          
           this.originalBusinessProfile = { ...this.businessProfile };
           this.profileFormTouched = false;
           this.isUpdatingProfile = false;
           this.toastService.show('Business profile updated successfully', 'success');
         },
         error: (error) => {
-          console.error('Error updating business profile:', error);
           this.isUpdatingProfile = false;
-          this.toastService.show('Failed to update business profile', 'error');
+          
+          // Provide specific error messages
+          let errorMessage = 'Failed to update business profile';
+          if (error.status === 403) {
+            errorMessage = 'You do not have permission to update this business';
+          } else if (error.status === 404) {
+            errorMessage = 'Business not found';
+          } else if (error.status === 401) {
+            errorMessage = 'Authentication required. Please log in again.';
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error.error?.error) {
+            errorMessage = typeof error.error.error === 'string' 
+              ? error.error.error 
+              : error.error.error.message || errorMessage;
+          }
+          
+          this.toastService.show(errorMessage, 'error');
         }
       });
   }
@@ -1025,15 +1196,42 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     uploadOptions.folder = 'crediscore/business-logos';
 
     this.cloudinaryService.uploadFile(this.selectedLogoFile, uploadOptions)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        takeUntil(this.destroy$),
+        // Filter for upload progress events
+        filter((event: any) => {
+          if (event.type === HttpEventType.UploadProgress) {
+            // Update progress from actual upload progress
+            if (event.total) {
+              const progress = Math.round(100 * event.loaded / event.total);
+              this.logoUploadProgress = Math.min(progress, 90); // Cap at 90% until complete
+            }
+            return false; // Don't pass through progress events
+          }
+          // Only pass through response events
+          return event.type === HttpEventType.Response;
+        }),
+        // Extract the response body
+        map((event: any) => event.body || event)
+      )
       .subscribe({
         next: (response: any) => {
           clearInterval(progressInterval);
           this.logoUploadProgress = 100;
           
           setTimeout(() => {
-            if (response.body?.secure_url) {
-              this.businessProfile.logo = response.body.secure_url;
+            // Handle different response structures from Cloudinary
+            let secureUrl = null;
+            if (response?.secure_url) {
+              secureUrl = response.secure_url;
+            } else if (response?.body?.secure_url) {
+              secureUrl = response.body.secure_url;
+            } else if (typeof response === 'string' && response.includes('cloudinary.com')) {
+              secureUrl = response;
+            }
+            
+            if (secureUrl) {
+              this.businessProfile.logo = secureUrl;
               this.toastService.show('Logo uploaded successfully', 'success');
               
               // Clear preview
@@ -1048,7 +1246,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
                 this.updateBusinessProfile();
               }
             } else {
-              this.toastService.show('Logo upload failed', 'error');
+              this.toastService.show('Logo upload failed: Invalid response from server', 'error');
             }
             
             this.isLogoUploading = false;
@@ -1057,8 +1255,31 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         },
         error: (error: any) => {
           clearInterval(progressInterval);
-          console.error('Logo upload error:', error);
-          this.toastService.show('Logo upload failed', 'error');
+          
+          let errorMessage = 'Logo upload failed';
+          // Handle different error response structures
+          if (error.error) {
+            if (typeof error.error === 'string') {
+              try {
+                const parsed = JSON.parse(error.error);
+                errorMessage = parsed.error?.message || parsed.message || errorMessage;
+              } catch {
+                errorMessage = error.error;
+              }
+            } else if (error.error.error?.message) {
+              errorMessage = error.error.error.message;
+            } else if (error.error.message) {
+              errorMessage = error.error.message;
+            } else if (error.error.error) {
+              errorMessage = typeof error.error.error === 'string' 
+                ? error.error.error 
+                : error.error.error.message || errorMessage;
+            }
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          this.toastService.show(errorMessage, 'error');
           this.isLogoUploading = false;
           this.logoUploadProgress = 0;
         }
@@ -1154,15 +1375,20 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   addPaymentMethod() {
-    console.log('addPaymentMethod called', {
-      currentBusiness: this.currentBusiness?.id,
-      paymentMethod: this.newPaymentMethod,
-      isValid: this.isPaymentFormValid()
-    });
-
     if (!this.currentBusiness) {
-      console.log('No current business');
-      this.toastService.show('No business found. Please create a business first.', 'error');
+      // Try to create business first if profile has minimum required data
+      if (this.businessProfile.name?.trim()) {
+        this.createBusinessIfNeeded().then(() => {
+          if (this.currentBusiness) {
+            // Retry after creation
+            this.addPaymentMethod();
+          } else {
+            this.toastService.show('Please complete your business profile first before adding payment methods.', 'warning');
+          }
+        });
+      } else {
+        this.toastService.show('Please complete your business profile first before adding payment methods.', 'warning');
+      }
       return;
     }
 
@@ -1183,14 +1409,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       formattedNumber = `${formattedNumber}#${this.newPaymentMethod.accountNumber.trim()}`;
     }
 
-    console.log('Calling businessService.addPaymentMethod with:', {
-      businessId: this.currentBusiness.id,
-      paymentData: {
-        type: this.newPaymentMethod.type,
-        number: formattedNumber
-      }
-    });
-
     this.businessService.addPaymentMethod(this.currentBusiness.id, {
       type: this.newPaymentMethod.type,
       number: formattedNumber
@@ -1198,7 +1416,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (paymentMethod) => {
-          console.log('Payment method added successfully:', paymentMethod);
           this.paymentMethods.push(paymentMethod);
           this.toastService.show('Payment method added successfully', 'success');
           this.closeAddPaymentModal();
@@ -1209,8 +1426,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error adding payment method:', error);
-          console.error('Error details:', error.error, error.message, error.status);
           this.toastService.show(
             error.error?.message || 'Failed to add payment method. Please try again.', 
             'error'
@@ -1293,5 +1508,94 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   hasValidAvatar(): boolean {
     const user = this.currentUser();
     return !!(user?.avatar && user.avatar.trim() !== '' && user.avatar.startsWith('http'));
+  }
+
+  // OCR/AI Service Health Check Methods
+  checkOCRServiceStatus() {
+    this.isCheckingOCRStatus = true;
+    this.businessService.checkOCRHealth()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (status) => {
+          this.ocrHealthStatus = status;
+          this.isCheckingOCRStatus = false;
+          
+          // Only show toast for non-healthy status to avoid noise
+          if (status.status === 'error') {
+            this.toastService.show(
+              'AI verification unavailable. Documents will be reviewed manually.', 
+              'warning'
+            );
+          }
+        },
+        error: (error) => {
+          this.ocrHealthStatus = {
+            status: 'error',
+            message: 'Unable to check OCR service status',
+            configured: false
+          };
+          this.isCheckingOCRStatus = false;
+        }
+      });
+  }
+
+  getOCRStatusColor(): string {
+    if (!this.ocrHealthStatus) return 'text-gray-500';
+    switch (this.ocrHealthStatus.status) {
+      case 'healthy': return 'text-green-600';
+      case 'warning': return 'text-yellow-600';
+      case 'error': return 'text-red-600';
+      default: return 'text-gray-500';
+    }
+  }
+
+  getOCRStatusIcon(): string {
+    if (!this.ocrHealthStatus) return 'fas fa-question-circle';
+    switch (this.ocrHealthStatus.status) {
+      case 'healthy': return 'fas fa-check-circle';
+      case 'warning': return 'fas fa-exclamation-triangle';
+      case 'error': return 'fas fa-times-circle';
+      default: return 'fas fa-question-circle';
+    }
+  }
+
+  getOCRStatusBadgeClass(): string {
+    if (!this.ocrHealthStatus) return 'bg-gray-100 text-gray-600 border-gray-300';
+    switch (this.ocrHealthStatus.status) {
+      case 'healthy': return 'bg-green-50 text-green-700 border-green-200';
+      case 'warning': return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'error': return 'bg-red-50 text-red-700 border-red-200';
+      default: return 'bg-gray-100 text-gray-600 border-gray-300';
+    }
+  }
+
+  getOCRUserFriendlyMessage(): string {
+    if (!this.ocrHealthStatus) return 'Checking service status...';
+    
+    switch (this.ocrHealthStatus.status) {
+      case 'healthy':
+        return 'AI document verification is ready. Upload documents for instant analysis.';
+      case 'warning':
+        return 'OCR available. AI features limited - documents may require manual review.';
+      case 'error':
+        return 'AI verification unavailable. Documents will be reviewed manually.';
+      default:
+        return 'Service status unknown.';
+    }
+  }
+
+  getOCRShortMessage(): string {
+    if (!this.ocrHealthStatus) return 'Checking...';
+    
+    switch (this.ocrHealthStatus.status) {
+      case 'healthy':
+        return 'Ready';
+      case 'warning':
+        return 'Limited';
+      case 'error':
+        return 'Unavailable';
+      default:
+        return 'Unknown';
+    }
   }
 }

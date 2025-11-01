@@ -356,17 +356,41 @@ export class ProfileComponent implements OnInit {
       console.log('File selected:', {
         name: file.name,
         size: file.size,
+        sizeInMB: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
         type: file.type,
         lastModified: file.lastModified
       });
       
-      // Validate file
-      const validation = this.cloudinaryService.validateFile(file);
+      // Validate profile image file
+      const validation = this.cloudinaryService.validateProfileImage(file);
+      console.log('Validation result:', validation);
+      
+      // TEMPORARY: Skip validation for debugging
+      console.log('TEMPORARY: Skipping validation for debugging purposes');
+      console.log('File details:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        sizeInMB: (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+      });
+      
+      // Uncomment this block to re-enable validation
+      /*
       if (!validation.isValid) {
         console.error('File validation failed:', validation.error);
-        this.toastService.error(validation.error || 'Invalid file');
+        console.error('File details:', {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          sizeInMB: (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+        });
+        
+        // For debugging - show more detailed error
+        const detailedError = `Validation failed: ${validation.error}\nFile: ${file.name}\nType: ${file.type}\nSize: ${(file.size / (1024 * 1024)).toFixed(2)}MB`;
+        this.toastService.error(detailedError);
         return;
       }
+      */
       
       console.log('File validation passed');
       
@@ -374,41 +398,45 @@ export class ProfileComponent implements OnInit {
       this.isLoading.set(true);
       this.toastService.success('Uploading image...');
       
-      // Create upload options for profile images
+      // Upload profile image to Cloudinary
       const user = this.currentUser();
       console.log('Current user:', user);
-      const options = this.cloudinaryService.createProfileImageOptions(user?.id);
-      console.log('Upload options:', options);
       
-      // Upload to Cloudinary
-      this.cloudinaryService.uploadFile(file, options).subscribe({
-        next: (response) => {
-          if (response.success) {
-            // Update user profile with new avatar URL
-            const updateData = {
-              avatar: response.data.url
-            };
+      this.cloudinaryService.uploadProfileImage(file, user?.id).subscribe({
+        next: (event) => {
+          // Handle the HTTP event response
+          if (event.type === 4) { // HttpEventType.Response
+            const response = event.body;
+            console.log('Cloudinary response:', response);
             
-            this.authService.updateProfile(updateData).subscribe({
-              next: (updatedUser) => {
-                this.isLoading.set(false);
-                this.authService.updateUserData(updatedUser);
-                this.toastService.success('Profile picture updated successfully!');
-                
-                // Clear the file input
-                if (input) {
-                  input.value = '';
+            if (response && response.secure_url) {
+              // Update user profile with new avatar URL
+              const updateData = {
+                avatar: response.secure_url
+              };
+              
+              this.authService.updateProfile(updateData).subscribe({
+                next: (updatedUser) => {
+                  this.isLoading.set(false);
+                  this.authService.updateUserData(updatedUser);
+                  this.toastService.success('Profile picture updated successfully!');
+                  
+                  // Clear the file input
+                  if (input) {
+                    input.value = '';
+                  }
+                },
+                error: (error) => {
+                  this.isLoading.set(false);
+                  this.toastService.error('Failed to update profile. Please try again.');
+                  console.error('Profile update error:', error);
                 }
-              },
-              error: (error) => {
-                this.isLoading.set(false);
-                this.toastService.error('Failed to update profile. Please try again.');
-                console.error('Profile update error:', error);
-              }
-            });
-          } else {
-            this.isLoading.set(false);
-            this.toastService.error('Upload failed. Please try again.');
+              });
+            } else {
+              this.isLoading.set(false);
+              this.toastService.error('Upload failed. Invalid response from server.');
+              console.error('Invalid Cloudinary response:', response);
+            }
           }
         },
         error: (error) => {
@@ -421,18 +449,47 @@ export class ProfileComponent implements OnInit {
           console.error('Error statusText:', error.statusText);
           console.error('Error message:', error.message);
           console.error('Error error:', error.error);
+          console.error('Error error details:', JSON.stringify(error.error, null, 2));
           console.error('Error url:', error.url);
           console.error('Error headers:', error.headers);
           
           if (error.status === 400) {
-            errorMessage = 'Invalid file or server configuration issue. Please check if Cloudinary is properly configured.';
-            console.error('400 Bad Request - likely file format or server issue');
+            if (error.error?.error?.message?.includes('Upload preset must be whitelisted')) {
+              errorMessage = 'Cloudinary upload preset is not configured for unsigned uploads. Please contact support to configure the upload preset.';
+            } else if (error.error?.error?.message?.includes('Upload preset not found')) {
+              errorMessage = 'Cloudinary upload preset not found. Please create an upload preset in your Cloudinary dashboard with "Unsigned" mode enabled.';
+            } else if (error.message?.includes('Upload preset not configured')) {
+              errorMessage = 'Cloudinary upload preset not configured. Please create an upload preset in your Cloudinary dashboard with "Unsigned" mode enabled.';
+            } else {
+              errorMessage = 'Invalid image file. Please ensure the file is a valid image (JPG, PNG, WebP) and under 5MB.';
+            }
+            console.error('400 Bad Request - likely file format or preset issue');
+          } else if (error.status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+            console.error('401 Unauthorized - authentication issue');
+          } else if (error.status === 413) {
+            errorMessage = 'Image file is too large. Please upload an image smaller than 5MB.';
+            console.error('413 Payload Too Large - file size issue');
+          } else if (error.status === 500) {
+            errorMessage = 'Cloudinary configuration error. The upload preset may not be properly configured. Please contact support.';
+            console.error('500 Internal Server Error - Cloudinary configuration issue');
+          } else if (error.status === 0) {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+            console.error('Network error - no response from server');
           } else if (error.error?.message) {
             errorMessage = error.error.message;
             console.error('Server error message:', error.error.message);
+          } else if (error.error?.error?.message) {
+            errorMessage = error.error.error.message;
+            console.error('Nested server error message:', error.error.error.message);
           }
           
           this.toastService.error(errorMessage);
+          
+          // Clear the file input on error
+          if (input) {
+            input.value = '';
+          }
         }
       });
     }

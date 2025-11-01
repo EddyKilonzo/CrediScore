@@ -383,6 +383,11 @@
 
 .profile-avatar:hover .avatar-overlay { opacity: 1; }
 
+.avatar-overlay.uploading {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.8);
+}
+
 .avatar-overlay i {
   font-size: 1.5rem;
   margin-bottom: 0.25rem;
@@ -391,6 +396,34 @@
 .avatar-overlay span {
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-progress .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 0.5rem;
+}
+
+.upload-progress span {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .avatar-image {

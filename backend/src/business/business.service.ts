@@ -729,16 +729,26 @@ export class BusinessService {
       }
 
       const docWithAI = document as typeof document & {
-        aiAnalysis?: unknown;
+        aiAnalysis?: any;
         aiVerified?: boolean;
         aiVerifiedAt?: Date | null;
         ocrConfidence?: number | null;
         extractedData?: unknown;
       };
 
+      // Determine processing status
+      let processingStatus = 'processing';
+      if (docWithAI.aiAnalysis) {
+        if (docWithAI.aiAnalysis.error) {
+          processingStatus = 'failed';
+        } else {
+          processingStatus = 'completed';
+        }
+      }
+
       return {
         documentId: docWithAI.id,
-        processingStatus: docWithAI.aiAnalysis ? 'completed' : 'processing',
+        processingStatus,
         aiVerified: docWithAI.aiVerified,
         aiVerifiedAt: docWithAI.aiVerifiedAt,
         ocrConfidence: docWithAI.ocrConfidence,
@@ -853,7 +863,8 @@ export class BusinessService {
 
       const payment = await this.prisma.payment.create({
         data: {
-          ...paymentData,
+          type: paymentData.type,
+          number: paymentData.number,
           businessId: businessId,
         },
       });

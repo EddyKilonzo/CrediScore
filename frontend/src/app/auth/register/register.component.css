@@ -200,9 +200,19 @@ input[type="checkbox"]:checked {
   margin-top: 0;
 }
 
+/* Specific styling for password field icon - centered */
+.password-field-icon {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .password-toggle-btn-flex:hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(1.1);
+}
+
+.password-field-icon:hover {
+  transform: translateY(-50%) scale(1.1);
 }
 
 .password-toggle-btn-flex:focus {
@@ -213,6 +223,10 @@ input[type="checkbox"]:checked {
 
 .password-toggle-btn-flex:active {
   background: rgba(0, 0, 0, 0.1);
+}
+
+.password-field-icon:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
 .password-toggle-btn-flex i {
@@ -300,11 +314,24 @@ input[type="checkbox"]:checked {
     margin-top: 0;
   }
   
+  .password-field-icon {
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
   .password-toggle-btn-flex:hover {
-    transform: translateY(-50%) scale(1.1);
+    transform: scale(1.1);
   }
   
   .password-toggle-btn-flex:active {
+    transform: scale(0.95);
+  }
+  
+  .password-field-icon:hover {
+    transform: translateY(-50%) scale(1.1);
+  }
+  
+  .password-field-icon:active {
     transform: translateY(-50%) scale(0.95);
   }
   

@@ -16,6 +16,7 @@ export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   isLoading = signal(false);
   error = signal<string | null>(null);
+  showPassword = signal(false);
 
   constructor(
     private fb: FormBuilder,
@@ -104,6 +105,10 @@ export class LoginComponent implements OnInit {
 
   signInWithGoogle(): void {
     this.authService.signInWithGoogle();
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword.set(!this.showPassword());
   }
 }
 

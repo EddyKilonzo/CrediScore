@@ -9,6 +9,11 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const toastService = inject(ToastService);
 
+  // Skip interceptor for Cloudinary requests
+  if (req.url.includes('api.cloudinary.com')) {
+    return next(req);
+  }
+
   // Add auth token to requests
   const token = authService.getToken();
   let authReq = req;

@@ -24,6 +24,7 @@ export class AdminDashboardComponent implements OnInit {
   dashboardStats = signal<AdminDashboardStats | null>(null);
   isLoading = signal(false);
   error = signal<string | null>(null);
+  monthlyUserRegistrations = signal<{ month: string; count: number }[]>([]);
 
   ngOnInit() {
     // Scroll to top when component loads
@@ -49,6 +50,7 @@ export class AdminDashboardComponent implements OnInit {
       this.isLoading.set(true);
       this.error.set(null);
       
+      // Load dashboard stats and monthly registrations in parallel
       this.adminService.getDashboardStats().subscribe({
         next: (stats) => {
           this.dashboardStats.set(stats);
@@ -59,6 +61,18 @@ export class AdminDashboardComponent implements OnInit {
           this.error.set('Failed to load dashboard statistics');
           this.isLoading.set(false);
           this.toastService.error('Failed to load dashboard statistics');
+        }
+      });
+
+      // Load monthly user registrations
+      this.adminService.getMonthlyUserRegistrations().subscribe({
+        next: (monthlyData) => {
+          console.log('Monthly user registrations received:', monthlyData);
+          this.monthlyUserRegistrations.set(monthlyData);
+        },
+        error: (error) => {
+          console.error('Error loading monthly registrations:', error);
+          // Don't show error toast for this as it's not critical
         }
       });
     } catch (error) {
@@ -88,57 +102,77 @@ export class AdminDashboardComponent implements OnInit {
 
   // Chart data generation based on real stats
   getUserGrowthData(): { month: string; value: number; height: string }[] {
-    const stats = this.getStats();
-    if (!stats) {
-      return this.getDefaultUserGrowthData();
-    }
-
-    const totalUsers = stats.userStats.totalUsers;
-    const newUsersThisMonth = stats.userStats.newUsersThisMonth;
+    const monthlyData = this.monthlyUserRegistrations();
     
-    // Create realistic historical data based on actual user registration
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const data = [];
-    
-    // Based on your data: 2 users registered in October
-    const userRegistrations = {
-      'Jan': 0, 'Feb': 0, 'Mar': 0, 'Apr': 0, 'May': 0, 'Jun': 0,
-      'Jul': 0, 'Aug': 0, 'Sep': 0, 'Oct': 2, 'Nov': 0, 'Dec': 0
-    };
-    
-    // Get current month (0-11, where 0 = January)
-    const currentDate = new Date();
-    const currentMonthIndex = currentDate.getMonth();
-    
-    // Calculate cumulative users for each month up to current month
-    let cumulativeUsers = 0;
-    
-    for (let i = 0; i < months.length; i++) {
-      const month = months[i];
+    // If we have monthly data, use it (counts are NEW registrations per month from backend)
+    if (monthlyData && monthlyData.length > 0) {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const data: { month: string; value: number; height: string }[] = [];
       
-      // Only show data up to current month
-      if (i <= currentMonthIndex) {
-        cumulativeUsers += userRegistrations[month as keyof typeof userRegistrations];
-        
-        // Calculate height based on cumulative users
-        const height = cumulativeUsers > 0 ? Math.min(95, Math.max(20, (cumulativeUsers / Math.max(cumulativeUsers, 1)) * 100)) : 0;
-        
-        data.push({
-          month,
-          value: cumulativeUsers,
-          height: `${height}%`
-        });
-      } else {
-        // Future months show no data
-        data.push({
-          month,
-          value: 0,
-          height: '0%'
-        });
+      // Get current month (0-11, where 0 = January)
+      const currentDate = new Date();
+      const currentMonthIndex = currentDate.getMonth();
+      
+      // Create a map for quick lookup (counts are new registrations per month)
+      const monthlyMap = new Map<string, number>();
+      monthlyData.forEach(item => {
+        if (item && item.month && typeof item.count === 'number') {
+          monthlyMap.set(item.month, item.count);
+        }
+      });
+      
+      console.log('Chart data - Monthly map (new registrations per month):', Array.from(monthlyMap.entries()));
+      console.log('Chart data - Raw monthly data:', monthlyData);
+      
+      // Find the maximum value for scaling
+      let maxValue = 0;
+      for (let i = 0; i <= currentMonthIndex; i++) {
+        const month = months[i];
+        const count = monthlyMap.get(month) || 0;
+        maxValue = Math.max(maxValue, count);
       }
+      
+      // Ensure maxValue is at least 1 to avoid division by zero
+      if (maxValue === 0) {
+        maxValue = 1;
+      }
+      
+      console.log('Chart data - Max value:', maxValue, 'Current month index:', currentMonthIndex);
+      
+      // Build chart data (showing new registrations per month, not cumulative)
+      for (let i = 0; i < months.length; i++) {
+        const month = months[i];
+        const newRegistrations = monthlyMap.get(month) || 0;
+        
+        // Only show data up to current month
+        if (i <= currentMonthIndex) {
+          // Calculate height based on new registrations (scale to max value)
+          const height = maxValue > 0 ? Math.min(95, Math.max(5, (newRegistrations / maxValue) * 100)) : 0;
+          
+          console.log(`Month ${month} (index ${i}): newRegistrations=${newRegistrations}, height=${height}%`);
+          
+          data.push({
+            month,
+            value: newRegistrations,
+            height: `${height}%`
+          });
+        } else {
+          // Future months show no data
+          data.push({
+            month,
+            value: 0,
+            height: '0%'
+          });
+        }
+      }
+      
+      console.log('Final chart data:', data.filter(d => d.value > 0));
+      return data;
     }
     
-    return data;
+    console.log('No monthly data available, using fallback');
+    // Fallback to default if no monthly data available
+    return this.getDefaultUserGrowthData();
   }
 
   getBusinessVerificationData(): { verified: number; pending: number; percentage: number } {
@@ -161,14 +195,14 @@ export class AdminDashboardComponent implements OnInit {
     const currentMonthIndex = currentDate.getMonth();
     
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const data = [];
+    const data: { month: string; value: number; height: string }[] = [];
     
-    // Based on your data: 2 users registered in October
-    const userRegistrations = {
-      'Jan': 0, 'Feb': 0, 'Mar': 0, 'Apr': 0, 'May': 0, 'Jun': 0,
-      'Jul': 0, 'Aug': 0, 'Sep': 0, 'Oct': 2, 'Nov': 0, 'Dec': 0
-    };
+    // Use actual total users from stats if available, otherwise 0
+    const stats = this.getStats();
+    const totalUsers = stats?.userStats?.totalUsers || 0;
     
+    // Distribute total users evenly across months up to current month
+    // Or show 0 for months with no data
     let cumulativeUsers = 0;
     
     for (let i = 0; i < months.length; i++) {
@@ -176,7 +210,12 @@ export class AdminDashboardComponent implements OnInit {
       
       // Only show data up to current month
       if (i <= currentMonthIndex) {
-        cumulativeUsers += userRegistrations[month as keyof typeof userRegistrations];
+        // If we have total users but no monthly breakdown, 
+        // show them all in the last month that has data
+        if (i === currentMonthIndex && totalUsers > 0) {
+          cumulativeUsers = totalUsers;
+        }
+        
         const height = cumulativeUsers > 0 ? '100%' : '0%';
         
         data.push({

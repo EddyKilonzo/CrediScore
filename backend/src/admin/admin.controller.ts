@@ -76,6 +76,20 @@ export class AdminController {
     return this.adminService.getDashboardStats();
   }
 
+  @Get('monthly-user-registrations')
+  @ApiOperation({ summary: 'Get monthly user registration counts for the current year' })
+  @ApiResponse({
+    status: 200,
+    description: 'Monthly user registrations retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Admin access required',
+  })
+  async getMonthlyUserRegistrations() {
+    return this.adminService.getMonthlyUserRegistrations();
+  }
+
   // User Management
   @Get('users')
   @ApiOperation({ summary: 'Get all users with pagination and filters' })

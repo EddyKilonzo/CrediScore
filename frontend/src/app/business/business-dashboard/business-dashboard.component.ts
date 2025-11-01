@@ -111,21 +111,21 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
       title: 'Respond to Reviews',
       description: 'Manage customer feedback',
       icon: 'uil uil-comment-dots',
-      route: '/business/reviews',
+      route: '/admin/reviews',
       color: 'bg-blue-600'
     },
     {
       title: 'Business Analytics',
       description: 'Performance insights',
       icon: 'uil uil-chart-line',
-      route: '/business/analytics',
+      route: '/business/dashboard',
       color: 'bg-blue-600'
     },
     {
       title: 'Upload Documents',
       description: 'Verify your business',
       icon: 'uil uil-file-upload-alt',
-      route: '/business/documents',
+      route: '/business/my-business',
       color: 'bg-blue-600'
     }
   ];

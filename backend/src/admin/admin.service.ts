@@ -859,6 +859,78 @@ export class AdminService {
     };
   }
 
+  async getMonthlyUserRegistrations(): Promise<{ month: string; count: number }[]> {
+    try {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-11
+      
+      // Get users from previous years (before current year) for base count
+      const usersBeforeYear = await this.prisma.user.count({
+        where: {
+          createdAt: {
+            lt: new Date(currentYear, 0, 1), // Before start of current year
+          },
+        },
+      });
+
+      // Get all users from the current year
+      const usersThisYear = await this.prisma.user.findMany({
+        where: {
+          createdAt: {
+            gte: new Date(currentYear, 0, 1), // Start of year
+          },
+        },
+        select: {
+          createdAt: true,
+        },
+      });
+
+      // Initialize months array
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyNewRegistrations: { [key: string]: number } = {};
+      months.forEach(month => {
+        monthlyNewRegistrations[month] = 0;
+      });
+
+      // Count new users by month in current year
+      usersThisYear.forEach(user => {
+        const userMonth = user.createdAt.getMonth(); // 0-11
+        monthlyNewRegistrations[months[userMonth]]++;
+      });
+
+      // Log for debugging
+      this.logger.log(`Monthly user registrations - Before year: ${usersBeforeYear}, This year total: ${usersThisYear.length}`);
+      this.logger.log(`Monthly breakdown: ${JSON.stringify(monthlyNewRegistrations)}`);
+
+      // Return new registrations per month (not cumulative)
+      // This shows how many NEW users registered in each month
+      const result = months.map((month, index) => {
+        if (index <= currentMonth) {
+          return {
+            month,
+            count: monthlyNewRegistrations[month], // New registrations this month
+          };
+        } else {
+          // Future months return 0 (no data yet)
+          return {
+            month,
+            count: 0,
+          };
+        }
+      });
+
+      this.logger.log(`Monthly new registrations: ${JSON.stringify(result.filter(r => r.count > 0))}`);
+      
+      return result;
+    } catch (error) {
+      this.logger.error('Error fetching monthly user registrations:', error);
+      throw new InternalServerErrorException(
+        'Failed to fetch monthly user registrations',
+      );
+    }
+  }
+
   // Business Onboarding Management
   async getPendingBusinesses(page: number = 1, limit: number = 10) {
     try {
