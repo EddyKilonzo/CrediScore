@@ -54,6 +54,8 @@ model Business {
   location           String?
   latitude           Float?
   longitude          Float?
+  logo               String?
+  catchphrase        String?
   isVerified         Boolean           @default(false)
   isActive           Boolean           @default(true)
   businessCategoryId String?

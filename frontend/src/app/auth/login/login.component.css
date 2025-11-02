@@ -148,7 +148,7 @@ a:focus {
 }
 
 .password-toggle-btn-flex:focus i {
-  color: #3b82f6;
+  color: #2D5A87;
 }
 
 /* Enhanced eye icon states for better visibility */
@@ -157,7 +157,7 @@ a:focus {
 }
 
 .password-toggle-btn-flex[aria-pressed="true"] i {
-  color: #3b82f6;
+  color: #2D5A87;
 }
 
 /* Ensure proper spacing for password fields */

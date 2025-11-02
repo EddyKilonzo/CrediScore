@@ -185,7 +185,7 @@ export class OCRService {
   /**
    * Extract text from document image using OCR
    */
-  async extractText(imageUrl: string): Promise<OCRResult> {
+  async extractText(imageUrl: string, fileType?: string): Promise<OCRResult> {
     try {
       this.logger.log(`Extracting text from image: ${imageUrl}`);
 
@@ -207,12 +207,17 @@ export class OCRService {
       formData.append('language', 'eng');
       formData.append('isOverlayRequired', 'true');
       formData.append('detectOrientation', 'true');
+      
+      // Specify file type if provided to help OCR.space detect the file extension
+      if (fileType) {
+        formData.append('filetype', fileType);
+      }
 
       const response = await axios.post<OCRApiResponse>(this.apiUrl, formData, {
         headers: {
           ...formData.getHeaders(),
         },
-        timeout: 30000,
+        timeout: 60000, // Increased from 30s to 60s for slow networks
       });
 
       if (response.data.IsErroredOnProcessing) {
@@ -271,7 +276,7 @@ export class OCRService {
   /**
    * Extract text from document image using multiple OCR services with fallback
    */
-  async extractTextWithFallback(imageUrl: string): Promise<OCRResult> {
+  async extractTextWithFallback(imageUrl: string, fileType?: string): Promise<OCRResult> {
     try {
       this.logger.log(`Extracting text from image with fallback: ${imageUrl}`);
 
@@ -289,16 +294,19 @@ export class OCRService {
           const googleResult =
             await this.googleVisionService.extractText(imageUrl);
 
-          // Convert Google Vision result to OCRResult format
-          return {
-            text: googleResult.text,
-            confidence: googleResult.confidence,
-            boundingBoxes: googleResult.boundingBoxes?.map((bbox) => ({
-              text: bbox.text,
-              confidence: bbox.confidence,
-              coordinates: bbox.coordinates,
-            })),
-          };
+          // Check if we got meaningful text
+          if (googleResult.text && googleResult.text.trim().length > 0) {
+            this.logger.log(`Google Vision successfully extracted ${googleResult.text.length} characters`);
+            return {
+              text: googleResult.text,
+              confidence: googleResult.confidence,
+              boundingBoxes: googleResult.boundingBoxes?.map((bbox) => ({
+                text: bbox.text,
+                confidence: bbox.confidence,
+                coordinates: bbox.coordinates,
+              })),
+            };
+          }
         } catch (googleError) {
           this.logger.warn(
             'Google Vision extraction failed, falling back to OCR.space:',
@@ -307,16 +315,51 @@ export class OCRService {
         }
       }
 
-      // Fallback to OCR.space
-      return await this.extractText(imageUrl);
+      // Fallback to OCR.space with file type
+      try {
+        const ocrResult = await this.extractText(imageUrl, fileType);
+        if (ocrResult.text && ocrResult.text.trim().length > 0) {
+          this.logger.log(`OCR.space successfully extracted ${ocrResult.text.length} characters`);
+          return ocrResult;
+        }
+      } catch (ocrError) {
+        this.logger.warn('OCR.space extraction failed:', ocrError);
+        // Don't throw yet, try without file type parameter
+      }
+
+      // Last attempt: try OCR.space without file type parameter
+      if (fileType) {
+        try {
+          this.logger.log('Retrying OCR.space without file type parameter...');
+          const retryResult = await this.extractText(imageUrl);
+          if (retryResult.text && retryResult.text.trim().length > 0) {
+            this.logger.log(`OCR.space retry successful: ${retryResult.text.length} characters`);
+            return retryResult;
+          }
+        } catch (retryError) {
+          this.logger.warn('OCR.space retry also failed:', retryError);
+        }
+      }
+
+      // If all OCR attempts failed, return minimal result that can still be fraud-checked
+      // The fallback analysis will look for fraud keywords in whatever text was extracted
+      this.logger.warn('All OCR extraction attempts had low confidence - returning for fallback analysis');
+      return {
+        text: '', // Empty text will trigger complete failure check in analyzeDocument
+        confidence: 0,
+        boundingBoxes: [],
+      };
     } catch (error: unknown) {
       this.logger.error(
         'Error extracting text from document with fallback:',
         error,
       );
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to extract text from document: ${errorMessage}`);
+      // Return empty result instead of throwing - let analyzeDocument handle it
+      return {
+        text: '',
+        confidence: 0,
+        boundingBoxes: [],
+      };
     }
   }
 
@@ -327,8 +370,50 @@ export class OCRService {
     try {
       this.logger.log('Analyzing document content with AI');
 
+      // Check if OCR completely failed (no text extracted at all)
+      const ocrCompletelyFailed = !ocrResult.text || 
+        ocrResult.text.trim().length < 10 ||
+        ocrResult.text.includes('Manual review required') ||
+        ocrResult.text.includes('text extraction failed');
+
+      if (ocrCompletelyFailed) {
+        this.logger.warn('OCR extraction completely failed - returning result for manual review');
+        return {
+          documentType: 'UNKNOWN',
+          extractedData: {},
+          confidence: ocrResult.confidence,
+          isValid: true, // Mark as valid to allow upload, but with low score
+          validationErrors: [],
+          warnings: [
+            'Document uploaded successfully but automatic text extraction was unsuccessful.',
+            'This document requires manual verification by an administrator.',
+            'Please ensure your document is clear, well-lit, and in a supported format (JPEG, PNG, PDF).'
+          ],
+          authenticityScore: 30, // Low score to indicate manual review needed
+          fraudIndicators: [],
+          securityFeatures: [],
+          verificationChecklist: {
+            businessNameFound: false,
+            validRegistrationFormat: false,
+            validTaxFormat: false,
+            validIssueDate: false,
+            validExpiryDate: false,
+            officialAuthorityPresent: false,
+            securityFeaturesDetected: false,
+            noFraudIndicators: true,
+            validBusinessType: false,
+            consistentData: false,
+            recentDocument: false,
+            properFormatting: false,
+          },
+        };
+      }
+
+      // If we have text, proceed with AI analysis even if confidence is low
+      // The validation logic will properly assess the document based on content
+
       const analysisPrompt = `
-        Analyze this business document and extract the following information:
+        Analyze this business document and extract the following information. IMPORTANT: Be thorough in checking for fraud indicators.
         
         Document Text: ${ocrResult.text}
         
@@ -342,10 +427,15 @@ export class OCRService {
         7. Business address
         8. Owner name
         9. Business type
-        10. Security features (seals, stamps, watermarks)
-        11. Fraud indicators (sample, copy, fake, draft, template)
+        10. Security features (seals, stamps, watermarks, holograms, serial numbers)
+        11. **CRITICAL**: Fraud indicators - Check for these words: FAKE, SAMPLE, DEMO, TEST, DUMMY, TEMPLATE, DRAFT, COPY, "NOT VALID", "FOR DISPLAY ONLY", SPECIMEN, EXAMPLE, WATERMARK text
         
-        Also determine if this is a valid business document and list any validation errors.
+        For fraud detection:
+        - If the document contains words like "FAKE", "SAMPLE", "DEMO", "TEST", "DRAFT", "COPY", "SPECIMEN", "EXAMPLE", or "NOT VALID", this is a FRAUDULENT document
+        - If it says "FOR DISPLAY ONLY" or "TEMPLATE", this is NOT a real document
+        - Real documents will have official issuing authorities, proper formatting, and authentic security features
+        
+        Determine if this is a valid, authentic business document. List ALL validation errors and fraud indicators found.
         
         Respond in JSON format with the following structure:
         {
@@ -361,7 +451,7 @@ export class OCRService {
             "ownerName": "string",
             "businessType": "string"
           },
-          "confidence": number,
+          "confidence": number (0-100),
           "isValid": boolean,
           "validationErrors": ["string"],
           "securityFeatures": ["string"],
@@ -460,7 +550,7 @@ export class OCRService {
             Authorization: `Bearer ${openaiApiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 30000,
+          timeout: 60000, // Increased from 30s to 60s for slow networks
         },
       );
 
@@ -794,12 +884,21 @@ export class OCRService {
       authenticityScore -= fraudIndicators.length * 30;
     }
 
-    // OCR confidence check
+    // OCR confidence check - weighted based on how much text was extracted
     if (ocrConfidence > 80) {
       authenticityScore += 20;
-    } else if (ocrConfidence < 50) {
+    } else if (ocrConfidence >= 60) {
+      authenticityScore += 10; // Good confidence still gets bonus
+    } else if (ocrConfidence >= 40) {
+      authenticityScore += 5; // Moderate confidence gets small bonus
+    } else if (ocrConfidence < 40 && ocrConfidence > 0) {
+      // Low but not zero confidence - apply smaller penalty
+      authenticityScore -= 10;
+      warnings.push('Image quality could be improved for better verification');
+    } else if (ocrConfidence < 20) {
+      // Very low confidence - larger penalty but not failing automatically
       authenticityScore -= 20;
-      errors.push('Low image quality - please upload clearer scan');
+      warnings.push('Low image quality detected - manual review recommended');
     }
 
     // Ensure score is between 0 and 100
@@ -822,6 +921,49 @@ export class OCRService {
     ocrConfidence: number = 0,
   ): DocumentAnalysisResult {
     const upperText = text.toUpperCase();
+    const fraudIndicators: string[] = [];
+    const securityFeatures: string[] = [];
+
+    // Check for fraud indicators FIRST
+    const fraudPatterns = [
+      { pattern: /FAKE/i, indicator: 'Contains word "FAKE"' },
+      { pattern: /SAMPLE/i, indicator: 'Contains word "SAMPLE"' },
+      { pattern: /DEMO/i, indicator: 'Contains word "DEMO"' },
+      { pattern: /TEST/i, indicator: 'Contains word "TEST"' },
+      { pattern: /DUMMY/i, indicator: 'Contains word "DUMMY"' },
+      { pattern: /TEMPLATE/i, indicator: 'Contains word "TEMPLATE"' },
+      { pattern: /DRAFT/i, indicator: 'Contains word "DRAFT"' },
+      { pattern: /COPY/i, indicator: 'Contains word "COPY"' },
+      { pattern: /NOT\s+VALID/i, indicator: 'Contains "NOT VALID"' },
+      { pattern: /FOR\s+DISPLAY\s+ONLY/i, indicator: 'Contains "FOR DISPLAY ONLY"' },
+      { pattern: /SPECIMEN/i, indicator: 'Contains word "SPECIMEN"' },
+      { pattern: /EXAMPLE/i, indicator: 'Contains word "EXAMPLE"' },
+      { pattern: /WATERMARK/i, indicator: 'Contains word "WATERMARK" (suspicious)' },
+    ];
+
+    fraudPatterns.forEach(({ pattern, indicator }) => {
+      if (pattern.test(text)) {
+        fraudIndicators.push(indicator);
+      }
+    });
+
+    // Check for security features
+    const securityPatterns = [
+      { pattern: /SEAL/i, feature: 'Official seal mentioned' },
+      { pattern: /STAMP/i, feature: 'Official stamp mentioned' },
+      { pattern: /SIGNATURE/i, feature: 'Signature present' },
+      { pattern: /HOLOGRAM/i, feature: 'Hologram mentioned' },
+      { pattern: /EMBOSSED/i, feature: 'Embossed text present' },
+      { pattern: /SERIAL\s+NUMBER/i, feature: 'Serial number present' },
+      { pattern: /BARCODE/i, feature: 'Barcode present' },
+      { pattern: /QR\s+CODE/i, feature: 'QR code present' },
+    ];
+
+    securityPatterns.forEach(({ pattern, feature }) => {
+      if (pattern.test(text)) {
+        securityFeatures.push(feature);
+      }
+    });
 
     // Determine document type based on keywords
     let documentType = 'UNKNOWN';
@@ -853,6 +995,9 @@ export class OCRService {
       /(?:tax number|tax no|tax\. no|pin)[:\s]+([A-Z0-9-/]+)/i,
     );
     const dateMatch = text.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/g);
+    const authorityMatch = text.match(
+      /(?:issued by|issuing authority|authorized by)[:\s]+([^\n\r]+)/i,
+    );
 
     const extractedData = {
       businessName: businessNameMatch?.[1]?.trim(),
@@ -860,6 +1005,7 @@ export class OCRService {
       taxNumber: taxMatch?.[1]?.trim(),
       issueDate: dateMatch?.[0],
       expiryDate: dateMatch?.[1],
+      issuingAuthority: authorityMatch?.[1]?.trim(),
     };
 
     // Basic validation
@@ -874,21 +1020,21 @@ export class OCRService {
     // Perform validation for fallback
     const validationResult = this.performComprehensiveValidation(
       extractedData,
-      [],
-      [],
+      fraudIndicators,
+      securityFeatures,
       ocrConfidence,
     );
 
     return {
       documentType,
       extractedData,
-      confidence: 60, // Lower confidence for fallback
-      isValid: validationErrors.length === 0 && validationResult.isValid,
+      confidence: 50, // Lower confidence for fallback
+      isValid: validationErrors.length === 0 && validationResult.isValid && fraudIndicators.length === 0,
       validationErrors: [...validationErrors, ...validationResult.errors],
       warnings: validationResult.warnings,
       authenticityScore: validationResult.authenticityScore,
-      fraudIndicators: [],
-      securityFeatures: [],
+      fraudIndicators,
+      securityFeatures,
       verificationChecklist: validationResult.checklist,
     };
   }

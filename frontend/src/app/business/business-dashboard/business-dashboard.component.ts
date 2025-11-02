@@ -289,7 +289,7 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
       case 'review': return 'text-yellow-500';
       case 'customer_registration': return 'text-green-500';
       case 'document_verified': return 'text-blue-500';
-      case 'payment_received': return 'text-purple-500';
+      case 'payment_received': return 'text-blue-500';
       case 'review_response': return 'text-indigo-500';
       case 'business_update': return 'text-orange-500';
       case 'verification_status': return 'text-green-500';
@@ -382,7 +382,7 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
     
     const mockReputation = Math.floor(Math.random() * 100) + 1;
     
-    if (mockReputation >= 90) return 'text-purple-600';
+    if (mockReputation >= 90) return 'text-blue-600';
     if (mockReputation >= 75) return 'text-blue-600';
     if (mockReputation >= 60) return 'text-green-600';
     if (mockReputation >= 40) return 'text-yellow-600';

@@ -11,6 +11,8 @@ export interface Business {
   phone: string;
   email: string;
   website?: string;
+  logo?: string;
+  catchphrase?: string;
   category: string;
   trustScore: number;
   isVerified: boolean;

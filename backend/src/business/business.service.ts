@@ -634,9 +634,23 @@ export class BusinessService {
         );
       }
 
+      // Get document details including mimeType
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      // Determine file type from mimeType for OCR processing
+      const fileType = this.getFileTypeFromMimeType(document.mimeType);
+
       // Step 1: Extract text using OCR with fallback (Google Vision -> OCR.space)
-      const ocrResult =
-        await this.ocrService.extractTextWithFallback(documentUrl);
+      const ocrResult = await this.ocrService.extractTextWithFallback(
+        documentUrl,
+        fileType,
+      );
 
       // Step 2: Analyze document content
       const analysisResult = await this.ocrService.analyzeDocument(ocrResult);
@@ -646,6 +660,16 @@ export class BusinessService {
         ocrResult,
         analysisResult,
       );
+
+      // Determine if document should be marked as AI verified
+      // Low confidence OCR results (score < 40) should still be accepted but not auto-verified
+      const isLowConfidence =
+        analysisResult.authenticityScore < 40 || ocrResult.confidence < 30;
+      const shouldAutoVerify =
+        authenticityResult.isAuthentic &&
+        analysisResult.isValid &&
+        !isLowConfidence &&
+        analysisResult.authenticityScore >= 60;
 
       // Update document with OCR and AI results
       await this.prisma.document.update({
@@ -665,30 +689,81 @@ export class BusinessService {
             verificationChecklist: analysisResult.verificationChecklist,
             authenticity: authenticityResult,
             ocrText: ocrResult.text, // Store OCR text in aiAnalysis
+            requiresManualReview: isLowConfidence, // Flag for manual review
           },
-          aiVerified: authenticityResult.isAuthentic && analysisResult.isValid,
+          aiVerified: shouldAutoVerify,
           aiVerifiedAt: new Date(),
           extractedData: analysisResult.extractedData,
         },
       });
 
-      this.logger.log(`Document ${documentId} processed successfully with AI`);
+      if (isLowConfidence) {
+        this.logger.log(
+          `Document ${documentId} processed but requires manual review (score: ${analysisResult.authenticityScore}, OCR confidence: ${ocrResult.confidence})`,
+        );
+      } else {
+        this.logger.log(
+          `Document ${documentId} processed successfully with AI`,
+        );
+      }
     } catch (error) {
       this.logger.error(
         `Error processing document ${documentId} with AI:`,
         error,
       );
 
-      // Update document with error status
-      await this.prisma.document.update({
-        where: { id: documentId },
-        data: {
-          aiAnalysis: {
-            error: (error as Error).message,
-            processedAt: new Date(),
+      // For critical errors, update document with error status
+      // But don't fail the entire upload - allow manual review
+      const errorMessage = (error as Error).message;
+      const isRecoverableError =
+        errorMessage.includes('OCR') ||
+        errorMessage.includes('text extraction') ||
+        errorMessage.includes('Network') ||
+        errorMessage.includes('timeout');
+
+      if (isRecoverableError) {
+        // Recoverable error - mark for manual review instead of failing
+        await this.prisma.document.update({
+          where: { id: documentId },
+          data: {
+            ocrConfidence: 0,
+            aiAnalysis: {
+              documentType: 'UNKNOWN',
+              extractedData: {},
+              confidence: 0,
+              isValid: true, // Mark as valid to allow submission
+              validationErrors: [],
+              warnings: [
+                'Automatic document processing encountered technical difficulties.',
+                'This document has been uploaded successfully and requires manual verification.',
+                'An administrator will review your document shortly.',
+              ],
+              authenticityScore: 25,
+              fraudIndicators: [],
+              securityFeatures: [],
+              requiresManualReview: true,
+              processingError: errorMessage,
+              processedAt: new Date(),
+            },
+            aiVerified: false,
+            aiVerifiedAt: new Date(),
           },
-        },
-      });
+        });
+        this.logger.log(
+          `Document ${documentId} uploaded successfully but automatic processing failed - marked for manual review`,
+        );
+      } else {
+        // Non-recoverable error - store error details
+        await this.prisma.document.update({
+          where: { id: documentId },
+          data: {
+            aiAnalysis: {
+              error: errorMessage,
+              processedAt: new Date(),
+            },
+          },
+        });
+      }
     }
   }
 
@@ -729,7 +804,10 @@ export class BusinessService {
       }
 
       const docWithAI = document as typeof document & {
-        aiAnalysis?: any;
+        aiAnalysis?: {
+          error?: string;
+          [key: string]: unknown;
+        };
         aiVerified?: boolean;
         aiVerifiedAt?: Date | null;
         ocrConfidence?: number | null;
@@ -1029,9 +1107,10 @@ export class BusinessService {
         completedSteps++;
       }
 
-      const progressPercentage = Math.round(
-        (completedSteps / totalSteps) * 100,
-      );
+      const progressPercentage = Math.min(
+        Math.round((completedSteps / totalSteps) * 100),
+        100,
+      ); // Cap at 100%
 
       return {
         businessId: business.id,
@@ -1666,5 +1745,29 @@ export class BusinessService {
       }
       throw new InternalServerErrorException('Failed to verify document');
     }
+  }
+
+  /**
+   * Helper method to convert mimeType to file extension for OCR processing
+   */
+  private getFileTypeFromMimeType(mimeType: string | null): string {
+    if (!mimeType) {
+      return 'jpg'; // Default to jpg if no mimeType
+    }
+
+    const mimeToExtension: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/bmp': 'bmp',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+      'image/tiff': 'tif',
+      'image/tif': 'tif',
+    };
+
+    const extension = mimeToExtension[mimeType.toLowerCase()];
+    return extension || 'jpg'; // Default to jpg if unknown type
   }
 }

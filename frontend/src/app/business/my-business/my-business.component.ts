@@ -34,6 +34,7 @@ interface DocumentType {
   uploaded: boolean;
   verified: boolean;
   scanning: boolean;
+  url?: string;
   scanResult?: {
     ocrConfidence: number;
     aiVerified: boolean;
@@ -303,8 +304,21 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   private loadBusinessDocuments() {
     if (!this.currentBusiness) return;
 
-    // For now, we'll skip loading documents since the method doesn't exist in the core service
-    // The documents will be loaded when they're uploaded
+    // Load documents from the business data
+    const documents = (this.currentBusiness as any).documents || [];
+    
+    // Update document status based on loaded documents
+    if (documents.length > 0) {
+      this.updateDocumentStatus(documents);
+    }
+    
+    // Mark step 1 (Upload Documents) as completed if at least one document is uploaded
+    this.onboardingSteps[1].completed = documents.length > 0;
+    
+    // Mark step 3 (Review & Submit) as completed if business has been submitted for review
+    const businessWithStatus = this.currentBusiness as any;
+    this.onboardingSteps[3].completed = businessWithStatus.submittedForReview === true;
+    
     this.isLoading = false;
   }
 
@@ -407,8 +421,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     const businessWithExtendedFields = this.currentBusiness as any;
     this.businessProfile = {
       name: this.currentBusiness.name || '',
-      catchphrase: businessWithExtendedFields.catchphrase || '',
-      logo: businessWithExtendedFields.logo || '',
+      catchphrase: this.currentBusiness.catchphrase || businessWithExtendedFields.catchphrase || '', // Load from backend
+      logo: this.currentBusiness.logo || businessWithExtendedFields.logo || '', // Load from backend
       description: this.currentBusiness.description || '',
       website: this.currentBusiness.website || '',
       phone: this.currentBusiness.phone || '',
@@ -417,6 +431,17 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     
     // Store original profile for reset functionality
     this.originalBusinessProfile = { ...this.businessProfile };
+    
+    // Check if business profile is complete and mark step as completed
+    // A profile is considered complete if it has name, description, phone, and email
+    const isProfileComplete = !!(
+      this.businessProfile.name?.trim() &&
+      this.businessProfile.description?.trim() &&
+      this.businessProfile.phone?.trim() &&
+      this.businessProfile.email?.trim()
+    );
+    
+    this.onboardingSteps[0].completed = isProfileComplete;
   }
 
   private loadPaymentMethods() {
@@ -437,6 +462,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         doc.uploaded = true;
         doc.verified = realDoc.verified;
         doc.scanning = !realDoc.aiAnalysis && realDoc.uploaded;
+        doc.url = realDoc.url; // Store the URL for viewing
         
         if (realDoc.aiAnalysis) {
           doc.scanResult = {
@@ -471,7 +497,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   getOnboardingProgress(): number {
     const completedSteps = this.onboardingSteps.filter(step => step.completed).length;
-    return (completedSteps / this.onboardingSteps.length) * 100;
+    const percentage = (completedSteps / this.onboardingSteps.length) * 100;
+    return Math.min(Math.round(percentage), 100); // Cap at 100% and round to whole number
   }
 
   getCompletedStepsCount(): number {
@@ -599,6 +626,14 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.showUploadModal = true;
   }
 
+  viewDocument(document: DocumentType) {
+    if (document.url) {
+      window.open(document.url, '_blank');
+    } else {
+      this.toastService.show('Document URL is not available.', 'error');
+    }
+  }
+
   closeUploadModal() {
     this.showUploadModal = false;
     this.selectedDocumentType = null;
@@ -716,7 +751,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     // Simulate progress for better UX
     const progressInterval = setInterval(() => {
       if (this.documentUploadProgress < 90) {
-        this.documentUploadProgress += Math.random() * 15;
+        this.documentUploadProgress = Math.min(this.documentUploadProgress + Math.random() * 15, 90);
       }
     }, 300);
 
@@ -787,20 +822,61 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   private updateProcessingStatus(status: any) {
     // Update scanning progress - backend doesn't provide progress, so we simulate it
     if (!status.processingStatus || status.processingStatus === 'processing') {
-      // Still processing - increment progress
-      if (this.scanningProgress < 90) {
-        this.scanningProgress += 10;
+      // Still processing - increment progress smoothly
+      if (this.scanningProgress < 95) {
+        this.scanningProgress = Math.round(Math.min(95, this.scanningProgress + 15));
       }
       // Continue polling
       return;
     }
     
     if (status.processingStatus === 'completed') {
-      this.completeDocumentScanning(status);
+      // Complete the progress bar to 100%
+      this.scanningProgress = 100;
+      setTimeout(() => {
+        this.completeDocumentScanning(status);
+      }, 500);
     } else if (status.processingStatus === 'failed') {
-      // Processing failed
-      const errorMessage = status.aiAnalysis?.error || 'Document processing failed. Please try again.';
-      this.handleUploadError(this.requiredDocuments.find(d => d.scanning)!, errorMessage);
+      // Processing failed - check if it's a hard failure or recoverable
+      let errorMessage = 'Document processing failed. Please try again.';
+      let shouldReject = true;
+      
+      if (status.aiAnalysis?.error) {
+        const rawError = status.aiAnalysis.error;
+        // Make error message user-friendly
+        if (rawError.includes('zero length') || rawError.includes('Invalid file') || 
+            rawError.includes('OCR') || rawError.includes('text extraction')) {
+          // These are OCR-related errors - don't reject outright, treat as low confidence
+          shouldReject = false;
+          // Mark as completed with low confidence instead of failed
+          this.scanningProgress = 100;
+          setTimeout(() => {
+            this.completeDocumentScanning({
+              ...status,
+              processingStatus: 'completed',
+              aiAnalysis: {
+                ...status.aiAnalysis,
+                authenticityScore: 25,
+                isValid: true,
+                warnings: [
+                  'Document uploaded successfully but automatic text extraction encountered difficulties.',
+                  'Your document will be manually reviewed by an administrator.',
+                  'For faster processing, try uploading a clearer, higher-resolution image.'
+                ]
+              }
+            });
+          }, 500);
+          return;
+        } else if (rawError.includes('Network') || rawError.includes('timeout')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = 'Document processing failed. Please try uploading a different file format or clearer image.';
+        }
+      }
+      
+      if (shouldReject) {
+        this.handleUploadError(this.requiredDocuments.find(d => d.scanning)!, errorMessage);
+      }
     }
   }
 
@@ -830,13 +906,30 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.scanningProgress = 0;
 
     if (status.aiVerified) {
-      this.toastService.show(`✅ Document verified! AI found all required information.`, 'success');
+      this.toastService.show(`Document verified! AI found all required information.`, 'success');
     } else {
       const score = status.aiAnalysis?.authenticityScore || 0;
-      if (score >= 60) {
-        this.toastService.show(`⚠️ Document processed (${score}% score). Requires admin review for final approval.`, 'warning');
+      const hasWarnings = status.aiAnalysis?.warnings?.length > 0;
+      const requiresManualReview = status.aiAnalysis?.requiresManualReview || false;
+      
+      if (requiresManualReview || score < 40) {
+        // Low confidence or manual review required
+        if (hasWarnings && status.aiAnalysis.warnings[0]) {
+          // Show the first warning which usually contains the most relevant info
+          this.toastService.show(status.aiAnalysis.warnings[0], 'info');
+        } else {
+          this.toastService.show(
+            `Document uploaded successfully but requires manual verification. An administrator will review it shortly.`,
+            'info'
+          );
+        }
+      } else if (score >= 60) {
+        this.toastService.show(`Document processed (${score}% score). Requires admin review for final approval.`, 'warning');
       } else {
-        this.toastService.show(`❌ Low quality detected (${score}% score). Please upload a clearer, higher-resolution document.`, 'error');
+        this.toastService.show(
+          `Document uploaded (${score}% confidence). Consider uploading a clearer image for better results, or proceed with manual review.`,
+          'warning'
+        );
       }
     }
   }
@@ -1041,21 +1134,22 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.isUpdatingProfile = true;
 
     // Prepare update data matching backend UpdateBusinessDto
-    // Note: catchphrase and logo are not part of the standard business model
-    // They may need to be stored separately or added to the backend DTO
+    // Note: name is readonly and should not be updated (verified from documents)
     const updateData: any = {
-      name: this.businessProfile.name.trim(),
       description: this.businessProfile.description?.trim() || undefined,
       website: this.businessProfile.website?.trim() || undefined,
       phone: this.businessProfile.phone?.trim() || undefined,
       email: this.businessProfile.email?.trim() || undefined,
+      logo: this.businessProfile.logo?.trim() || undefined,
+      catchphrase: this.businessProfile.catchphrase?.trim() || undefined,
       // location is mapped from businessLocation if needed
       // category can be added if needed
     };
 
     // Remove undefined values to avoid sending them
+    // Note: Empty strings are kept to allow clearing fields
     Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined || updateData[key] === '') {
+      if (updateData[key] === undefined) {
         delete updateData[key];
       }
     });
@@ -1082,8 +1176,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
           // Update local profile data to match response
           this.businessProfile = {
             name: updatedBusiness.name || '',
-            catchphrase: this.businessProfile.catchphrase || '', // Keep local-only fields
-            logo: this.businessProfile.logo || '', // Keep local-only fields
+            catchphrase: (updatedBusiness as any).catchphrase || '', // Load from backend
+            logo: (updatedBusiness as any).logo || '', // Load from backend
             description: updatedBusiness.description || '',
             website: updatedBusiness.website || '',
             phone: updatedBusiness.phone || '',
@@ -1153,12 +1247,15 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   isFormValid(): boolean {
+    // Name is required (but readonly, verified from documents)
+    // Email and phone are required for contact
     return !!(
       this.businessProfile.name?.trim() &&
       this.businessProfile.email?.trim() &&
       this.businessProfile.phone?.trim() &&
       this.isValidEmail(this.businessProfile.email)
     );
+    // Note: Description, website, catchphrase, and logo are optional
   }
 
   uploadLogo(event: any) {
@@ -1241,9 +1338,10 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
               }
               this.selectedLogoFile = null;
               
-              // Update business profile with new logo
+              // Update business profile with new logo (saves to backend)
               if (this.currentBusiness) {
-                this.updateBusinessProfile();
+                // Save logo to backend immediately
+                this.saveLogoToBackend(secureUrl);
               }
             } else {
               this.toastService.show('Logo upload failed: Invalid response from server', 'error');
@@ -1294,6 +1392,82 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     }
     this.selectedLogoFile = null;
     this.toastService.show('Logo upload cancelled', 'info');
+  }
+
+  saveLogoToBackend(logoUrl: string) {
+    if (!this.currentBusiness?.id) {
+      this.toastService.show('Cannot save logo: Business not found', 'error');
+      return;
+    }
+
+    const updateData = {
+      id: this.currentBusiness.id,
+      logo: logoUrl
+    };
+
+    this.businessService.updateBusiness(updateData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedBusiness) => {
+          this.currentBusiness = updatedBusiness;
+          this.businessProfile.logo = (updatedBusiness as any).logo || logoUrl;
+          this.originalBusinessProfile = { ...this.businessProfile };
+          this.toastService.show('Logo saved successfully', 'success');
+        },
+        error: (error) => {
+          this.toastService.show(
+            error.error?.message || 'Failed to save logo. Please try again.',
+            'error'
+          );
+        }
+      });
+  }
+
+  editLogo() {
+    // Clear any existing preview and allow new upload
+    if (this.logoPreview) {
+      URL.revokeObjectURL(this.logoPreview);
+      this.logoPreview = null;
+    }
+    this.selectedLogoFile = null;
+    // Trigger file input click
+    const fileInput = document.querySelector('#logoFileInput') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  deleteLogo() {
+    if (!confirm('Are you sure you want to remove your business logo?')) {
+      return;
+    }
+
+    if (!this.currentBusiness?.id) {
+      this.toastService.show('Cannot delete logo: Business not found', 'error');
+      return;
+    }
+
+    const updateData = {
+      id: this.currentBusiness.id,
+      logo: null
+    };
+
+    this.businessService.updateBusiness(updateData)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedBusiness) => {
+          this.currentBusiness = updatedBusiness;
+          this.businessProfile.logo = '';
+          this.originalBusinessProfile = { ...this.businessProfile };
+          this.toastService.show('Logo removed successfully', 'success');
+        },
+        error: (error) => {
+          this.toastService.show(
+            error.error?.message || 'Failed to remove logo. Please try again.',
+            'error'
+          );
+        }
+      });
   }
 
   // Payment Methods Methods

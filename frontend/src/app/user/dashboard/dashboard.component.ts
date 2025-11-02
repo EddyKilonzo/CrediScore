@@ -93,7 +93,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   businessCategories = [
     { name: 'Retail', count: 12, color: 'bg-blue-500' },
     { name: 'Restaurant', count: 8, color: 'bg-green-500' },
-    { name: 'Services', count: 15, color: 'bg-purple-500' },
+    { name: 'Services', count: 15, color: 'bg-blue-500' },
     { name: 'Technology', count: 6, color: 'bg-orange-500' }
   ];
 
@@ -139,7 +139,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           description: 'Business performance',
           icon: 'uil uil-chart-line',
           route: '/business/analytics',
-          color: 'bg-purple-500'
+          color: 'bg-blue-500'
         },
         {
           title: 'Manage Reviews',
@@ -177,7 +177,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           description: 'Manage your account',
           icon: 'uil uil-user-circle',
           route: '/profile',
-          color: 'bg-purple-500'
+          color: 'bg-blue-500'
         }
       ];
     }
@@ -322,7 +322,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'review': return 'text-yellow-500';
       case 'business_created': return 'text-green-500';
       case 'document_uploaded': return 'text-blue-500';
-      case 'payment_added': return 'text-purple-500';
+      case 'payment_added': return 'text-blue-500';
       default: return 'text-gray-500';
     }
   }
@@ -402,7 +402,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     const mockReputation = Math.floor(Math.random() * 100) + 1;
     
-    if (mockReputation >= 90) return 'text-purple-600';
+    if (mockReputation >= 90) return 'text-blue-600';
     if (mockReputation >= 75) return 'text-blue-600';
     if (mockReputation >= 60) return 'text-green-600';
     if (mockReputation >= 40) return 'text-yellow-600';

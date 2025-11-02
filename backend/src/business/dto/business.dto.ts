@@ -74,6 +74,16 @@ export class CreateBusinessDto {
   @IsNumber()
   longitude?: number;
 
+  @ApiProperty({ description: 'Business logo URL', required: false })
+  @IsOptional()
+  @IsString()
+  logo?: string;
+
+  @ApiProperty({ description: 'Business catchphrase/tagline', required: false })
+  @IsOptional()
+  @IsString()
+  catchphrase?: string;
+
   @ApiProperty({ description: 'Business category ID', required: false })
   @IsOptional()
   @IsString()
@@ -125,6 +135,16 @@ export class UpdateBusinessDto {
   @IsOptional()
   @IsNumber()
   longitude?: number;
+
+  @ApiProperty({ description: 'Business logo URL', required: false })
+  @IsOptional()
+  @IsString()
+  logo?: string;
+
+  @ApiProperty({ description: 'Business catchphrase/tagline', required: false })
+  @IsOptional()
+  @IsString()
+  catchphrase?: string;
 
   @ApiProperty({ description: 'Business category ID', required: false })
   @IsOptional()

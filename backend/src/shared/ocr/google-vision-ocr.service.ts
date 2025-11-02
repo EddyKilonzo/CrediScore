@@ -145,6 +145,16 @@ export class GoogleVisionOCRService {
 
       // Extract full text (first annotation contains all text)
       const fullText = annotations[0].text || '';
+      
+      // Validate that extracted text is not empty or just whitespace
+      if (!fullText || fullText.trim().length === 0) {
+        throw new Error('Document appears to be blank or text could not be extracted. Please ensure the document is clear, well-lit, and contains visible text.');
+      }
+      
+      // Validate minimum content length (at least 10 characters of meaningful text)
+      if (fullText.trim().length < 10) {
+        throw new Error('Document contains insufficient text. Please upload a complete, clear document with all visible information.');
+      }
 
       // Extract bounding boxes for individual text blocks
       const boundingBoxes = annotations.slice(1).map((annotation) => {
@@ -234,6 +244,16 @@ export class GoogleVisionOCRService {
 
       // Extract full text (first annotation contains all text)
       const fullText = annotations[0].text || '';
+      
+      // Validate that extracted text is not empty or just whitespace
+      if (!fullText || fullText.trim().length === 0) {
+        throw new Error('Document appears to be blank or text could not be extracted. Please ensure the document is clear, well-lit, and contains visible text.');
+      }
+      
+      // Validate minimum content length (at least 10 characters of meaningful text)
+      if (fullText.trim().length < 10) {
+        throw new Error('Document contains insufficient text. Please upload a complete, clear document with all visible information.');
+      }
 
       // Extract bounding boxes for individual text blocks
       const boundingBoxes = annotations.slice(1).map((annotation) => {
