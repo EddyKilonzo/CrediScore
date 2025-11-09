@@ -184,26 +184,23 @@ export class CloudinaryService {
     this.uploadProgress.set(0);
     this.uploadError.set(null);
 
-    return this.getSignedUploadUrl('crediscore/profile-images').pipe(
+    const folder = 'crediscore/profile-images';
+    const tags = userId ? `profile,user-${userId}` : 'profile';
+
+    return this.getSignedUploadUrlWithParams({
+      folder,
+      resourceType: 'image',
+      maxFileSize: (10 * 1024 * 1024).toString(),
+      tags
+    }).pipe(
       switchMap(({ uploadUrl, signature, timestamp }) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('api_key', this.API_KEY);
         formData.append('timestamp', timestamp.toString());
         formData.append('signature', signature);
-        formData.append('folder', 'crediscore/profile-images');
-        
-        if (userId) {
-          formData.append('tags', `profile,user-${userId}`);
-        } else {
-          formData.append('tags', 'profile');
-        }
-
-        // Add transformation parameters
-        formData.append('transformation[width]', '300');
-        formData.append('transformation[height]', '300');
-        formData.append('transformation[crop]', 'fill');
-        formData.append('transformation[gravity]', 'face');
+        formData.append('folder', folder);
+        formData.append('tags', tags);
 
         return this.http.post<any>(uploadUrl, formData, {
           reportProgress: true,

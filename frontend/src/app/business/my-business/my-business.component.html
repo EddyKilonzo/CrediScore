@@ -713,16 +713,16 @@
                       <div class="scanning-progress">
                         <div class="progress-circle relative">
                           <!-- Animated Circle Progress -->
-                          <svg class="progress-ring absolute inset-0" width="120" height="120">
+                          <svg class="progress-ring absolute inset-0" width="104" height="104">
                             <circle class="progress-ring-circle"
                                     stroke="#2D5A87"
-                                    stroke-width="8"
+                                    stroke-width="6"
                                     fill="transparent"
-                                    r="52"
-                                    cx="60"
-                                    cy="60"
-                                    [style.stroke-dasharray]="326.73"
-                                    [style.stroke-dashoffset]="326.73 * (1 - scanningProgress / 100)"
+                                    r="46"
+                                    cx="52"
+                                    cy="52"
+                                    [style.stroke-dasharray]="289.03"
+                                    [style.stroke-dashoffset]="289.03 * (1 - scanningProgress / 100)"
                                     style="transition: stroke-dashoffset 0.5s ease;"/>
                           </svg>
                           <span class="progress-text relative z-10">{{ scanningProgress | number:'1.0-0' }}%</span>

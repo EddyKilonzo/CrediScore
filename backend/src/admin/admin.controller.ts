@@ -77,7 +77,9 @@ export class AdminController {
   }
 
   @Get('monthly-user-registrations')
-  @ApiOperation({ summary: 'Get monthly user registration counts for the current year' })
+  @ApiOperation({
+    summary: 'Get monthly user registration counts for the current year',
+  })
   @ApiResponse({
     status: 200,
     description: 'Monthly user registrations retrieved successfully',
@@ -688,7 +690,9 @@ export class AdminController {
   @Post('documents/:id/reject')
   @ApiOperation({ summary: 'Reject a document' })
   @ApiParam({ name: 'id', description: 'Document ID' })
-  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { reason: { type: 'string' } } },
+  })
   @ApiResponse({
     status: 200,
     description: 'Document rejected successfully',
@@ -706,13 +710,19 @@ export class AdminController {
     @Param('id') documentId: string,
     @Body() body: { reason?: string },
   ) {
-    return this.adminService.rejectDocument(req.user.id, documentId, body.reason);
+    return this.adminService.rejectDocument(
+      req.user.id,
+      documentId,
+      body.reason,
+    );
   }
 
   @Post('documents/:id/request-revision')
   @ApiOperation({ summary: 'Request revision for a document' })
   @ApiParam({ name: 'id', description: 'Document ID' })
-  @ApiBody({ schema: { type: 'object', properties: { notes: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { notes: { type: 'string' } } },
+  })
   @ApiResponse({
     status: 200,
     description: 'Revision requested successfully',
@@ -730,7 +740,11 @@ export class AdminController {
     @Param('id') documentId: string,
     @Body() body: { notes?: string },
   ) {
-    return this.adminService.requestDocumentRevision(req.user.id, documentId, body.notes);
+    return this.adminService.requestDocumentRevision(
+      req.user.id,
+      documentId,
+      body.notes,
+    );
   }
 
   // Review Management
@@ -778,7 +792,9 @@ export class AdminController {
   @Post('reviews/:id/reject')
   @ApiOperation({ summary: 'Reject a review' })
   @ApiParam({ name: 'id', description: 'Review ID' })
-  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { reason: { type: 'string' } } },
+  })
   @ApiResponse({
     status: 200,
     description: 'Review rejected successfully',
@@ -802,7 +818,9 @@ export class AdminController {
   @Post('reviews/:id/flag')
   @ApiOperation({ summary: 'Flag a review for further review' })
   @ApiParam({ name: 'id', description: 'Review ID' })
-  @ApiBody({ schema: { type: 'object', properties: { reason: { type: 'string' } } } })
+  @ApiBody({
+    schema: { type: 'object', properties: { reason: { type: 'string' } } },
+  })
   @ApiResponse({
     status: 200,
     description: 'Review flagged successfully',

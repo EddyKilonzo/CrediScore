@@ -460,7 +460,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       const realDoc = documents.find(d => d.type === this.getDocumentTypeEnum(doc.id));
       if (realDoc) {
         doc.uploaded = true;
-        doc.verified = realDoc.verified;
+        doc.verified = !!(
+          realDoc.aiAnalysis?.isValid ||
+          realDoc.aiVerified ||
+          realDoc.verified
+        );
         doc.scanning = !realDoc.aiAnalysis && realDoc.uploaded;
         doc.url = realDoc.url; // Store the URL for viewing
         
@@ -482,6 +486,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         }
       }
     });
+
   }
 
   private getDocumentTypeEnum(documentId: string): BusinessDocumentType {
@@ -822,9 +827,17 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   private updateProcessingStatus(status: any) {
     // Update scanning progress - backend doesn't provide progress, so we simulate it
     if (!status.processingStatus || status.processingStatus === 'processing') {
-      // Still processing - increment progress smoothly
-      if (this.scanningProgress < 95) {
-        this.scanningProgress = Math.round(Math.min(95, this.scanningProgress + 15));
+      if (this.scanningProgress < 99) {
+        const increment =
+          this.scanningProgress < 60
+            ? 18
+            : this.scanningProgress < 80
+            ? 10
+            : this.scanningProgress < 90
+            ? 6
+            : 2;
+        const nextProgress = Math.min(99, this.scanningProgress + increment);
+        this.scanningProgress = Math.round(nextProgress);
       }
       // Continue polling
       return;
@@ -885,13 +898,15 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     if (!document) return;
 
     // Update document with real AI analysis results
+    const aiIsValid = !!(status.aiVerified || status.aiAnalysis?.isValid);
+
     document.scanResult = {
       ocrConfidence: status.ocrConfidence || 0,
-      aiVerified: status.aiVerified || false,
+      aiVerified: status.aiVerified || aiIsValid,
       authenticityScore: status.aiAnalysis?.authenticityScore || 0,
       confidence: status.aiAnalysis?.confidence || 0,
       documentType: status.aiAnalysis?.documentType || 'Unknown',
-      isValid: status.aiAnalysis?.isValid || false,
+      isValid: aiIsValid,
       extractedData: status.extractedData || status.aiAnalysis?.extractedData || {},
       validationErrors: status.aiAnalysis?.validationErrors || [],
       warnings: status.aiAnalysis?.warnings || [],
@@ -901,11 +916,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     };
 
     document.scanning = false;
-    document.verified = status.aiVerified || false;
+    document.verified = aiIsValid;
     this.isScanning = false;
     this.scanningProgress = 0;
 
-    if (status.aiVerified) {
+    if (aiIsValid) {
       this.toastService.show(`Document verified! AI found all required information.`, 'success');
     } else {
       const score = status.aiAnalysis?.authenticityScore || 0;
@@ -966,9 +981,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   canSubmitForReview(): boolean {
-    // Need a business and at least one document uploaded
     if (!this.currentBusiness) return false;
-    return this.getUploadedDocumentsCount() >= 1;
+    if (this.currentBusiness.submittedForReview) return false;
+    return this.hasAiVerifiedDocument();
   }
 
   submitForReview() {
@@ -977,23 +992,36 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       return;
     }
     
-    if (this.canSubmitForReview()) {
-      this.businessService.submitForReview(this.currentBusiness.id, 'Business submitted for verification review')
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (business) => {
-            this.currentBusiness = business;
-            this.toastService.show('Business profile submitted for review! You will be notified once verification is complete.', 'success');
-            this.onboardingSteps[3].completed = true;
-          },
-          error: (error) => {
-            const errorMessage = error.error?.message || 'Failed to submit for review. Please try again.';
-            this.toastService.show(errorMessage, 'error');
-          }
-        });
-    } else {
-      this.toastService.show('Please upload at least one document before submitting for review.', 'warning');
+    if (!this.hasAiVerifiedDocument()) {
+      this.toastService.show('Please complete AI verification for at least one document before submitting for review.', 'warning');
+      return;
     }
+
+    this.businessService
+      .submitForReview(this.currentBusiness.id, 'Business submitted for verification review')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (business) => {
+          this.currentBusiness = business;
+          this.onboardingSteps[3].completed = true;
+          this.toastService.show('Business profile submitted for review! You will be notified once verification is complete.', 'success');
+        },
+        error: (error) => {
+          const errorMessage = error.error?.message || 'Failed to submit for review. Please try again.';
+          this.toastService.show(errorMessage, 'error');
+        },
+      });
+  }
+
+  hasAiVerifiedDocument(): boolean {
+    return this.requiredDocuments.some(
+      (doc) =>
+        !!(
+          doc.scanResult?.isValid ||
+          doc.scanResult?.aiVerified ||
+          doc.verified
+        ),
+    );
   }
 
   getScanningTime(): number {

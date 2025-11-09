@@ -306,9 +306,9 @@ export class CloudinaryController {
         resourceType,
         maxFileSize,
         tags,
-        transformation
+        transformation,
       });
-      
+
       const result = this.cloudinaryService.generateSignedUploadUrl(
         folder || 'crediscore',
         resourceType || 'image',
@@ -316,15 +316,18 @@ export class CloudinaryController {
         tags ? tags.split(',') : undefined,
         transformation ? JSON.parse(transformation) : undefined,
       );
-      
-      const apiKey = this.cloudinaryService['configService']?.get<string>('CLOUDINARY_API_KEY');
+
+      const apiKey =
+        this.cloudinaryService['configService']?.get<string>(
+          'CLOUDINARY_API_KEY',
+        );
       console.log('Generated signed URL result:', {
         uploadUrl: result.uploadUrl,
         timestamp: result.timestamp,
         signatureLength: result.signature?.length,
-        apiKeyPreview: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING'
+        apiKeyPreview: apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING',
       });
-      
+
       return result;
     } catch (error) {
       console.error('Error generating signed URL:', error);

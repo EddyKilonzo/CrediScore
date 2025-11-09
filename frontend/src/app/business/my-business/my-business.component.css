@@ -330,15 +330,15 @@
 }
 
 .progress-circle {
-  width: 120px;
-  height: 120px;
+  width: 108px;
+  height: 108px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto;
-  box-shadow: 0 8px 32px rgba(45, 90, 135, 0.2);
+  box-shadow: 0 6px 24px rgba(45, 90, 135, 0.18);
   position: relative;
 }
 
@@ -354,7 +354,7 @@
 .progress-text {
   color: #2D5A87;
   font-weight: bold;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
 }
 
 .progress-label {

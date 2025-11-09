@@ -180,9 +180,15 @@ export class CloudinaryService {
     maxFileSize: number = 10 * 1024 * 1024, // 10MB
     tags?: string[],
     transformation?: Record<string, any>,
-  ): { uploadUrl: string; signature: string; timestamp: number } {
+  ): {
+    uploadUrl: string;
+    signature: string;
+    timestamp: number;
+    maxFileSize: number;
+    transformation?: Record<string, any>;
+  } {
     const timestamp = Math.round(new Date().getTime() / 1000);
-    
+
     // Build parameters object for signature
     // NOTE: resource_type is NOT included in signature - it's part of the URL path
     // NOTE: max_file_size is NOT included in signature - Cloudinary doesn't validate it for signed uploads
@@ -211,24 +217,35 @@ export class CloudinaryService {
     if (!apiSecret) {
       throw new Error('CLOUDINARY_API_SECRET is not configured');
     }
-    
+
     // Log parameters that will be signed (important for debugging)
-    this.logger.debug('Generating signature with params:', JSON.stringify(params, null, 2));
-    
+    this.logger.debug(
+      'Generating signature with params:',
+      JSON.stringify(params, null, 2),
+    );
+
     // Important: Cloudinary requires parameters to be sorted alphabetically for signature
     // But cloudinary.utils.api_sign_request handles this internally, so we don't need to sort
     const signature = cloudinary.utils.api_sign_request(params, apiSecret);
-    this.logger.debug('Generated signature:', signature.substring(0, 10) + '...');
+    this.logger.debug(
+      'Generated signature:',
+      signature.substring(0, 10) + '...',
+    );
     this.logger.debug('Full signature:', signature);
-    
+
     // Also log the API key being used (partial) for verification
     const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
-    this.logger.debug('API Key used (first 10 chars):', apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING');
-    
+    this.logger.debug(
+      'API Key used (first 10 chars):',
+      apiKey ? apiKey.substring(0, 10) + '...' : 'MISSING',
+    );
+
     return {
       uploadUrl: `https://api.cloudinary.com/v1_1/${this.configService.get<string>('CLOUDINARY_CLOUD_NAME') || 'your-cloud-name'}/${resourceType}/upload`,
       signature,
       timestamp,
+      maxFileSize,
+      transformation,
     };
   }
 
@@ -290,5 +307,81 @@ export class CloudinaryService {
       }),
       original: this.getTransformedUrl(publicId, baseTransformations),
     };
+  }
+
+  /**
+   * Generate a signed download URL for assets that require authentication/ACL checks.
+   */
+  generateAuthenticatedDownloadUrlFromAssetUrl(
+    assetUrl: string,
+    expiresInSeconds: number = 300,
+  ): string | null {
+    try {
+      const parsedUrl = new URL(assetUrl);
+      if (!parsedUrl.hostname.endsWith('cloudinary.com')) {
+        return null;
+      }
+
+      const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
+      if (pathSegments.length < 5) {
+        this.logger.warn(
+          'Unexpected Cloudinary asset URL structure - unable to sign URL',
+          assetUrl,
+        );
+        return null;
+      }
+
+      const [
+        ,
+        resourceType = 'image',
+        deliveryType = 'upload',
+        versionSegment,
+        ...publicIdSegments
+      ] = pathSegments;
+
+      if (!versionSegment?.startsWith('v') || publicIdSegments.length === 0) {
+        this.logger.warn(
+          'Cloudinary asset URL missing version or public ID segments - unable to sign URL',
+          assetUrl,
+        );
+        return null;
+      }
+
+      const publicIdWithExtension = publicIdSegments.join('/');
+      const lastSegment = publicIdSegments[publicIdSegments.length - 1];
+      const extensionMatch = lastSegment.match(/\.([^.]+)$/);
+      const format = extensionMatch ? extensionMatch[1] : undefined;
+      const publicId = extensionMatch
+        ? publicIdWithExtension.slice(0, -extensionMatch[0].length)
+        : publicIdWithExtension;
+
+      if (!format) {
+        this.logger.warn(
+          'Cloudinary asset URL missing file extension - unable to generate signed URL',
+          assetUrl,
+        );
+        return null;
+      }
+
+      const expiresAt = Math.round(Date.now() / 1000) + expiresInSeconds;
+
+      const signedUrl = cloudinary.utils.private_download_url(
+        publicId,
+        format,
+        {
+          resource_type: resourceType,
+          type: deliveryType,
+          expires_at: expiresAt,
+        },
+      );
+
+      return signedUrl;
+    } catch (error) {
+      this.logger.warn(
+        'Failed to generate authenticated Cloudinary URL',
+        error,
+      );
+      return null;
+    }
   }
 }

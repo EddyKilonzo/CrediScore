@@ -59,7 +59,9 @@ export class GoogleVisionOCRService {
         this.client = null;
       }
     } else {
-      this.logger.log('Google Vision API credentials not configured - service will use fallback options');
+      this.logger.log(
+        'Google Vision API credentials not configured - service will use fallback options',
+      );
       this.client = null;
     }
   }
@@ -122,7 +124,9 @@ export class GoogleVisionOCRService {
     try {
       // Check if client is available
       if (!this.client) {
-        throw new Error('Google Vision client not initialized - credentials not configured');
+        throw new Error(
+          'Google Vision client not initialized - credentials not configured',
+        );
       }
 
       this.logger.log(
@@ -145,15 +149,19 @@ export class GoogleVisionOCRService {
 
       // Extract full text (first annotation contains all text)
       const fullText = annotations[0].text || '';
-      
+
       // Validate that extracted text is not empty or just whitespace
       if (!fullText || fullText.trim().length === 0) {
-        throw new Error('Document appears to be blank or text could not be extracted. Please ensure the document is clear, well-lit, and contains visible text.');
+        throw new Error(
+          'Document appears to be blank or text could not be extracted. Please ensure the document is clear, well-lit, and contains visible text.',
+        );
       }
-      
+
       // Validate minimum content length (at least 10 characters of meaningful text)
       if (fullText.trim().length < 10) {
-        throw new Error('Document contains insufficient text. Please upload a complete, clear document with all visible information.');
+        throw new Error(
+          'Document contains insufficient text. Please upload a complete, clear document with all visible information.',
+        );
       }
 
       // Extract bounding boxes for individual text blocks
@@ -220,7 +228,9 @@ export class GoogleVisionOCRService {
     try {
       // Check if client is available
       if (!this.client) {
-        throw new Error('Google Vision client not initialized - credentials not configured');
+        throw new Error(
+          'Google Vision client not initialized - credentials not configured',
+        );
       }
 
       this.logger.log(`Extracting text from buffer using Google Vision`);
@@ -244,15 +254,19 @@ export class GoogleVisionOCRService {
 
       // Extract full text (first annotation contains all text)
       const fullText = annotations[0].text || '';
-      
+
       // Validate that extracted text is not empty or just whitespace
       if (!fullText || fullText.trim().length === 0) {
-        throw new Error('Document appears to be blank or text could not be extracted. Please ensure the document is clear, well-lit, and contains visible text.');
+        throw new Error(
+          'Document appears to be blank or text could not be extracted. Please ensure the document is clear, well-lit, and contains visible text.',
+        );
       }
-      
+
       // Validate minimum content length (at least 10 characters of meaningful text)
       if (fullText.trim().length < 10) {
-        throw new Error('Document contains insufficient text. Please upload a complete, clear document with all visible information.');
+        throw new Error(
+          'Document contains insufficient text. Please upload a complete, clear document with all visible information.',
+        );
       }
 
       // Extract bounding boxes for individual text blocks

@@ -86,7 +86,9 @@ export class UserController {
   }
 
   @Get('profile-data')
-  @ApiOperation({ summary: 'Get role-based profile data with real information' })
+  @ApiOperation({
+    summary: 'Get role-based profile data with real information',
+  })
   @ApiResponse({
     status: 200,
     description: 'Role-based profile data retrieved successfully',

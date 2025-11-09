@@ -576,9 +576,9 @@
 .add-info-btn:hover { color: #b91c1c; }
 
 .manage-business-btn {
-  background: #10b981;
-  color: white;
-  border: none;
+  background: #ffffff;
+  color: #10b981;
+  border: 1px solid #10b981;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -587,7 +587,9 @@
 }
 
 .manage-business-btn:hover {
-  background: #059669;
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #059669;
   transform: translateY(-1px);
 }
 
@@ -1043,19 +1045,21 @@ input:checked + .slider:before {
 .btn-primary, .btn-secondary {
   padding: 0.5rem 1rem;
   border-radius: 6px;
-  border: none;
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-primary {
-  background: #2D5A87;
-  color: white;
+  background: #ffffff;
+  color: #10b981;
+  border: 1px solid #10b981;
 }
 
 .btn-primary:hover {
-  background: #3E6A8A;
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #059669;
 }
 
 .btn-secondary {
@@ -1429,9 +1433,9 @@ input:checked + .slider:before {
 }
 
 .card-actions .btn-primary {
-  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
-  color: white;
-  border: none;
+  background: #ffffff;
+  color: #10b981;
+  border: 1px solid #10b981;
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: 600;
@@ -1441,7 +1445,9 @@ input:checked + .slider:before {
 }
 
 .card-actions .btn-primary:hover {
-  background: linear-gradient(135deg, #2C5270, #3E6A8A);
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #059669;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(62, 106, 138, 0.3);
 }

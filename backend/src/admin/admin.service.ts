@@ -859,12 +859,14 @@ export class AdminService {
     };
   }
 
-  async getMonthlyUserRegistrations(): Promise<{ month: string; count: number }[]> {
+  async getMonthlyUserRegistrations(): Promise<
+    { month: string; count: number }[]
+  > {
     try {
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth(); // 0-11
-      
+
       // Get users from previous years (before current year) for base count
       const usersBeforeYear = await this.prisma.user.count({
         where: {
@@ -887,21 +889,38 @@ export class AdminService {
       });
 
       // Initialize months array
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       const monthlyNewRegistrations: { [key: string]: number } = {};
-      months.forEach(month => {
+      months.forEach((month) => {
         monthlyNewRegistrations[month] = 0;
       });
 
       // Count new users by month in current year
-      usersThisYear.forEach(user => {
+      usersThisYear.forEach((user) => {
         const userMonth = user.createdAt.getMonth(); // 0-11
         monthlyNewRegistrations[months[userMonth]]++;
       });
 
       // Log for debugging
-      this.logger.log(`Monthly user registrations - Before year: ${usersBeforeYear}, This year total: ${usersThisYear.length}`);
-      this.logger.log(`Monthly breakdown: ${JSON.stringify(monthlyNewRegistrations)}`);
+      this.logger.log(
+        `Monthly user registrations - Before year: ${usersBeforeYear}, This year total: ${usersThisYear.length}`,
+      );
+      this.logger.log(
+        `Monthly breakdown: ${JSON.stringify(monthlyNewRegistrations)}`,
+      );
 
       // Return new registrations per month (not cumulative)
       // This shows how many NEW users registered in each month
@@ -920,8 +939,10 @@ export class AdminService {
         }
       });
 
-      this.logger.log(`Monthly new registrations: ${JSON.stringify(result.filter(r => r.count > 0))}`);
-      
+      this.logger.log(
+        `Monthly new registrations: ${JSON.stringify(result.filter((r) => r.count > 0))}`,
+      );
+
       return result;
     } catch (error) {
       this.logger.error('Error fetching monthly user registrations:', error);
@@ -1223,7 +1244,7 @@ export class AdminService {
       ]);
 
       return {
-        documents: documents.map(doc => ({
+        documents: documents.map((doc) => ({
           id: doc.id,
           businessName: doc.business.name,
           businessType: doc.business.category,
@@ -1243,11 +1264,16 @@ export class AdminService {
       };
     } catch (error) {
       this.logger.error('Error fetching pending documents:', error);
-      throw new InternalServerErrorException('Failed to fetch pending documents');
+      throw new InternalServerErrorException(
+        'Failed to fetch pending documents',
+      );
     }
   }
 
-  async approveDocument(adminUserId: string, documentId: string): Promise<{ message: string }> {
+  async approveDocument(
+    adminUserId: string,
+    documentId: string,
+  ): Promise<{ message: string }> {
     try {
       const document = await this.prisma.document.findUnique({
         where: { id: documentId },
@@ -1272,18 +1298,27 @@ export class AdminService {
         },
       });
 
-      this.logger.log(`Document approved: ${documentId} by admin: ${adminUserId}`);
+      this.logger.log(
+        `Document approved: ${documentId} by admin: ${adminUserId}`,
+      );
       return { message: 'Document approved successfully' };
     } catch (error) {
       this.logger.error('Error approving document:', error);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException('Failed to approve document');
     }
   }
 
-  async rejectDocument(adminUserId: string, documentId: string, reason?: string): Promise<{ message: string }> {
+  async rejectDocument(
+    adminUserId: string,
+    documentId: string,
+    reason?: string,
+  ): Promise<{ message: string }> {
     try {
       const document = await this.prisma.document.findUnique({
         where: { id: documentId },
@@ -1303,7 +1338,9 @@ export class AdminService {
         },
       });
 
-      this.logger.log(`Document rejected: ${documentId} by admin: ${adminUserId}`);
+      this.logger.log(
+        `Document rejected: ${documentId} by admin: ${adminUserId}`,
+      );
       return { message: 'Document rejected successfully' };
     } catch (error) {
       this.logger.error('Error rejecting document:', error);
@@ -1314,7 +1351,11 @@ export class AdminService {
     }
   }
 
-  async requestDocumentRevision(adminUserId: string, documentId: string, notes?: string): Promise<{ message: string }> {
+  async requestDocumentRevision(
+    adminUserId: string,
+    documentId: string,
+    notes?: string,
+  ): Promise<{ message: string }> {
     try {
       const document = await this.prisma.document.findUnique({
         where: { id: documentId },
@@ -1333,14 +1374,18 @@ export class AdminService {
         },
       });
 
-      this.logger.log(`Document revision requested: ${documentId} by admin: ${adminUserId}`);
+      this.logger.log(
+        `Document revision requested: ${documentId} by admin: ${adminUserId}`,
+      );
       return { message: 'Revision requested successfully' };
     } catch (error) {
       this.logger.error('Error requesting document revision:', error);
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException('Failed to request document revision');
+      throw new InternalServerErrorException(
+        'Failed to request document revision',
+      );
     }
   }
 
@@ -1385,7 +1430,7 @@ export class AdminService {
       ]);
 
       return {
-        reviews: reviews.map(review => ({
+        reviews: reviews.map((review) => ({
           id: review.id,
           reviewer: review.user.name,
           business: review.business.name,
@@ -1408,7 +1453,10 @@ export class AdminService {
     }
   }
 
-  async approveReview(adminUserId: string, reviewId: string): Promise<{ message: string }> {
+  async approveReview(
+    adminUserId: string,
+    reviewId: string,
+  ): Promise<{ message: string }> {
     try {
       const review = await this.prisma.review.findUnique({
         where: { id: reviewId },
@@ -1437,7 +1485,11 @@ export class AdminService {
     }
   }
 
-  async rejectReview(adminUserId: string, reviewId: string, reason?: string): Promise<{ message: string }> {
+  async rejectReview(
+    adminUserId: string,
+    reviewId: string,
+    reason?: string,
+  ): Promise<{ message: string }> {
     try {
       const review = await this.prisma.review.findUnique({
         where: { id: reviewId },
@@ -1466,7 +1518,11 @@ export class AdminService {
     }
   }
 
-  async flagReview(adminUserId: string, reviewId: string, reason?: string): Promise<{ message: string }> {
+  async flagReview(
+    adminUserId: string,
+    reviewId: string,
+    reason?: string,
+  ): Promise<{ message: string }> {
     try {
       const review = await this.prisma.review.findUnique({
         where: { id: reviewId },
