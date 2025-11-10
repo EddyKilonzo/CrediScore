@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +8,7 @@ import { CloudinaryService } from '../../core/services/cloudinary.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { HttpEventType } from '@angular/common/http';
-import { filter, map } from 'rxjs/operators';
+import { filter, map, finalize } from 'rxjs/operators';
 
 enum PaymentType {
   TILL = 'TILL',
@@ -34,6 +34,7 @@ interface DocumentType {
   uploaded: boolean;
   verified: boolean;
   scanning: boolean;
+  recordId?: string;
   url?: string;
   scanResult?: {
     ocrConfidence: number;
@@ -74,6 +75,26 @@ interface DocumentType {
   };
 }
 
+const SOCIAL_LINK_KEYS = [
+  'facebook',
+  'twitter',
+  'instagram',
+  'linkedin',
+  'youtube',
+  'tiktok'
+] as const;
+
+type SocialLinkKey = (typeof SOCIAL_LINK_KEYS)[number];
+
+const DEFAULT_SOCIAL_LINKS: Record<SocialLinkKey, string> = {
+  facebook: '',
+  twitter: '',
+  instagram: '',
+  linkedin: '',
+  youtube: '',
+  tiktok: ''
+};
+
 @Component({
   selector: 'app-my-business',
   standalone: true,
@@ -83,12 +104,18 @@ interface DocumentType {
 })
 export class MyBusinessComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private pendingStepUpdates = new Map<number, boolean>();
+  private stepUpdateScheduled = false;
+  private isComponentActive = true;
+  private shouldPersistOnboardingStep = false;
+  private isPersistingOnboardingStep = false;
   
   // Inject services
   private authService = inject(AuthService);
   private businessService = inject(BusinessService);
   private cloudinaryService = inject(CloudinaryService);
   private toastService = inject(ToastService);
+  private cdr = inject(ChangeDetectorRef);
 
   // Authentication state
   currentUser = this.authService.currentUser;
@@ -126,12 +153,12 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     },
     {
       id: 4,
-      title: 'Review & Submit',
-      description: 'Submit for verification review',
-      icon: 'fas fa-check-circle',
+      title: 'Socials & Map',
+      description: 'Add social media links and business location',
+      icon: 'fas fa-map-marker-alt',
       completed: false,
       required: true
-    }
+    },
   ];
 
   // Pagination state
@@ -189,14 +216,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Location and Social Media
   businessLocation: string = '';
-  socialLinks = {
-    facebook: '',
-    twitter: '',
-    instagram: '',
-    linkedin: '',
-    youtube: '',
-    tiktok: ''
-  };
+  socialLinks = { ...DEFAULT_SOCIAL_LINKS };
+  isSavingSocialLinks = false;
 
   // Business Profile
   businessProfile = {
@@ -243,6 +264,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.isComponentActive = false;
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -262,12 +284,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         next: (businesses: Business[]) => {
           if (businesses && businesses.length > 0) {
             this.currentBusiness = businesses[0];
-            this.isLoading = false;
-            this.loadBusinessDocuments();
-            this.loadBusinessLocation();
-            this.loadSocialLinks();
-            this.loadBusinessProfile();
-            this.loadPaymentMethods();
+            this.fetchBusinessDetails(this.currentBusiness.id, true);
           } else {
             // No business found - this is normal during onboarding
             this.isLoading = false;
@@ -301,24 +318,62 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       });
   }
 
+  private fetchBusinessDetails(businessId: string, showLoading: boolean = false) {
+    if (showLoading) {
+      this.isLoading = true;
+    }
+
+    this.businessService.getBusinessById(businessId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (business) => {
+          this.initializeBusinessData(business);
+          if (showLoading) {
+            this.isLoading = false;
+          }
+        },
+        error: (error) => {
+          if (showLoading) {
+            this.isLoading = false;
+          }
+          const errorMessage = error?.error?.message || error?.message || 'Failed to load business details';
+          this.toastService.show(errorMessage, 'error');
+        }
+      });
+  }
+
+  private initializeBusinessData(business: Business) {
+    this.currentBusiness = business;
+    this.loadBusinessDocuments();
+    this.loadBusinessLocation();
+    this.loadSocialLinks();
+    this.loadBusinessProfile();
+    this.loadPaymentMethods();
+    this.updateSocialsAndLocationCompletion();
+  }
+
+  private refreshBusinessDetails(showLoading: boolean = false) {
+    if (!this.currentBusiness?.id) {
+      return;
+    }
+
+    this.fetchBusinessDetails(this.currentBusiness.id, showLoading);
+  }
+
   private loadBusinessDocuments() {
     if (!this.currentBusiness) return;
 
-    // Load documents from the business data
-    const documents = (this.currentBusiness as any).documents || [];
-    
-    // Update document status based on loaded documents
-    if (documents.length > 0) {
-      this.updateDocumentStatus(documents);
-    }
-    
-    // Mark step 1 (Upload Documents) as completed if at least one document is uploaded
-    this.onboardingSteps[1].completed = documents.length > 0;
-    
-    // Mark step 3 (Review & Submit) as completed if business has been submitted for review
-    const businessWithStatus = this.currentBusiness as any;
-    this.onboardingSteps[3].completed = businessWithStatus.submittedForReview === true;
-    
+    const documents = Array.isArray((this.currentBusiness as any).documents)
+      ? (this.currentBusiness as any).documents
+      : [];
+
+    this.updateDocumentStatus(documents);
+
+    const hasAiVerifiedDocument = documents.some((doc: any) =>
+      this.isDocumentAiVerified(doc),
+    );
+    this.scheduleOnboardingStepUpdate(1, hasAiVerifiedDocument, false);
+
     this.isLoading = false;
   }
 
@@ -327,6 +382,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     
     // Load location from business data if available
     this.businessLocation = (this.currentBusiness as any).location || '';
+    this.updateSocialsAndLocationCompletion();
   }
 
   private createBusinessIfNeeded(): Promise<void> {
@@ -382,7 +438,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             this.toastService.show('Business profile created successfully!', 'success');
             
             // Update onboarding step
-            this.onboardingSteps[0].completed = true;
+          this.scheduleOnboardingStepUpdate(0, true);
             
             // Load related data
             this.loadBusinessProfile();
@@ -411,8 +467,48 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     // Load social links from business data if available
     const businessWithSocialLinks = this.currentBusiness as any;
     if (businessWithSocialLinks.socialLinks) {
-      this.socialLinks = { ...this.socialLinks, ...businessWithSocialLinks.socialLinks };
+      this.socialLinks = this.normalizeSocialLinks(
+        businessWithSocialLinks.socialLinks as Partial<Record<SocialLinkKey, string>>,
+      );
+    } else {
+      this.socialLinks = { ...DEFAULT_SOCIAL_LINKS };
     }
+
+    this.updateSocialsAndLocationCompletion(false);
+  }
+
+  private normalizeSocialLinks(
+    rawLinks: Partial<Record<SocialLinkKey, string>> | null | undefined,
+  ): Record<SocialLinkKey, string> {
+    const normalized = { ...DEFAULT_SOCIAL_LINKS };
+
+    if (!rawLinks || typeof rawLinks !== 'object') {
+      return normalized;
+    }
+
+    SOCIAL_LINK_KEYS.forEach((key) => {
+      const value = rawLinks[key];
+      normalized[key] =
+        typeof value === 'string' ? value.trim() : DEFAULT_SOCIAL_LINKS[key];
+    });
+
+    return normalized;
+  }
+
+  private getTrimmedSocialLinks(): Partial<Record<SocialLinkKey, string>> {
+    const trimmed: Partial<Record<SocialLinkKey, string>> = {};
+
+    SOCIAL_LINK_KEYS.forEach((key) => {
+      const value = this.socialLinks[key];
+      if (typeof value === 'string') {
+        const sanitized = value.trim();
+        if (sanitized.length > 0) {
+          trimmed[key] = sanitized;
+        }
+      }
+    });
+
+    return trimmed;
   }
 
   private loadBusinessProfile() {
@@ -441,7 +537,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       this.businessProfile.email?.trim()
     );
     
-    this.onboardingSteps[0].completed = isProfileComplete;
+    this.scheduleOnboardingStepUpdate(0, isProfileComplete, false);
   }
 
   private loadPaymentMethods() {
@@ -451,42 +547,60 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.paymentMethods = this.currentBusiness.payments || [];
     
     // Update onboarding step based on payment methods
-    this.onboardingSteps[2].completed = this.paymentMethods.length > 0;
+    this.scheduleOnboardingStepUpdate(2, this.paymentMethods.length > 0, false);
   }
 
   private updateDocumentStatus(documents: any[]) {
-    // Update document status based on real data
-    this.requiredDocuments.forEach(doc => {
-      const realDoc = documents.find(d => d.type === this.getDocumentTypeEnum(doc.id));
+    this.requiredDocuments.forEach((doc) => {
+      const realDoc = documents.find(
+        (d: any) => d.type === this.getDocumentTypeEnum(doc.id),
+      );
+
       if (realDoc) {
+        const aiAnalysis = realDoc.aiAnalysis || {};
+        const aiVerified = this.isDocumentAiVerified(realDoc);
+        const isScanning =
+          !aiVerified &&
+          (!aiAnalysis || Object.keys(aiAnalysis).length === 0);
+
         doc.uploaded = true;
-        doc.verified = !!(
-          realDoc.aiAnalysis?.isValid ||
-          realDoc.aiVerified ||
-          realDoc.verified
-        );
-        doc.scanning = !realDoc.aiAnalysis && realDoc.uploaded;
-        doc.url = realDoc.url; // Store the URL for viewing
-        
-        if (realDoc.aiAnalysis) {
+        doc.verified = aiVerified;
+        doc.scanning = isScanning;
+        doc.url = realDoc.url;
+        doc.recordId = realDoc.id;
+
+        if (aiAnalysis && Object.keys(aiAnalysis).length > 0) {
           doc.scanResult = {
-            ocrConfidence: realDoc.ocrConfidence || 0,
-            aiVerified: realDoc.aiVerified || false,
-            authenticityScore: realDoc.authenticityScore || 0,
-            confidence: realDoc.aiAnalysis.confidence || 0,
-            documentType: realDoc.aiAnalysis.documentType || 'Unknown',
-            isValid: realDoc.aiAnalysis.isValid || false,
-            extractedData: realDoc.extractedData,
-            validationErrors: realDoc.aiAnalysis.validationErrors || [],
-            warnings: realDoc.aiAnalysis.warnings || [],
-            fraudIndicators: realDoc.aiAnalysis.fraudIndicators || [],
-            securityFeatures: realDoc.aiAnalysis.securityFeatures || [],
-            verificationChecklist: realDoc.aiAnalysis.verificationChecklist || {}
+            ocrConfidence:
+              realDoc.ocrConfidence ??
+              aiAnalysis.ocrConfidence ??
+              aiAnalysis.confidence ??
+              0,
+            aiVerified: aiVerified || aiAnalysis.aiVerified || false,
+            authenticityScore: aiAnalysis.authenticityScore || 0,
+            confidence: aiAnalysis.confidence || 0,
+            documentType: aiAnalysis.documentType || realDoc.type || 'Unknown',
+            isValid: aiVerified,
+            extractedData:
+              realDoc.extractedData || aiAnalysis.extractedData || {},
+            validationErrors: aiAnalysis.validationErrors || [],
+            warnings: aiAnalysis.warnings || [],
+            fraudIndicators: aiAnalysis.fraudIndicators || [],
+            securityFeatures: aiAnalysis.securityFeatures || [],
+            verificationChecklist: aiAnalysis.verificationChecklist || {},
           };
+        } else {
+          doc.scanResult = undefined;
         }
+      } else {
+        doc.uploaded = false;
+        doc.verified = false;
+        doc.scanning = false;
+        doc.url = undefined;
+        doc.recordId = undefined;
+        doc.scanResult = undefined;
       }
     });
-
   }
 
   private getDocumentTypeEnum(documentId: string): BusinessDocumentType {
@@ -498,6 +612,145 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       default:
         return BusinessDocumentType.BUSINESS_DOCUMENT;
     }
+  }
+
+  private updateSocialsAndLocationCompletion(shouldPersist: boolean = false) {
+    const hasSocialLink = Object.values(this.socialLinks).some(
+      (link) => link && link.trim().length > 0,
+    );
+
+    this.scheduleOnboardingStepUpdate(3, hasSocialLink, shouldPersist);
+  }
+
+  private scheduleOnboardingStepUpdate(
+    index: number,
+    completed: boolean,
+    persistChange: boolean = true,
+  ) {
+    const currentSteps = this.onboardingSteps;
+    const step = currentSteps[index];
+    if (!step || step.completed === completed) {
+      return;
+    }
+
+    this.pendingStepUpdates.set(index, completed);
+    if (persistChange) {
+      this.shouldPersistOnboardingStep = true;
+    }
+
+    if (this.stepUpdateScheduled) {
+      return;
+    }
+
+    this.stepUpdateScheduled = true;
+
+    setTimeout(() => {
+      this.stepUpdateScheduled = false;
+
+      if (!this.isComponentActive || this.pendingStepUpdates.size === 0) {
+        this.pendingStepUpdates.clear();
+        this.shouldPersistOnboardingStep = false;
+        return;
+      }
+
+      const updates = Array.from(this.pendingStepUpdates.entries());
+      this.pendingStepUpdates.clear();
+
+      const stepsSnapshot = [...this.onboardingSteps];
+      let changed = false;
+
+      for (const [idx, value] of updates) {
+        const target = stepsSnapshot[idx];
+        if (target && target.completed !== value) {
+          stepsSnapshot[idx] = { ...target, completed: value };
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        this.onboardingSteps = stepsSnapshot;
+        this.cdr.markForCheck();
+        if (this.shouldPersistOnboardingStep) {
+          this.persistOnboardingProgress();
+        }
+      }
+      this.shouldPersistOnboardingStep = false;
+    }, 0);
+  }
+
+  private persistOnboardingProgress() {
+    if (
+      !this.currentBusiness?.id ||
+      this.isPersistingOnboardingStep ||
+      this.onboardingSteps.length === 0
+    ) {
+      return;
+    }
+
+    const nextStep = this.onboardingSteps.find((step) => !step.completed);
+    const fallbackStep = this.onboardingSteps[this.onboardingSteps.length - 1];
+    const stepToPersist = nextStep ? nextStep.id : fallbackStep?.id;
+
+    if (!stepToPersist) {
+      return;
+    }
+
+    if (this.currentBusiness.onboardingStep === stepToPersist) {
+      return;
+    }
+
+    this.isPersistingOnboardingStep = true;
+
+    this.businessService
+      .updateOnboardingStep(this.currentBusiness.id, stepToPersist)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isPersistingOnboardingStep = false;
+        }),
+      )
+      .subscribe({
+        next: (business) => {
+          const mergedBusiness = {
+            ...this.currentBusiness,
+            ...business,
+          } as Business;
+
+          if (
+            business.payments === undefined &&
+            this.currentBusiness?.payments
+          ) {
+            mergedBusiness.payments = this.currentBusiness.payments;
+          }
+
+          if (
+            business.documents === undefined &&
+            this.currentBusiness?.documents
+          ) {
+            mergedBusiness.documents = this.currentBusiness.documents;
+          }
+
+          this.currentBusiness = mergedBusiness;
+        },
+        error: (error) => {
+          const errorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Failed to save onboarding progress. Please try again later.';
+          this.toastService.show(errorMessage, 'warning');
+        },
+      });
+  }
+
+  private isDocumentAiVerified(document: any): boolean {
+    if (!document) return false;
+    const analysis = document.aiAnalysis || {};
+    return !!(
+      document.aiVerified ||
+      document.verified ||
+      analysis.isValid ||
+      analysis.aiVerified
+    );
   }
 
   getOnboardingProgress(): number {
@@ -614,10 +867,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     return this.requiredDocuments.filter(doc => doc.uploaded).length;
   }
 
-  getRequiredDocumentsCount(): number {
-    return this.requiredDocuments.filter(doc => doc.required).length;
-  }
-
   getVerifiedDocumentsCount(): number {
     return this.requiredDocuments.filter(doc => doc.verified).length;
   }
@@ -632,11 +881,31 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   viewDocument(document: DocumentType) {
-    if (document.url) {
-      window.open(document.url, '_blank');
-    } else {
-      this.toastService.show('Document URL is not available.', 'error');
+    if (!document.recordId) {
+      this.toastService.show('Document reference is missing. Please refresh the page and try again.', 'warning');
+      return;
     }
+
+    this.businessService.downloadDocument(document.recordId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (blob) => {
+          if (!(blob instanceof Blob)) {
+            this.toastService.show('Document download failed. Please try again later.', 'error');
+            return;
+          }
+
+          const fileUrl = URL.createObjectURL(blob);
+          window.open(fileUrl, '_blank', 'noopener,noreferrer');
+
+          setTimeout(() => URL.revokeObjectURL(fileUrl), 60_000);
+        },
+        error: (error) => {
+          const message =
+            error?.error?.message || error?.message || 'Unable to open document. Please try again later.';
+          this.toastService.show(message, 'error');
+        }
+      });
   }
 
   closeUploadModal() {
@@ -780,6 +1049,10 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             if (documentType) {
               documentType.uploaded = true;
               documentType.scanning = true;
+              documentType.verified = false;
+              documentType.url = document.url;
+              documentType.recordId = document.id;
+              documentType.scanResult = undefined;
               this.isScanning = true;
               this.scanningProgress = 0;
             }
@@ -788,6 +1061,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             this.startProcessingStatusPolling(document.id);
             
             this.closeUploadModal();
+            this.refreshBusinessDetails();
           }, 500);
         },
         error: (error) => {
@@ -900,6 +1174,14 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     // Update document with real AI analysis results
     const aiIsValid = !!(status.aiVerified || status.aiAnalysis?.isValid);
 
+    if (status.url) {
+      document.url = status.url;
+    }
+
+    if (status.documentId) {
+      document.recordId = status.documentId;
+    }
+
     document.scanResult = {
       ocrConfidence: status.ocrConfidence || 0,
       aiVerified: status.aiVerified || aiIsValid,
@@ -947,6 +1229,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         );
       }
     }
+
+    this.refreshBusinessDetails();
   }
 
   private handleUploadError(document: DocumentType, message: string) {
@@ -978,39 +1262,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     if (document.verified) return 'Verified';
     if (document.uploaded) return 'Under Review';
     return 'Not Uploaded';
-  }
-
-  canSubmitForReview(): boolean {
-    if (!this.currentBusiness) return false;
-    if (this.currentBusiness.submittedForReview) return false;
-    return this.hasAiVerifiedDocument();
-  }
-
-  submitForReview() {
-    if (!this.currentBusiness) {
-      this.toastService.show('Please complete your business profile first before submitting for review.', 'warning');
-      return;
-    }
-    
-    if (!this.hasAiVerifiedDocument()) {
-      this.toastService.show('Please complete AI verification for at least one document before submitting for review.', 'warning');
-      return;
-    }
-
-    this.businessService
-      .submitForReview(this.currentBusiness.id, 'Business submitted for verification review')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (business) => {
-          this.currentBusiness = business;
-          this.onboardingSteps[3].completed = true;
-          this.toastService.show('Business profile submitted for review! You will be notified once verification is complete.', 'success');
-        },
-        error: (error) => {
-          const errorMessage = error.error?.message || 'Failed to submit for review. Please try again.';
-          this.toastService.show(errorMessage, 'error');
-        },
-      });
   }
 
   hasAiVerifiedDocument(): boolean {
@@ -1084,6 +1335,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
     // This would typically call an API to update the business location
     this.toastService.show('Location updated successfully', 'success');
+    this.updateSocialsAndLocationCompletion();
   }
 
   viewOnMap() {
@@ -1099,18 +1351,72 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Social Media Methods
   updateSocialLinks() {
-    if (!this.currentBusiness) return;
+    if (!this.currentBusiness) {
+      this.toastService.show('Business not found. Please refresh the page.', 'error');
+      return;
+    }
+
+    const trimmedLinks = this.getTrimmedSocialLinks();
 
     // Validate social links
-    const hasValidLinks = Object.values(this.socialLinks).some(link => link.trim() !== '');
+    const hasValidLinks = Object.keys(trimmedLinks).length > 0;
     
     if (!hasValidLinks) {
       this.toastService.show('Please enter at least one social media link', 'warning');
       return;
     }
 
-    // For now, just show success message since the method doesn't exist in core service
-    this.toastService.show('Social media links updated successfully', 'success');
+    this.isSavingSocialLinks = true;
+
+    this.businessService
+      .updateBusinessSocialLinks(this.currentBusiness.id, trimmedLinks)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isSavingSocialLinks = false;
+        }),
+      )
+      .subscribe({
+        next: (updatedBusiness) => {
+          const previousBusiness = this.currentBusiness;
+          const mergedBusiness = {
+            ...previousBusiness,
+            ...updatedBusiness,
+          } as Business;
+
+          if (
+            updatedBusiness.payments === undefined &&
+            previousBusiness?.payments
+          ) {
+            mergedBusiness.payments = previousBusiness.payments;
+          }
+
+          if (
+            updatedBusiness.documents === undefined &&
+            previousBusiness?.documents
+          ) {
+            mergedBusiness.documents = previousBusiness.documents;
+          }
+
+          this.currentBusiness = mergedBusiness;
+          this.socialLinks = this.normalizeSocialLinks(
+            (updatedBusiness as any).socialLinks ?? trimmedLinks,
+          );
+
+          this.toastService.show(
+            'Social media links updated successfully',
+            'success',
+          );
+          this.updateSocialsAndLocationCompletion(true);
+        },
+        error: (error) => {
+          const errorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Failed to update social media links. Please try again.';
+          this.toastService.show(errorMessage, 'error');
+        },
+      });
   }
 
   previewSocialLinks() {
@@ -1623,9 +1929,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
           this.closeAddPaymentModal();
           
           // Update onboarding step if this was the first payment method
-          if (this.paymentMethods.length === 1) {
-            this.onboardingSteps[2].completed = true;
-          }
+          this.scheduleOnboardingStepUpdate(2, this.paymentMethods.length > 0);
         },
         error: (error) => {
           this.toastService.show(
@@ -1637,20 +1941,49 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   removePaymentMethod(paymentId: string) {
-    if (!this.currentBusiness) return;
-
-    // For now, remove from local array
-    // TODO: Implement backend API call when available
-    const index = this.paymentMethods.findIndex(p => p.id === paymentId);
-    if (index > -1) {
-      this.paymentMethods.splice(index, 1);
-      this.toastService.show('Payment method removed successfully', 'success');
-      
-      // Update onboarding step if no payment methods left
-      if (this.paymentMethods.length === 0) {
-        this.onboardingSteps[2].completed = false;
-      }
+    if (!this.currentBusiness) {
+      this.toastService.show('Business not found. Please refresh the page.', 'error');
+      return;
     }
+
+    this.businessService
+      .deletePaymentMethod(paymentId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          const index = this.paymentMethods.findIndex(
+            (payment) => payment.id === paymentId,
+          );
+
+          if (index > -1) {
+            this.paymentMethods.splice(index, 1);
+            this.toastService.show(
+              'Payment method removed successfully',
+              'success',
+            );
+
+            if (this.currentBusiness) {
+              this.currentBusiness = {
+                ...this.currentBusiness,
+                payments: [...this.paymentMethods],
+              } as Business;
+            }
+
+            this.scheduleOnboardingStepUpdate(
+              2,
+              this.paymentMethods.length > 0,
+              true,
+            );
+          }
+        },
+        error: (error) => {
+          const errorMessage =
+            error?.error?.message ||
+            error?.message ||
+            'Failed to remove payment method. Please try again.';
+          this.toastService.show(errorMessage, 'error');
+        },
+      });
   }
 
   validatePaymentNumber(type: string, number: string): boolean {
@@ -1686,11 +2019,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   getPaymentTypeColor(type: string): string {
     switch (type) {
-      case 'TILL': return 'bg-green-500';
-      case 'PAYBILL': return 'bg-blue-500';
-      case 'SEND_MONEY': return 'bg-orange-500';
-      case 'BANK': return 'bg-purple-500';
-      default: return 'bg-gray-500';
+      case 'TILL': return 'bg-[#1B3F72]';
+      case 'PAYBILL': return 'bg-[#22558C]';
+      case 'SEND_MONEY': return 'bg-[#2D5A87]';
+      case 'BANK': return 'bg-[#1E3A5F]';
+      default: return 'bg-[#2D5A87]';
     }
   }
 

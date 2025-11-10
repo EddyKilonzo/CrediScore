@@ -6,6 +6,7 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
 import { OCRService } from '../shared/ocr/ocr.service';
@@ -18,8 +19,10 @@ import {
   UpdateBusinessCategoryDto,
   SubmitForReviewDto,
   VerifyDocumentDto,
+  SocialLinksDto,
 } from './dto/business.dto';
 import { DocumentType } from '@prisma/client';
+import axios, { AxiosResponse } from 'axios';
 
 export interface BusinessSearchDto {
   query?: string;
@@ -31,8 +34,95 @@ export interface BusinessSearchDto {
   limit?: number;
 }
 
+const hasNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const sanitizeSocialLinks = (
+  links: SocialLinksDto | null | undefined,
+): {
+  value?: Record<string, string>;
+  shouldClear: boolean;
+} => {
+  if (!links) {
+    return { shouldClear: false };
+  }
+
+  const sanitized = Object.entries(links).reduce<Record<string, string>>(
+    (accumulator, [key, value]) => {
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+          accumulator[key] = trimmed;
+        }
+      }
+      return accumulator;
+    },
+    {},
+  );
+
+  if (Object.keys(sanitized).length === 0) {
+    return { shouldClear: true };
+  }
+
+  return { value: sanitized, shouldClear: false };
+};
+
 @Injectable()
 export class BusinessService {
+  private hasCompletedSocialLinks(
+    socialLinks: Prisma.JsonValue | null | undefined,
+  ): boolean {
+    if (!socialLinks || typeof socialLinks !== 'object') {
+      return false;
+    }
+
+    if (Array.isArray(socialLinks)) {
+      return socialLinks.some((value) => hasNonEmptyString(value));
+    }
+
+    return Object.values(socialLinks as Record<string, unknown>).some(
+      (value) => hasNonEmptyString(value),
+    );
+  }
+
+  private isBusinessProfileComplete(business: {
+    name?: string | null;
+    description?: string | null;
+    phone?: string | null;
+    email?: string | null;
+  }): boolean {
+    return !!(
+      hasNonEmptyString(business.name) &&
+      hasNonEmptyString(business.description) &&
+      hasNonEmptyString(business.phone) &&
+      hasNonEmptyString(business.email)
+    );
+  }
+
+  private isOnboardingChecklistComplete(
+    business: {
+      documents: Array<{ verified: boolean; aiVerified: boolean }>;
+      payments: Array<{ verified: boolean }>;
+      socialLinks: Prisma.JsonValue | null;
+      name?: string | null;
+      description?: string | null;
+      phone?: string | null;
+      email?: string | null;
+    },
+  ): boolean {
+    const hasVerifiedDocument = business.documents.some(
+      (doc) => doc.verified || doc.aiVerified,
+    );
+    const hasAnyPaymentMethod = business.payments.length > 0;
+
+    return (
+      hasVerifiedDocument &&
+      hasAnyPaymentMethod &&
+      this.hasCompletedSocialLinks(business.socialLinks) &&
+      this.isBusinessProfileComplete(business)
+    );
+  }
+
   private readonly logger = new Logger(BusinessService.name);
 
   constructor(
@@ -62,13 +152,19 @@ export class BusinessService {
         this.logger.log(`User role upgraded to BUSINESS_OWNER: ${userId}`);
       }
 
+      const { socialLinks: rawSocialLinks, ...businessFields } = businessData;
+      const { value: sanitizedSocialLinks } = sanitizeSocialLinks(
+        rawSocialLinks,
+      );
+
       const business = await this.prisma.business.create({
         data: {
-          ...businessData,
+          ...(businessFields as Omit<CreateBusinessDto, 'socialLinks'>),
+          ...(sanitizedSocialLinks ? { socialLinks: sanitizedSocialLinks } : {}),
           ownerId: userId,
           status: 'PENDING',
           onboardingStep: 1,
-        },
+        } as Prisma.BusinessUncheckedCreateInput,
         include: {
           owner: {
             select: {
@@ -108,6 +204,12 @@ export class BusinessService {
           include: {
             trustScore: true,
             businessCategory: true,
+            documents: {
+              orderBy: { uploadedAt: 'desc' },
+            },
+            payments: {
+              orderBy: { addedAt: 'desc' },
+            },
             _count: {
               select: {
                 reviews: true,
@@ -166,11 +268,9 @@ export class BusinessService {
             take: 10,
           },
           documents: {
-            where: { verified: true },
             orderBy: { uploadedAt: 'desc' },
           },
           payments: {
-            where: { verified: true },
             orderBy: { addedAt: 'desc' },
           },
           _count: {
@@ -226,9 +326,24 @@ export class BusinessService {
         throw new ForbiddenException('You can only update your own businesses');
       }
 
+      const { socialLinks: rawSocialLinks, ...restUpdateData } = updateData;
+      const { value: sanitizedSocialLinks, shouldClear } = sanitizeSocialLinks(
+        rawSocialLinks,
+      );
+
+      const updatePayload: Prisma.BusinessUpdateInput = {
+        ...(restUpdateData as Prisma.BusinessUpdateInput),
+      };
+
+      if (rawSocialLinks !== undefined) {
+        updatePayload.socialLinks = shouldClear
+          ? Prisma.JsonNull
+          : sanitizedSocialLinks;
+      }
+
       const updatedBusiness = await this.prisma.business.update({
         where: { id: businessId },
-        data: updateData,
+        data: updatePayload,
         include: {
           owner: {
             select: {
@@ -672,30 +787,41 @@ export class BusinessService {
         analysisResult.authenticityScore >= 60;
 
       // Update document with OCR and AI results
+      const updateData: Prisma.DocumentUpdateInput = {
+        ocrConfidence: ocrResult.confidence,
+        aiAnalysis: {
+          documentType: analysisResult.documentType,
+          extractedData: analysisResult.extractedData,
+          confidence: analysisResult.confidence,
+          isValid: analysisResult.isValid,
+          validationErrors: analysisResult.validationErrors,
+          warnings: analysisResult.warnings,
+          authenticityScore: analysisResult.authenticityScore,
+          fraudIndicators: analysisResult.fraudIndicators,
+          securityFeatures: analysisResult.securityFeatures,
+          verificationChecklist: analysisResult.verificationChecklist,
+          authenticity: authenticityResult,
+          ocrText: ocrResult.text, // Store OCR text in aiAnalysis
+          requiresManualReview: isLowConfidence, // Flag for manual review
+        },
+        aiVerified: shouldAutoVerify,
+        aiVerifiedAt: new Date(),
+        extractedData: analysisResult.extractedData,
+      };
+
+      if (shouldAutoVerify) {
+        updateData.verified = true;
+        updateData.verifiedAt = new Date();
+      }
+
       await this.prisma.document.update({
         where: { id: documentId },
-        data: {
-          ocrConfidence: ocrResult.confidence,
-          aiAnalysis: {
-            documentType: analysisResult.documentType,
-            extractedData: analysisResult.extractedData,
-            confidence: analysisResult.confidence,
-            isValid: analysisResult.isValid,
-            validationErrors: analysisResult.validationErrors,
-            warnings: analysisResult.warnings,
-            authenticityScore: analysisResult.authenticityScore,
-            fraudIndicators: analysisResult.fraudIndicators,
-            securityFeatures: analysisResult.securityFeatures,
-            verificationChecklist: analysisResult.verificationChecklist,
-            authenticity: authenticityResult,
-            ocrText: ocrResult.text, // Store OCR text in aiAnalysis
-            requiresManualReview: isLowConfidence, // Flag for manual review
-          },
-          aiVerified: shouldAutoVerify,
-          aiVerifiedAt: new Date(),
-          extractedData: analysisResult.extractedData,
-        },
+        data: updateData,
       });
+
+      if (shouldAutoVerify) {
+        await this.calculateTrustScore(document.businessId);
+      }
 
       if (isLowConfidence) {
         this.logger.log(
@@ -796,6 +922,9 @@ export class BusinessService {
           aiVerifiedAt: true,
           ocrConfidence: true,
           extractedData: true,
+          url: true,
+          name: true,
+          type: true,
         },
       });
 
@@ -832,6 +961,9 @@ export class BusinessService {
         ocrConfidence: docWithAI.ocrConfidence,
         extractedData: docWithAI.extractedData,
         aiAnalysis: docWithAI.aiAnalysis,
+        url: (docWithAI as typeof docWithAI & { url?: string }).url,
+        name: (docWithAI as typeof docWithAI & { name?: string }).name,
+        type: (docWithAI as typeof docWithAI & { type?: unknown }).type,
       };
     } catch (error) {
       this.logger.error('Error fetching document processing status:', error);
@@ -918,6 +1050,125 @@ export class BusinessService {
     }
   }
 
+  async getDocumentAccessUrl(userId: string, documentId: string) {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          business: {
+            select: {
+              id: true,
+              ownerId: true,
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      if (document.business.ownerId !== userId) {
+        throw new ForbiddenException(
+          'You can only access documents for your own businesses',
+        );
+      }
+
+      if (!document.url) {
+        throw new BadRequestException('Document URL is not available');
+      }
+
+      return {
+        documentId: document.id,
+        url: document.url,
+        name: document.name,
+        mimeType: document.mimeType,
+      };
+    } catch (error) {
+      this.logger.error('Error generating document access URL:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to generate document access URL',
+      );
+    }
+  }
+
+  async downloadDocument(
+    userId: string,
+    documentId: string,
+  ): Promise<{ buffer: Buffer; contentType: string; filename: string }> {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          business: {
+            select: {
+              ownerId: true,
+            },
+          },
+        },
+      });
+
+      if (!document) {
+        throw new NotFoundException('Document not found');
+      }
+
+      if (document.business.ownerId !== userId) {
+        throw new ForbiddenException(
+          'You can only download documents for your own businesses',
+        );
+      }
+
+      if (!document.url) {
+        throw new BadRequestException('Document URL is not available');
+      }
+
+      const signedUrl =
+        this.cloudinaryService.generateAuthenticatedDownloadUrlFromAssetUrl(
+          document.url,
+        ) || document.url;
+
+      const response: AxiosResponse<ArrayBuffer> = await axios.get<ArrayBuffer>(
+        signedUrl,
+        {
+          responseType: 'arraybuffer',
+        },
+      );
+
+      const buffer: Buffer = Buffer.from(response.data);
+      const headers = response.headers as Record<string, string | undefined>;
+      const contentType =
+        headers['content-type'] ||
+        document.mimeType ||
+        'application/octet-stream';
+      const filename = document.name || `document-${document.id}`;
+
+      return {
+        buffer,
+        contentType,
+        filename,
+      };
+    } catch (error) {
+      this.logger.error('Error downloading document:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to download document. Please try again later.',
+      );
+    }
+  }
+
   // Payment Method Management
   async addPaymentMethod(
     userId: string,
@@ -944,12 +1195,14 @@ export class BusinessService {
           type: paymentData.type,
           number: paymentData.number,
           businessId: businessId,
+          verified: true,
         },
       });
 
       this.logger.log(
         `Payment method added: ${payment.id} for business: ${businessId}`,
       );
+      await this.calculateTrustScore(businessId);
       return payment;
     } catch (error) {
       this.logger.error('Error adding payment method:', error);
@@ -1023,6 +1276,7 @@ export class BusinessService {
       this.logger.log(
         `Payment method deleted: ${paymentId} by user: ${userId}`,
       );
+      await this.calculateTrustScore(payment.businessId);
       return { message: 'Payment method deleted successfully' };
     } catch (error) {
       this.logger.error('Error deleting payment method:', error);
@@ -1467,6 +1721,27 @@ export class BusinessService {
     try {
       const business = await this.prisma.business.findUnique({
         where: { id: businessId },
+        include: {
+          documents: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              uploadedAt: true,
+              verified: true,
+              aiVerified: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              type: true,
+              number: true,
+              addedAt: true,
+              verified: true,
+            },
+          },
+        },
       });
 
       if (!business) {
@@ -1479,60 +1754,344 @@ export class BusinessService {
         );
       }
 
+      const now = new Date();
+      const currentPeriodStart = new Date(now);
+      currentPeriodStart.setDate(now.getDate() - 30);
+      currentPeriodStart.setHours(0, 0, 0, 0);
+
+      const previousPeriodStart = new Date(currentPeriodStart);
+      previousPeriodStart.setDate(currentPeriodStart.getDate() - 30);
+
       const [
-        totalReviews,
-        averageRating,
-        totalDocuments,
-        verifiedDocuments,
-        totalPayments,
-        verifiedPayments,
-        totalFraudReports,
+        reviews,
+        previousPeriodReviewsCount,
+        previousPeriodRevenueAggregate,
         trustScore,
       ] = await Promise.all([
-        this.prisma.review.count({
+        this.prisma.review.findMany({
           where: { businessId: businessId, isActive: true },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            replies: {
+              select: {
+                id: true,
+                createdAt: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.review.count({
+          where: {
+            businessId: businessId,
+            isActive: true,
+            createdAt: {
+              gte: previousPeriodStart,
+              lt: currentPeriodStart,
+            },
+          },
         }),
         this.prisma.review.aggregate({
-          where: { businessId: businessId, isActive: true },
-          _avg: { rating: true },
+          where: {
+            businessId: businessId,
+            isActive: true,
+            createdAt: {
+              gte: previousPeriodStart,
+              lt: currentPeriodStart,
+            },
+          },
+          _sum: { amount: true },
         }),
-        this.prisma.document.count({ where: { businessId: businessId } }),
-        this.prisma.document.count({
-          where: { businessId: businessId, verified: true },
-        }),
-        this.prisma.payment.count({ where: { businessId: businessId } }),
-        this.prisma.payment.count({
-          where: { businessId: businessId, verified: true },
-        }),
-        this.prisma.fraudReport.count({ where: { businessId: businessId } }),
         this.getTrustScore(businessId),
       ]);
 
+      const totalReviews = reviews.length;
+      const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+      const averageRating =
+        totalReviews > 0 ? totalRating / totalReviews : 0;
+
+      const totalCustomers = new Set(
+        reviews.map((review) => review.userId),
+      ).size;
+
+      const respondedReviews = reviews.filter(
+        (review) => review.replies && review.replies.length > 0,
+      ).length;
+      const pendingReviews = totalReviews - respondedReviews;
+      const responseRate =
+        totalReviews > 0
+          ? Math.round((respondedReviews / totalReviews) * 100)
+          : 0;
+
+      const currentPeriodReviews = reviews.filter(
+        (review) => review.createdAt >= currentPeriodStart,
+      ).length;
+
+      let monthlyGrowth = 0;
+      if (previousPeriodReviewsCount === 0) {
+        monthlyGrowth = currentPeriodReviews > 0 ? 100 : 0;
+      } else {
+        monthlyGrowth =
+          ((currentPeriodReviews - previousPeriodReviewsCount) /
+            previousPeriodReviewsCount) *
+          100;
+      }
+
+      const currentRevenue = reviews
+        .filter((review) => review.createdAt >= currentPeriodStart)
+        .reduce((sum, review) => sum + (review.amount ?? 0), 0);
+      const previousRevenue = previousPeriodRevenueAggregate._sum.amount ?? 0;
+      let revenueGrowth = 0;
+      if (previousRevenue === 0) {
+        revenueGrowth = currentRevenue > 0 ? 100 : 0;
+      } else {
+        revenueGrowth = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+      }
+
+      const customerSatisfaction = Math.round(
+        totalReviews > 0 ? (averageRating / 5) * 100 : 0,
+      );
+
+      const totalDocuments = business.documents.length;
+      const verifiedDocuments = business.documents.filter(
+        (document) => document.verified || document.aiVerified,
+      ).length;
+      const docVerificationRate =
+        totalDocuments > 0
+          ? Math.round((verifiedDocuments / totalDocuments) * 100)
+          : 0;
+
+      const totalPayments = business.payments.length;
+      const verifiedPayments = business.payments.filter(
+        (payment) => payment.verified,
+      ).length;
+      const paymentVerificationRate =
+        totalPayments > 0
+          ? Math.round((verifiedPayments / totalPayments) * 100)
+          : 0;
+
+      const reviewTrends = Array.from({ length: 7 }).map((_, index) => {
+        const day = new Date(now);
+        day.setDate(now.getDate() - (6 - index));
+        day.setHours(0, 0, 0, 0);
+        const nextDay = new Date(day);
+        nextDay.setDate(day.getDate() + 1);
+
+        const dayReviews = reviews.filter(
+          (review) => review.createdAt >= day && review.createdAt < nextDay,
+        );
+
+        const dayAverage =
+          dayReviews.length > 0
+            ? dayReviews.reduce((sum, review) => sum + review.rating, 0) /
+              dayReviews.length
+            : 0;
+
+        return {
+          date: day.toISOString(),
+          reviews: dayReviews.length,
+          rating: Number(dayAverage.toFixed(2)),
+        };
+      });
+
+      const recentActivities: Array<{
+        id: string;
+        type:
+          | 'review'
+          | 'customer_registration'
+          | 'document_verified'
+          | 'payment_received'
+          | 'review_response'
+          | 'business_update'
+          | 'verification_status';
+        title: string;
+        description: string;
+        timestamp: Date;
+        status?: string;
+        priority?: string;
+        rating?: number;
+      }> = [];
+
+      reviews.slice(0, 5).forEach((review) => {
+        recentActivities.push({
+          id: review.id,
+          type: 'review',
+          title: `${review.user?.name ?? 'Customer'} left a ${
+            review.rating
+          }-star review`,
+          description: review.comment || 'No review comment provided.',
+          timestamp: review.createdAt,
+          status: review.replies.length > 0 ? 'responded' : 'pending',
+          priority:
+            review.rating <= 2 ? 'high' : review.rating === 3 ? 'medium' : 'low',
+          rating: review.rating,
+        });
+      });
+
+      [...business.documents]
+        .sort(
+          (a, b) =>
+            (b.uploadedAt?.getTime() || 0) - (a.uploadedAt?.getTime() || 0),
+        )
+        .slice(0, 3)
+        .forEach((document) => {
+          recentActivities.push({
+            id: document.id,
+            type: 'document_verified',
+            title: `${document.name ?? document.type} ${
+              document.verified || document.aiVerified
+                ? 'verified'
+                : 'uploaded'
+            }`,
+            description:
+              document.verified || document.aiVerified
+                ? 'Document verification completed.'
+                : 'Document uploaded and pending verification.',
+            timestamp: document.uploadedAt ?? new Date(),
+            status:
+              document.verified || document.aiVerified ? 'verified' : 'pending',
+          });
+        });
+
+      [...business.payments]
+        .sort(
+          (a, b) =>
+            (b.addedAt?.getTime() || 0) - (a.addedAt?.getTime() || 0),
+        )
+        .slice(0, 3)
+        .forEach((payment) => {
+          const maskedNumber =
+            payment.number && payment.number.length > 4
+              ? `${payment.number.slice(0, 2)}****${payment.number.slice(-2)}`
+              : payment.number;
+          recentActivities.push({
+            id: payment.id,
+            type: 'payment_received',
+            title: `${payment.type} payment method ${
+              payment.verified ? 'verified' : 'added'
+            }`,
+            description: maskedNumber
+              ? `Payment reference ${maskedNumber}`
+              : 'Payment method updated.',
+            timestamp: payment.addedAt ?? new Date(),
+            status:
+              payment.verified || payment.type === 'SEND_MONEY'
+                ? 'verified'
+                : 'pending',
+          });
+        });
+
+      const recentActivityFeed = recentActivities
+        .sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        )
+        .slice(0, 10);
+
+      const customerMap = new Map<
+        string,
+        {
+          id: string;
+          name: string;
+          email: string;
+          reviewCount: number;
+          totalRating: number;
+          lastActivity: Date;
+        }
+      >();
+
+      reviews.forEach((review) => {
+        const existing = customerMap.get(review.userId);
+        const reviewEntry = {
+          id: review.user?.id ?? review.userId,
+          name: review.user?.name ?? 'Customer',
+          email: review.user?.email ?? 'N/A',
+          reviewCount: 1,
+          totalRating: review.rating,
+          lastActivity: review.createdAt,
+        };
+
+        if (existing) {
+          existing.reviewCount += 1;
+          existing.totalRating += review.rating;
+          if (review.createdAt > existing.lastActivity) {
+            existing.lastActivity = review.createdAt;
+          }
+        } else {
+          customerMap.set(review.userId, reviewEntry);
+        }
+      });
+
+      const getCustomerGrade = (average: number): string => {
+        if (average >= 4.5) return 'A+';
+        if (average >= 4) return 'A';
+        if (average >= 3.5) return 'B';
+        if (average >= 3) return 'C';
+        if (average >= 2) return 'D';
+        return 'E';
+      };
+
+      const topCustomers = Array.from(customerMap.values())
+        .map((customer) => {
+          const average = customer.totalRating / customer.reviewCount;
+          return {
+            id: customer.id,
+            name: customer.name,
+            email: customer.email,
+            reviewCount: customer.reviewCount,
+            averageRating: Number(average.toFixed(2)),
+            lastActivity: customer.lastActivity,
+            grade: getCustomerGrade(average),
+          };
+        })
+        .sort((a, b) => b.reviewCount - a.reviewCount)
+        .slice(0, 5);
+
+      const onboardingChecklistComplete = this.isOnboardingChecklistComplete({
+        documents: business.documents ?? [],
+        payments: business.payments ?? [],
+        socialLinks: business.socialLinks,
+        name: business.name,
+        description: business.description,
+        phone: business.phone,
+        email: business.email,
+      });
+
+      const verificationStatus =
+        business.isVerified || onboardingChecklistComplete
+          ? 'verified'
+          : business.status === 'UNDER_REVIEW' || business.submittedForReview
+          ? 'pending'
+          : 'not_verified';
+
       return {
-        business: {
-          id: business.id,
-          name: business.name,
-          isVerified: business.isVerified,
-          isActive: business.isActive,
-        },
-        reviews: {
-          total: totalReviews,
-          averageRating: averageRating._avg.rating || 0,
-        },
+        totalReviews,
+        totalCustomers,
+        averageRating: Number(averageRating.toFixed(2)),
+        monthlyGrowth: Math.round(monthlyGrowth),
+        responseRate,
+        pendingReviews,
+        revenueGrowth: Math.round(revenueGrowth),
+        customerSatisfaction,
+        verificationStatus,
+        reviewTrends,
+        recentActivities: recentActivityFeed,
+        topCustomers,
         documents: {
           total: totalDocuments,
           verified: verifiedDocuments,
-          verificationRate:
-            totalDocuments > 0 ? (verifiedDocuments / totalDocuments) * 100 : 0,
+          verificationRate: docVerificationRate,
         },
         payments: {
           total: totalPayments,
           verified: verifiedPayments,
-          verificationRate:
-            totalPayments > 0 ? (verifiedPayments / totalPayments) * 100 : 0,
-        },
-        fraudReports: {
-          total: totalFraudReports,
+          verificationRate: paymentVerificationRate,
         },
         trustScore: {
           grade: trustScore.grade,
@@ -1559,6 +2118,21 @@ export class BusinessService {
     try {
       const business = await this.prisma.business.findUnique({
         where: { id: businessId },
+        include: {
+          documents: {
+            select: {
+              id: true,
+              verified: true,
+              aiVerified: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              verified: true,
+            },
+          },
+        },
       });
 
       if (!business) {
@@ -1592,6 +2166,74 @@ export class BusinessService {
       this.logger.log(
         `Business onboarding step updated: ${businessId} -> step ${step}`,
       );
+
+      if (step >= 4) {
+        const completionSnapshot = await this.prisma.business.findUnique({
+          where: { id: businessId },
+          select: {
+            name: true,
+            description: true,
+            phone: true,
+            email: true,
+            socialLinks: true,
+            documents: {
+              select: {
+                id: true,
+                verified: true,
+                aiVerified: true,
+              },
+            },
+            payments: {
+              select: {
+                id: true,
+                verified: true,
+              },
+            },
+            isVerified: true,
+            status: true,
+          },
+        });
+
+        if (
+          completionSnapshot &&
+          !completionSnapshot.isVerified &&
+          this.isOnboardingChecklistComplete({
+            documents: completionSnapshot.documents ?? [],
+            payments: completionSnapshot.payments ?? [],
+            socialLinks: completionSnapshot.socialLinks,
+            name: completionSnapshot.name,
+            description: completionSnapshot.description,
+            phone: completionSnapshot.phone,
+            email: completionSnapshot.email,
+          })
+        ) {
+          const verifiedBusiness = await this.prisma.business.update({
+            where: { id: businessId },
+            data: {
+              isVerified: true,
+              status: 'VERIFIED',
+              submittedForReview: true,
+              rejectionReason: null,
+              reviewNotes: null,
+            },
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              businessCategory: true,
+            },
+          });
+
+          await this.calculateTrustScore(businessId);
+          this.logger.log(`Business verified automatically: ${businessId}`);
+          return verifiedBusiness;
+        }
+      }
+
       return updatedBusiness;
     } catch (error) {
       this.logger.error('Error updating onboarding step:', error);
@@ -1660,13 +2302,6 @@ export class BusinessService {
       if (!processedDocument) {
         throw new BadRequestException(
           'Document is still being processed by AI. Please wait a moment and try again.',
-        );
-      }
-
-      // Check if business has at least one payment method
-      if (businessWithRelations.payments.length === 0) {
-        throw new BadRequestException(
-          'At least one payment method is required',
         );
       }
 

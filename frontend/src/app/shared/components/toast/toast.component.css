@@ -27,19 +27,19 @@
 }
 
 .toast-success {
-  border-left: 4px solid #10b981;
+  border-left: 2px solid #10b981;
 }
 
 .toast-error {
-  border-left: 4px solid #ef4444;
+  border-left: 2px solid #ef4444;
 }
 
 .toast-warning {
-  border-left: 4px solid #f59e0b;
+  border-left: 2px solid #f59e0b;
 }
 
 .toast-info {
-  border-left: 4px solid #3b82f6;
+  border-left: 2px solid #3b82f6;
 }
 
 .toast-progress {
@@ -47,7 +47,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 1px;
   background: rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }

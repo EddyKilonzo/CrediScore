@@ -14,6 +14,8 @@ import {
   ValidationPipe,
   UseInterceptors,
   UploadedFile,
+  StreamableFile,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -42,6 +44,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
+import { Response } from 'express';
 
 @ApiTags('Business Management')
 @Controller('business')
@@ -397,6 +400,77 @@ export class BusinessController {
     @Param('documentId') documentId: string,
   ) {
     return this.businessService.deleteDocument(req.user.id, documentId);
+  }
+
+  @Get('documents/:documentId/download')
+  @ApiOperation({ summary: 'Download business document' })
+  @ApiParam({ name: 'documentId', description: 'Document ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Document downloaded successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - You can only download documents for your own businesses',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async downloadDocument(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('documentId') documentId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.businessService.downloadDocument(
+      req.user.id,
+      documentId,
+    );
+
+    res.set({
+      'Content-Type': file.contentType,
+      'Content-Disposition': `inline; filename="${encodeURIComponent(
+        file.filename,
+      )}"`,
+      'Content-Length': file.buffer.length.toString(),
+    });
+
+    return new StreamableFile(file.buffer);
+  }
+
+  @Get('documents/:documentId/access-url')
+  @ApiOperation({ summary: 'Get secure access URL for a business document' })
+  @ApiParam({ name: 'documentId', description: 'Document ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Document access URL generated successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - You can only access documents for your own businesses',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getDocumentAccessUrl(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('documentId') documentId: string,
+  ) {
+    return this.businessService.getDocumentAccessUrl(
+      req.user.id,
+      documentId,
+    );
   }
 
   // Payment Method Management

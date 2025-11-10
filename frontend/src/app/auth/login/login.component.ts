@@ -15,6 +15,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   isLoading = signal(false);
+  isGoogleLoading = signal(false);
   error = signal<string | null>(null);
   showPassword = signal(false);
 
@@ -104,7 +105,16 @@ export class LoginComponent implements OnInit {
   }
 
   signInWithGoogle(): void {
-    this.authService.signInWithGoogle();
+    this.isGoogleLoading.set(true);
+    this.error.set(null);
+
+    try {
+      this.authService.signInWithGoogle();
+    } catch (error) {
+      this.isGoogleLoading.set(false);
+      this.error.set('Google sign-in failed. Please try again.');
+      console.error('Google OAuth error:', error);
+    }
   }
 
   togglePasswordVisibility(): void {

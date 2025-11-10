@@ -403,6 +403,7 @@ export class AdminService {
   ) {
     try {
       const skip = (page - 1) * limit;
+      const verificationFilter = isVerified;
 
       const where: {
         OR?: Array<{
@@ -411,7 +412,6 @@ export class AdminService {
           category?: { contains: string; mode: 'insensitive' };
           location?: { contains: string; mode: 'insensitive' };
         }>;
-        isVerified?: boolean;
         isActive?: boolean;
       } = {};
 
@@ -424,49 +424,117 @@ export class AdminService {
         ];
       }
 
-      if (isVerified !== undefined) {
-        where.isVerified = isVerified;
-      }
-
       if (isActive !== undefined) {
         where.isActive = isActive;
       }
 
-      const [businesses, total] = await Promise.all([
-        this.prisma.business.findMany({
-          where,
-          skip,
-          take: limit,
-          include: {
-            owner: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            trustScore: true,
-            _count: {
-              select: {
-                reviews: true,
-                documents: true,
-                payments: true,
-                fraudReports: true,
-              },
+      const businesses = await this.prisma.business.findMany({
+        where,
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
             },
           },
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.business.count({ where }),
-      ]);
+          trustScore: true,
+          documents: {
+            select: {
+              id: true,
+              verified: true,
+              aiVerified: true,
+              url: true,
+              type: true,
+              name: true,
+              uploadedAt: true,
+            },
+          },
+          payments: {
+            select: {
+              id: true,
+              verified: true,
+            },
+          },
+          _count: {
+            select: {
+              reviews: true,
+              documents: true,
+              payments: true,
+              fraudReports: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const processedBusinesses = businesses.map((business) => {
+        const documents = business.documents ?? [];
+        const payments = business.payments ?? [];
+        const totalDocuments =
+          business._count?.documents !== undefined
+            ? business._count.documents
+            : documents.length;
+        const verifiedDocuments = documents.filter((doc) => doc.verified).length;
+        const aiVerifiedDocuments = documents.filter((doc) => doc.aiVerified).length;
+        const totalPayments =
+          business._count?.payments !== undefined
+            ? business._count.payments
+            : payments.length;
+        const verifiedPayments = payments.filter((payment) => payment.verified).length;
+
+        const summary = {
+          totalDocuments,
+          verifiedDocuments,
+          aiVerifiedDocuments,
+          totalPayments,
+          verifiedPayments,
+          hasValidDocument: aiVerifiedDocuments > 0 || verifiedDocuments > 0,
+          canApprove: totalDocuments > 0 && totalPayments > 0,
+        };
+
+        const status = (business.status || '').toLowerCase();
+        const completedOnboarding =
+          (business.onboardingStep ?? 0) >= 4 || summary.canApprove;
+        const computedVerified =
+          business.isVerified ||
+          status === 'verified' ||
+          completedOnboarding ||
+          (summary.verifiedDocuments > 0 && summary.verifiedPayments > 0);
+
+        return {
+          ...business,
+          summary,
+          computedVerified,
+        };
+      });
+
+      const filteredBusinesses =
+        verificationFilter === undefined
+          ? processedBusinesses
+          : processedBusinesses.filter(
+              (business) => business.computedVerified === verificationFilter,
+            );
+
+      const total = filteredBusinesses.length;
+      const totalPages = Math.ceil(total / limit);
+      const currentPage =
+        totalPages === 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
+      const currentSkip = (currentPage - 1) * limit;
+      const paginatedBusinesses = filteredBusinesses.slice(
+        currentSkip,
+        currentSkip + limit,
+      );
 
       return {
-        businesses,
+        businesses: paginatedBusinesses.map(({ computedVerified, ...business }) => ({
+          ...business,
+        })),
         pagination: {
-          page,
+          page: currentPage,
           limit,
           total,
-          totalPages: Math.ceil(total / limit),
+          totalPages,
         },
       };
     } catch (error) {

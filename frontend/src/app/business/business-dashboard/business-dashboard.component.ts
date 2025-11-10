@@ -111,14 +111,14 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
       title: 'Respond to Reviews',
       description: 'Manage customer feedback',
       icon: 'uil uil-comment-dots',
-      route: '/admin/reviews',
+      route: '/business/reviews',
       color: 'bg-blue-600'
     },
     {
       title: 'Business Analytics',
       description: 'Performance insights',
       icon: 'uil uil-chart-line',
-      route: '/business/dashboard',
+      route: '/business/analytics',
       color: 'bg-blue-600'
     },
     {
@@ -131,14 +131,14 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
   ];
 
   // Chart data - will be populated from real analytics
-  reviewTrendData = [
-    { day: 'Mon', reviews: 0 },
-    { day: 'Tue', reviews: 0 },
-    { day: 'Wed', reviews: 0 },
-    { day: 'Thu', reviews: 0 },
-    { day: 'Fri', reviews: 0 },
-    { day: 'Sat', reviews: 0 },
-    { day: 'Sun', reviews: 0 }
+  reviewTrendData: Array<{ day: string; reviews: number; height: number }> = [
+    { day: 'Mon', reviews: 0, height: 8 },
+    { day: 'Tue', reviews: 0, height: 8 },
+    { day: 'Wed', reviews: 0, height: 8 },
+    { day: 'Thu', reviews: 0, height: 8 },
+    { day: 'Fri', reviews: 0, height: 8 },
+    { day: 'Sat', reviews: 0, height: 8 },
+    { day: 'Sun', reviews: 0, height: 8 }
   ];
 
   businessCategories = [
@@ -158,8 +158,6 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
     }
     
     this.loadDashboardData();
-    this.loadRecentActivities();
-    this.loadBusinessCustomers();
   }
 
   ngOnDestroy() {
@@ -215,47 +213,68 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
   }
 
   private updateDashboardStats(business: Business) {
-    // Update verification status based on real business data
     this.dashboardStats.verificationStatus = this.businessService.getVerificationStatus(business);
     
-    // Load trust score if available
     if (business.trustScore) {
-      this.dashboardStats.trustScore = this.businessService.getTrustScoreValue(business.trustScore);
-      this.dashboardStats.businessGrade = this.businessService.getBusinessGrade(business.trustScore);
+      const trustScoreValue = this.businessService.getTrustScoreValue(business.trustScore);
+      this.dashboardStats.trustScore = trustScoreValue;
+      this.dashboardStats.businessGrade = trustScoreValue > 0
+        ? this.businessService.getBusinessGrade(business.trustScore)
+        : 'N/A';
+      this.cachedReputationLevel = '';
+    } else {
+      this.dashboardStats.trustScore = 0;
+      this.dashboardStats.businessGrade = 'N/A';
     }
   }
 
   private updateDashboardStatsFromAnalytics(analytics: BusinessAnalytics) {
     this.dashboardStats.totalReviews = analytics.totalReviews;
     this.dashboardStats.totalCustomers = analytics.totalCustomers;
-    this.dashboardStats.averageRating = analytics.averageRating;
-    this.dashboardStats.monthlyGrowth = analytics.monthlyGrowth;
+    this.dashboardStats.averageRating = Number(analytics.averageRating.toFixed(2));
+    this.dashboardStats.monthlyGrowth = Math.round(analytics.monthlyGrowth);
     this.dashboardStats.responseRate = analytics.responseRate;
     this.dashboardStats.pendingReviews = analytics.pendingReviews;
-    this.dashboardStats.revenueGrowth = analytics.revenueGrowth;
+    this.dashboardStats.revenueGrowth = Math.round(analytics.revenueGrowth);
     this.dashboardStats.customerSatisfaction = analytics.customerSatisfaction;
-    
-    // Update chart data from real analytics
+    this.dashboardStats.verificationStatus = analytics.verificationStatus;
+
+    if (analytics.trustScore) {
+      const trustScoreValue = analytics.trustScore.score ?? 0;
+      this.dashboardStats.trustScore = trustScoreValue;
+      this.dashboardStats.businessGrade = trustScoreValue > 0
+        ? (analytics.trustScore.grade || this.businessService.getBusinessGrade(analytics.trustScore))
+        : 'N/A';
+      this.cachedReputationLevel = '';
+    } else {
+      this.dashboardStats.trustScore = 0;
+      this.dashboardStats.businessGrade = 'N/A';
+    }
+
     if (analytics.reviewTrends && analytics.reviewTrends.length > 0) {
+      const maxReviews = Math.max(...analytics.reviewTrends.map(trend => trend.reviews), 1);
       this.reviewTrendData = analytics.reviewTrends.map(trend => ({
         day: new Date(trend.date).toLocaleDateString('en-US', { weekday: 'short' }),
-        reviews: trend.reviews
+        reviews: trend.reviews,
+        height: Math.max(8, Math.round((trend.reviews / maxReviews) * 80)),
       }));
+    } else {
+      this.reviewTrendData = [
+        { day: 'Mon', reviews: 0, height: 8 },
+        { day: 'Tue', reviews: 0, height: 8 },
+        { day: 'Wed', reviews: 0, height: 8 },
+        { day: 'Thu', reviews: 0, height: 8 },
+        { day: 'Fri', reviews: 0, height: 8 },
+        { day: 'Sat', reviews: 0, height: 8 },
+        { day: 'Sun', reviews: 0, height: 8 },
+      ];
     }
-  }
 
-  private loadRecentActivities() {
-    if (!this.businessAnalytics) return;
-    
-    // Use real data from analytics
-    this.recentActivities = this.businessAnalytics.recentActivities || [];
-  }
-
-  private loadBusinessCustomers() {
-    if (!this.businessAnalytics) return;
-    
-    // Use real data from analytics
-    this.businessCustomers = this.businessAnalytics.topCustomers || [];
+    this.recentActivities = analytics.recentActivities || [];
+    this.businessCustomers = (analytics.topCustomers || []).map(customer => ({
+      ...customer,
+      lastActivity: new Date(customer.lastActivity),
+    }));
   }
 
   getTimeframeLabel(): string {
@@ -306,9 +325,47 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  getStatusLabel(activity: RecentActivity): string | undefined {
+    if (!activity.status) {
+      return undefined;
+    }
+
+    const title = activity.title?.toLowerCase() ?? '';
+    const description = activity.description?.toLowerCase() ?? '';
+    const status = activity.status.toLowerCase();
+
+    const isPaymentMethodActivity =
+      (activity.type === 'business_update' || activity.type === 'payment_received') &&
+      (title.includes('payment method') ||
+        description.includes('payment method') ||
+        description.includes('payment reference'));
+
+    if (isPaymentMethodActivity) {
+      const isSendMoney =
+        title.includes('send money') ||
+        title.includes('send_money') ||
+        description.includes('send money') ||
+        description.includes('send_money');
+
+      if (isSendMoney) {
+        return 'verified';
+      }
+
+      if (status === 'pending') {
+        return 'added';
+      }
+
+      return status;
+    }
+
+    return status;
+  }
+
   getStatusColor(status?: string): string {
-    switch (status) {
+    const normalized = status?.toLowerCase();
+    switch (normalized) {
       case 'verified': return 'text-green-500 bg-green-100';
+      case 'added': return 'text-green-500 bg-green-100';
       case 'pending': return 'text-yellow-500 bg-yellow-100';
       case 'rejected': return 'text-red-500 bg-red-100';
       case 'responded': return 'text-blue-500 bg-blue-100';
@@ -335,9 +392,10 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  formatTimeAgo(date: Date): string {
+  formatTimeAgo(date: Date | string): string {
+    const targetDate = new Date(date);
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const diffInSeconds = Math.floor((now.getTime() - targetDate.getTime()) / 1000);
     
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
@@ -364,34 +422,72 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
 
   getBusinessReputationLevel(): string {
     const user = this.currentUser();
-    if (!user || user.role !== 'business') return '';
-    
-    // Mock reputation calculation - in real app, this would come from backend
-    const mockReputation = Math.floor(Math.random() * 100) + 1;
-    
-    if (mockReputation >= 90) return 'Elite Business';
-    if (mockReputation >= 75) return 'Trusted Partner';
-    if (mockReputation >= 60) return 'Verified Business';
-    if (mockReputation >= 40) return 'Active Business';
-    return 'New Business';
+    if (!user || (user.role !== 'business' && user.role !== 'BUSINESS_OWNER')) {
+      return '';
+    }
+
+    if (this.cachedReputationLevel) {
+      return this.cachedReputationLevel;
+    }
+
+    const grade = this.dashboardStats.businessGrade;
+    let reputation: string;
+    switch (grade) {
+      case 'A+':
+      case 'A':
+        reputation = 'Elite Business';
+        break;
+      case 'B+':
+      case 'B':
+        reputation = 'Trusted Partner';
+        break;
+      case 'C+':
+      case 'C':
+        reputation = 'Verified Business';
+        break;
+      case 'D+':
+      case 'D':
+        reputation = 'Active Business';
+        break;
+      case 'N/A':
+        reputation = 'New Business';
+        break;
+      case 'E':
+      case 'F':
+      default:
+        reputation = 'Developing Business';
+        break;
+    }
+
+    this.cachedReputationLevel = reputation;
+    return reputation;
   }
 
   getReputationColor(): string {
-    const user = this.currentUser();
-    if (!user || user.role !== 'business') return '';
-    
-    const mockReputation = Math.floor(Math.random() * 100) + 1;
-    
-    if (mockReputation >= 90) return 'text-blue-600';
-    if (mockReputation >= 75) return 'text-blue-600';
-    if (mockReputation >= 60) return 'text-green-600';
-    if (mockReputation >= 40) return 'text-yellow-600';
-    return 'text-gray-600';
+    const grade = this.dashboardStats.businessGrade;
+    switch (grade) {
+      case 'A+':
+      case 'A':
+        return 'text-green-600';
+      case 'B+':
+      case 'B':
+        return 'text-blue-600';
+      case 'C+':
+      case 'C':
+        return 'text-yellow-600';
+      case 'D+':
+      case 'D':
+        return 'text-orange-600';
+      case 'E':
+      case 'F':
+      default:
+        return 'text-gray-600';
+    }
   }
 
   getVerificationStatusImage(): string {
     switch (this.dashboardStats.verificationStatus) {
-      case 'verified': return '/images/verified.png';
+      case 'verified': return '/images/verfied.png';
       case 'pending': return '/images/pending.png';
       case 'not_verified': return '/images/not.png';
       default: return '/images/not.png';
@@ -402,22 +498,17 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
     switch (this.dashboardStats.verificationStatus) {
       case 'verified':
         return {
-          title: 'Verified Business',
-          description: 'All documents approved',
+          title: 'Verified',
+          description: 'Business is verified',
           color: 'text-green-600'
         };
       case 'pending':
         return {
           title: 'Verification Pending',
-          description: 'Documents under review',
+          description: 'Awaiting verification',
           color: 'text-orange-600'
         };
       case 'not_verified':
-        return {
-          title: 'Not Verified',
-          description: 'Complete verification process',
-          color: 'text-red-600'
-        };
       default:
         return {
           title: 'Not Verified',

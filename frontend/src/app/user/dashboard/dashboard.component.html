@@ -68,22 +68,6 @@
         </div>
       </div>
 
-      <!-- Trust Score Card (for business owners) -->
-      <div *ngIf="currentUser()?.role !== 'user'" class="dashboard-card stats-card hover-lift">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="card-label">Trust Score</p>
-            <p class="card-number trust-score" [class]="getTrustScoreColor(dashboardStats.trustScore)">
-              {{ dashboardStats.trustScore }}%
-            </p>
-            <p class="card-subtitle">Overall credibility</p>
-          </div>
-          <div class="card-icon">
-            <i class="uil uil-shield-check text-xl"></i>
-          </div>
-        </div>
-      </div>
-
       <!-- Customer Reputation Card -->
       <div *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'" class="dashboard-card stats-card hover-lift">
         <div class="flex items-center justify-between">
@@ -204,14 +188,9 @@
                     Verified
                   </span>
                 </div>
-                <div class="flex items-center space-x-2">
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white"
-                        [class]="getTrustGradeColor(business.grade)">
-                    {{ business.grade }}
-                  </span>
-                  <span class="text-sm font-medium" [class]="getTrustScoreColor(business.trustScore)">
-                    {{ business.trustScore }}%
-                  </span>
+                <div class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white"
+                     [class]="getTrustGradeColor(business.grade)">
+                  {{ business.grade }}
                 </div>
               </div>
               <div class="flex items-center justify-between text-sm text-gray-500">

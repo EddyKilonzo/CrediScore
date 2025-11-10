@@ -9,7 +9,6 @@ interface DashboardStats {
   totalReviews: number;
   totalBusinesses: number;
   averageRating: number;
-  trustScore: number;
   monthlyGrowth: number;
   verifiedBusinesses: number;
 }
@@ -29,7 +28,6 @@ interface BusinessCard {
   id: string;
   name: string;
   category: string;
-  trustScore: number;
   grade: string;
   reviewCount: number;
   averageRating: number;
@@ -66,7 +64,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     totalReviews: 0,
     totalBusinesses: 0,
     averageRating: 0,
-    trustScore: 0,
     monthlyGrowth: 0,
     verifiedBusinesses: 0
   };
@@ -200,7 +197,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         totalReviews: 0, // Will be loaded from reviews service
         totalBusinesses: 0, // Will be loaded from business service
         averageRating: 4.5, // Will be calculated from reviews
-        trustScore: Math.min(95, Math.max(60, 75)), // Default trust score
         monthlyGrowth: 12,
         verifiedBusinesses: user.isVerified ? 1 : 0
       };

@@ -56,6 +56,7 @@ model Business {
   longitude          Float?
   logo               String?
   catchphrase        String?
+  socialLinks        Json?
   isVerified         Boolean           @default(false)
   isActive           Boolean           @default(true)
   businessCategoryId String?

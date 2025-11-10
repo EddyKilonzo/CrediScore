@@ -24,6 +24,8 @@ export interface Business {
   status?: BusinessStatus;
   onboardingStep?: number;
   submittedForReview?: boolean;
+  location?: string;
+  socialLinks?: SocialLinks;
   documents?: Document[];
   payments?: PaymentMethod[];
 }
@@ -63,9 +65,18 @@ export interface Document {
 
 export interface PaymentMethod {
   id: string;
-  type: 'TILL' | 'PAYBILL' | 'BANK';
+  type: 'TILL' | 'PAYBILL' | 'SEND_MONEY' | 'BANK';
   number: string;
   verified: boolean;
+}
+
+export interface SocialLinks {
+  facebook?: string;
+  twitter?: string;
+  instagram?: string;
+  linkedin?: string;
+  youtube?: string;
+  tiktok?: string;
 }
 
 export interface OnboardingProgress {
@@ -325,6 +336,27 @@ export class BusinessService {
       );
   }
 
+  downloadDocument(documentId: string): Observable<Blob> {
+    return this.http.get(`${this.API_URL}/business/documents/${documentId}/download`, {
+      responseType: 'blob'
+    }).pipe(
+      catchError(error => {
+        this.error.set('Failed to download document');
+        throw error;
+      })
+    );
+  }
+
+  getDocumentAccessUrl(documentId: string): Observable<{ url: string }> {
+    return this.http.get<{ url: string }>(`${this.API_URL}/business/documents/${documentId}/access-url`)
+      .pipe(
+        catchError(error => {
+          this.error.set('Failed to get document access URL');
+          throw error;
+        })
+      );
+  }
+
   addPaymentMethod(businessId: string, payment: { type: string; number: string }): Observable<PaymentMethod> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -338,6 +370,53 @@ export class BusinessService {
           this.error.set('Failed to add payment method');
           this.isLoading.set(false);
           throw error;
+        })
+      );
+  }
+
+  deletePaymentMethod(paymentId: string): Observable<{ message: string }> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    return this.http
+      .delete<{ message: string }>(
+        `${this.API_URL}/business/payment-methods/${paymentId}`,
+      )
+      .pipe(
+        tap(() => {
+          this.isLoading.set(false);
+        }),
+        catchError((error) => {
+          this.error.set('Failed to remove payment method');
+          this.isLoading.set(false);
+          throw error;
+        }),
+      );
+  }
+
+  updateBusinessSocialLinks(businessId: string, socialLinks: SocialLinks): Observable<Business> {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    return this.http.patch<Business>(`${this.API_URL}/business/${businessId}`, { socialLinks })
+      .pipe(
+        tap(business => {
+          this.currentBusiness.set(business);
+          this.isLoading.set(false);
+        }),
+        catchError(error => {
+          this.error.set('Failed to update social links');
+          this.isLoading.set(false);
+          throw error;
+        })
+      );
+  }
+
+  updateOnboardingStep(businessId: string, step: number): Observable<Business> {
+    return this.http.patch<Business>(`${this.API_URL}/business/${businessId}/onboarding-step`, { step })
+      .pipe(
+        tap(business => {
+          this.currentBusiness.set(business);
         })
       );
   }

@@ -4,9 +4,11 @@ import {
   IsNumber,
   IsEnum,
   IsBoolean,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { PaymentType } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export enum BusinessStatus {
   PENDING = 'PENDING',
@@ -27,6 +29,41 @@ export enum DocumentType {
   ID_COPY = 'ID_COPY',
   PROOF_OF_ADDRESS = 'PROOF_OF_ADDRESS',
   OTHER = 'OTHER',
+}
+
+export class SocialLinksDto {
+  @ApiProperty({ description: 'Facebook page URL', required: false })
+  @IsOptional()
+  @IsString()
+  facebook?: string;
+
+  @ApiProperty({
+    description: 'Twitter/X profile URL or handle',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  twitter?: string;
+
+  @ApiProperty({ description: 'Instagram profile URL or handle', required: false })
+  @IsOptional()
+  @IsString()
+  instagram?: string;
+
+  @ApiProperty({ description: 'LinkedIn company page URL', required: false })
+  @IsOptional()
+  @IsString()
+  linkedin?: string;
+
+  @ApiProperty({ description: 'YouTube channel URL', required: false })
+  @IsOptional()
+  @IsString()
+  youtube?: string;
+
+  @ApiProperty({ description: 'TikTok profile URL or handle', required: false })
+  @IsOptional()
+  @IsString()
+  tiktok?: string;
 }
 
 export class CreateBusinessDto {
@@ -83,6 +120,16 @@ export class CreateBusinessDto {
   @IsOptional()
   @IsString()
   catchphrase?: string;
+
+  @ApiProperty({
+    description: 'Business social media links',
+    required: false,
+    type: () => SocialLinksDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SocialLinksDto)
+  socialLinks?: SocialLinksDto;
 
   @ApiProperty({ description: 'Business category ID', required: false })
   @IsOptional()
@@ -145,6 +192,16 @@ export class UpdateBusinessDto {
   @IsOptional()
   @IsString()
   catchphrase?: string;
+
+  @ApiProperty({
+    description: 'Business social media links',
+    required: false,
+    type: () => SocialLinksDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SocialLinksDto)
+  socialLinks?: SocialLinksDto;
 
   @ApiProperty({ description: 'Business category ID', required: false })
   @IsOptional()

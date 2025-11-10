@@ -14,7 +14,8 @@
       </p>
       <!-- Business Reputation Level -->
       <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="mt-4">
-        <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
+        <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300"
+              [ngClass]="getReputationColor()">
           <i class="uil uil-building mr-2"></i>
           {{ getBusinessReputationLevel() }}
         </span>
@@ -104,195 +105,189 @@
         </div>
       </div>
 
-
-      <!-- Charts and Analytics -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Review Trend Chart - Larger -->
-        <div class="dashboard-card lg:col-span-2 fade-in-card">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Review Trends</h2>
-            <p class="text-sm text-gray-600">{{ getTimeframeLabel() }}</p>
-          </div>
-          <div class="p-6">
-            <div class="h-80 flex items-end justify-between space-x-2">
-              <div *ngFor="let data of reviewTrendData" class="flex flex-col items-center">
-                <div class="rounded-t w-10 mb-2 transition-all duration-300 hover:opacity-80"
-                     [style]="'background-color: #3E6A8A; height: ' + (data.reviews * 10) + 'px;'"></div>
-                <span class="text-xs text-gray-600">{{ data.day }}</span>
-                <span class="text-xs font-medium text-gray-900">{{ data.reviews }}</span>
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2.6fr)_minmax(0,1fr)] gap-8 items-start">
+        <div class="space-y-8 order-2 xl:order-none">
+          <!-- Charts and Analytics -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="dashboard-card lg:col-span-2 fade-in-card">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Review Trends</h2>
+                <p class="text-sm text-gray-600">{{ getTimeframeLabel() }}</p>
               </div>
-            </div>
-            <div class="mt-4 text-center">
-              <p class="text-sm text-gray-600">Total Reviews: {{ getTotalReviews() }}</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Business Insights - Smaller -->
-        <div class="dashboard-card fade-in-card">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Business Insights</h2>
-            <p class="text-sm text-gray-600">Key metrics</p>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <i class="fas fa-star text-sm mr-3" style="color: #3E6A8A;"></i>
-                  <span class="text-sm font-medium text-gray-900">Avg Rating</span>
-                </div>
-                <span class="text-sm font-bold" style="color: #3E6A8A;">{{ dashboardStats.averageRating }}/5</span>
-              </div>
-              
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <i class="fas fa-clock text-sm mr-3" style="color: #3E6A8A;"></i>
-                  <span class="text-sm font-medium text-gray-900">Response Time</span>
-                </div>
-                <span class="text-sm font-bold" style="color: #3E6A8A;">2.4h</span>
-              </div>
-              
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <i class="fas fa-trending-up text-sm mr-3" style="color: #3E6A8A;"></i>
-                  <span class="text-sm font-medium text-gray-900">Growth Rate</span>
-                </div>
-                <span class="text-sm font-bold" style="color: #3E6A8A;">+{{ dashboardStats.monthlyGrowth }}%</span>
-              </div>
-              
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <i class="fas fa-shield-alt text-sm mr-3" style="color: #3E6A8A;"></i>
-                  <span class="text-sm font-medium text-gray-900">Trust Score</span>
-                </div>
-                <span class="text-sm font-bold" style="color: #3E6A8A;">{{ dashboardStats.trustScore }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Activity and Customers -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        <!-- Recent Activity -->
-        <div class="dashboard-card fade-in-card">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Recent Activity</h2>
-            <p class="text-sm text-gray-600">Latest business activities & reviews</p>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div *ngFor="let activity of recentActivities" class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                <div class="flex-shrink-0">
-                  <div class="w-8 h-8 rounded-full flex items-center justify-center"
-                       [class]="getActivityColor(activity.type) + ' bg-opacity-20'">
-                    <i [class]="getActivityIcon(activity.type) + ' text-sm'"></i>
+              <div class="p-6">
+                <div class="h-80 flex items-end justify-between space-x-2">
+                  <div *ngFor="let data of reviewTrendData" class="flex flex-col items-center">
+                    <div class="rounded-t w-10 mb-2 transition-all duration-300 hover:opacity-80"
+                         [style]="'background-color: #3E6A8A; height: ' + data.height + 'px;' "></div>
+                    <span class="text-xs text-gray-600">{{ data.day }}</span>
+                    <span class="text-xs font-medium text-gray-900">{{ data.reviews }}</span>
                   </div>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between">
-                    <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
-                    <span *ngIf="activity.priority" 
-                          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                          [class]="getPriorityColor(activity.priority)">
-                      {{ activity.priority }}
-                    </span>
+                <div class="mt-4 text-center">
+                  <p class="text-sm text-gray-600">Total Reviews: {{ getTotalReviews() }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-card fade-in-card">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Business Insights</h2>
+                <p class="text-sm text-gray-600">Key metrics</p>
+              </div>
+              <div class="p-6">
+                <div class="space-y-4">
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                      <i class="fas fa-star text-sm mr-3" style="color: #3E6A8A;"></i>
+                      <span class="text-sm font-medium text-gray-900">Avg Rating</span>
+                    </div>
+                    <span class="text-sm font-bold" style="color: #3E6A8A;">{{ dashboardStats.averageRating }}/5</span>
                   </div>
-                  <p class="text-sm text-gray-600">{{ activity.description }}</p>
-                  <div class="flex items-center mt-1 space-x-2">
-                    <span class="text-xs text-gray-500">{{ formatTimeAgo(activity.timestamp) }}</span>
-                    <span *ngIf="activity.status" 
-                          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                          [class]="getStatusColor(activity.status)">
-                      {{ activity.status }}
-                    </span>
-                    <span *ngIf="activity.rating" class="text-xs text-yellow-600">
-                      <i class="fas fa-star"></i> {{ activity.rating }}/5
-                    </span>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                      <i class="fas fa-clock text-sm mr-3" style="color: #3E6A8A;"></i>
+                      <span class="text-sm font-medium text-gray-900">Response Time</span>
+                    </div>
+                    <span class="text-sm font-bold" style="color: #3E6A8A;">2.4h</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                      <i class="fas fa-trending-up text-sm mr-3" style="color: #3E6A8A;"></i>
+                      <span class="text-sm font-medium text-gray-900">Growth Rate</span>
+                    </div>
+                    <span class="text-sm font-bold" style="color: #3E6A8A;">+{{ dashboardStats.monthlyGrowth }}%</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                      <i class="fas fa-shield-alt text-sm mr-3" style="color: #3E6A8A;"></i>
+                      <span class="text-sm font-medium text-gray-900">Trust Score</span>
+                    </div>
+                    <span class="text-sm font-bold" style="color: #3E6A8A;">{{ dashboardStats.trustScore }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Customer Engagement -->
-        <div class="dashboard-card fade-in-card">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Customer Engagement</h2>
-            <p class="text-sm text-gray-600">Top performing customers</p>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div *ngFor="let customer of businessCustomers" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div class="flex items-center space-x-3">
-                  <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span class="text-sm font-medium text-gray-700">{{ customer.name.charAt(0) }}</span>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="dashboard-card fade-in-card">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                <p class="text-sm text-gray-600">Latest business activities & reviews</p>
+              </div>
+              <div class="p-6">
+                <div class="space-y-4">
+                  <div *ngFor="let activity of recentActivities" class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="flex-shrink-0">
+                      <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                           [class]="getActivityColor(activity.type) + ' bg-opacity-20'">
+                        <i [class]="getActivityIcon(activity.type) + ' text-sm'"></i>
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center justify-between">
+                        <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                        <span *ngIf="activity.priority" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                              [class]="getPriorityColor(activity.priority)">
+                          {{ activity.priority }}
+                        </span>
+                      </div>
+                      <p class="text-sm text-gray-600">{{ activity.description }}</p>
+                      <div class="flex items-center mt-1 space-x-2">
+                        <span class="text-xs text-gray-500">{{ formatTimeAgo(activity.timestamp) }}</span>
+                        <span *ngIf="getStatusLabel(activity) as status" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                              [class]="getStatusColor(status)">
+                          {{ status }}
+                        </span>
+                        <span *ngIf="activity.rating" class="text-xs text-yellow-600">
+                          <i class="fas fa-star"></i> {{ activity.rating }}/5
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900">{{ customer.name }}</p>
-                    <p class="text-xs text-gray-600">{{ customer.email }}</p>
+                  <div *ngIf="recentActivities.length === 0" class="text-center py-12">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-[#E8EEF3] rounded-full flex items-center justify-center">
+                      <i class="fas fa-bell text-2xl text-[#2D5A87]"></i>
+                    </div>
+                    <p class="text-sm text-gray-600">No recent activity yet. Keep engaging with your customers!</p>
                   </div>
-                </div>
-                <div class="text-right">
-                  <div class="flex items-center space-x-2 mb-1">
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                          [class]="getTrustGradeColor(customer.grade) + ' text-white'">
-                      {{ customer.grade }}
-                    </span>
-                    <span class="text-xs font-bold" style="color: #3E6A8A;">{{ customer.reviewCount }} reviews</span>
-                  </div>
-                  <div class="flex items-center space-x-1">
-                    <i class="fas fa-star text-xs text-yellow-500"></i>
-                    <span class="text-xs font-medium text-gray-600">{{ customer.averageRating }}</span>
-                  </div>
-                  <p class="text-xs text-gray-500">{{ formatTimeAgo(customer.lastActivity) }}</p>
                 </div>
               </div>
-              
-              <!-- Customer Engagement Summary -->
-              <div class="mt-4 pt-4 border-t border-gray-200">
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="text-center">
-                    <p class="text-lg font-bold" style="color: #3E6A8A;">{{ dashboardStats.totalCustomers }}</p>
-                    <p class="text-xs text-gray-600">Total Customers</p>
+            </div>
+            <div class="dashboard-card fade-in-card">
+              <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Customer Engagement</h2>
+                <p class="text-sm text-gray-600">Top performing customers</p>
+              </div>
+              <div class="p-6">
+                <div class="space-y-4">
+                  <div *ngFor="let customer of businessCustomers" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-medium text-gray-700">{{ customer.name.charAt(0) }}</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900">{{ customer.name }}</p>
+                        <p class="text-xs text-gray-600">{{ customer.email }}</p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <div class="flex items-center space-x-2 mb-1">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                              [class]="getTrustGradeColor(customer.grade) + ' text-white'">
+                          {{ customer.grade }}
+                        </span>
+                        <span class="text-xs font-bold" style="color: #3E6A8A;">{{ customer.reviewCount }} reviews</span>
+                      </div>
+                      <div class="flex items-center space-x-1">
+                        <i class="fas fa-star text-xs text-yellow-500"></i>
+                        <span class="text-xs font-medium text-gray-600">{{ customer.averageRating }}</span>
+                      </div>
+                      <p class="text-xs text-gray-500">{{ formatTimeAgo(customer.lastActivity) }}</p>
+                    </div>
                   </div>
-                  <div class="text-center">
-                    <p class="text-lg font-bold" style="color: #3E6A8A;">{{ dashboardStats.averageRating }}</p>
-                    <p class="text-xs text-gray-600">Avg Rating</p>
+                  <div class="mt-4 pt-4 border-t border-gray-200">
+                    <div class="grid grid-cols-2 gap-4">
+                      <div class="text-center">
+                        <p class="text-lg font-bold" style="color: #3E6A8A;">{{ dashboardStats.totalCustomers }}</p>
+                        <p class="text-xs text-gray-600">Total Customers</p>
+                      </div>
+                      <div class="text-center">
+                        <p class="text-lg font-bold" style="color: #3E6A8A;">{{ dashboardStats.averageRating }}</p>
+                        <p class="text-xs text-gray-600">Avg Rating</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Quick Actions -->
-      <div class="dashboard-card fade-in-card">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
-          <p class="text-sm text-gray-600">Manage your business</p>
-        </div>
-        
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <a *ngFor="let action of quickActions" 
-               [routerLink]="action.route"
-               class="quick-action-card flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer">
-              <div class="flex-shrink-0">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: #3E6A8A;">
-                  <i [class]="action.icon + ' text-white text-lg'"></i>
-                </div>
+        <aside class="order-1 xl:order-none xl:self-start xl:sticky xl:top-24 space-y-6">
+          <div class="dashboard-card fade-in-card">
+            <div class="px-6 py-4 border-b border-gray-200">
+              <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+              <p class="text-sm text-gray-600">Manage your business</p>
+            </div>
+            <div class="p-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
+                <a *ngFor="let action of quickActions" [routerLink]="action.route"
+                   class="quick-action-card flex items-center p-4 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer">
+                  <div class="flex-shrink-0">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: #3E6A8A;">
+                      <i [class]="action.icon + ' text-white text-lg'"></i>
+                    </div>
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="text-sm font-medium text-gray-900">{{ action.title }}</h3>
+                    <p class="text-xs text-gray-600">{{ action.description }}</p>
+                  </div>
+                </a>
               </div>
-              <div class="ml-3">
-                <h3 class="text-sm font-medium text-gray-900">{{ action.title }}</h3>
-                <p class="text-xs text-gray-600">{{ action.description }}</p>
-              </div>
-            </a>
+            </div>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   </div>

@@ -84,6 +84,7 @@ export interface Business {
   location: string;
   latitude?: number;
   longitude?: number;
+  logo?: string;
   isVerified: boolean;
   isActive: boolean;
   status: string;
@@ -95,6 +96,23 @@ export interface Business {
   rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
+  summary?: {
+    totalDocuments?: number;
+    verifiedDocuments?: number;
+    aiVerifiedDocuments?: number;
+    totalPayments?: number;
+    verifiedPayments?: number;
+    hasValidDocument?: boolean;
+    canApprove?: boolean;
+  };
+  documents?: Array<{
+    id: string;
+    verified: boolean;
+    aiVerified?: boolean;
+    type?: string;
+    url?: string;
+    name?: string;
+  }>;
   owner: {
     id: string;
     name: string;
@@ -136,6 +154,17 @@ export interface FraudReport {
 
 export interface PaginatedResponse<T> {
   data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface BackendBusinessResponse<T> {
+  businesses?: T[];
+  data?: T[];
   pagination: {
     page: number;
     limit: number;
@@ -377,8 +406,12 @@ export class AdminService {
     if (isVerified !== undefined) params = params.set('isVerified', isVerified.toString());
     if (isActive !== undefined) params = params.set('isActive', isActive.toString());
 
-    return this.http.get<PaginatedResponse<Business>>(`${this.API_URL}/admin/businesses`, { params })
+    return this.http.get<BackendBusinessResponse<Business>>(`${this.API_URL}/admin/businesses`, { params })
       .pipe(
+        map(response => ({
+          data: response.data ?? response.businesses ?? [],
+          pagination: response.pagination
+        })),
         catchError(error => this.handleError(error))
       );
   }

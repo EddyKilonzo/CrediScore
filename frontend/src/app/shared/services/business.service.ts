@@ -108,16 +108,28 @@ export interface Payment {
 
 export interface BusinessAnalytics {
   totalReviews: number;
-  averageRating: number;
   totalCustomers: number;
+  averageRating: number;
   monthlyGrowth: number;
   responseRate: number;
   pendingReviews: number;
   revenueGrowth: number;
   customerSatisfaction: number;
+  verificationStatus: 'verified' | 'pending' | 'not_verified';
   reviewTrends: ReviewTrend[];
   recentActivities: RecentActivity[];
   topCustomers: CustomerEngagement[];
+  documents: {
+    total: number;
+    verified: number;
+    verificationRate: number;
+  };
+  payments: {
+    total: number;
+    verified: number;
+    verificationRate: number;
+  };
+  trustScore: TrustScore;
 }
 
 export interface ReviewTrend {
@@ -202,7 +214,22 @@ export class BusinessService {
 
   // Get business analytics
   getBusinessAnalytics(businessId: string): Observable<BusinessAnalytics> {
-    return this.http.get<BusinessAnalytics>(`${this.apiUrl}/${businessId}/analytics`);
+    return this.http.get<BusinessAnalytics>(`${this.apiUrl}/${businessId}/analytics`).pipe(
+      map((analytics) => ({
+        ...analytics,
+        recentActivities: (analytics.recentActivities || []).map((activity) => ({
+          ...activity,
+          timestamp: new Date(activity.timestamp),
+        })),
+        topCustomers: (analytics.topCustomers || []).map((customer) => ({
+          ...customer,
+          lastActivity: new Date(customer.lastActivity),
+        })),
+        reviewTrends: (analytics.reviewTrends || []).map((trend) => ({
+          ...trend,
+        })),
+      })),
+    );
   }
 
   // Get business trust score
@@ -287,7 +314,29 @@ export class BusinessService {
   // Helper method to get business grade from trust score
   getBusinessGrade(trustScore?: TrustScore): string {
     if (!trustScore) return 'N/A';
-    return trustScore.grade || 'N/A';
+
+    if (trustScore.grade) {
+      return trustScore.grade.toUpperCase();
+    }
+
+    const score = typeof trustScore.score === 'number' ? trustScore.score : null;
+    if (score === null) {
+      return 'N/A';
+    }
+
+    if (score >= 90) return 'A+';
+    if (score >= 85) return 'A';
+    if (score >= 80) return 'A-';
+    if (score >= 75) return 'B+';
+    if (score >= 70) return 'B';
+    if (score >= 65) return 'B-';
+    if (score >= 60) return 'C+';
+    if (score >= 55) return 'C';
+    if (score >= 50) return 'C-';
+    if (score >= 45) return 'D+';
+    if (score >= 40) return 'D';
+    if (score >= 35) return 'D-';
+    return 'E';
   }
 
   // Helper method to get trust score value

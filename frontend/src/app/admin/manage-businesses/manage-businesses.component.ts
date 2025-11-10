@@ -6,6 +6,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { AdminService, Business, PaginatedResponse } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
+type BusinessDocument = NonNullable<Business['documents']>[number];
+
 // Component for managing businesses - Admin Business Management
 @Component({
   selector: 'app-manage-businesses',
@@ -314,11 +316,11 @@ export class ManageBusinessesComponent implements OnInit {
   }
 
   getVerifiedBusinesses(): number {
-    return this.getBusinesses().filter(business => business.isVerified).length;
+    return this.getBusinesses().filter(business => this.isBusinessVerified(business)).length;
   }
 
   getPendingBusinesses(): number {
-    return this.getBusinesses().filter(business => !business.isVerified).length;
+    return this.getBusinesses().filter(business => !this.isBusinessVerified(business)).length;
   }
 
   getThisMonthBusinesses(): number {
@@ -335,5 +337,101 @@ export class ManageBusinessesComponent implements OnInit {
     const total = this.getTotalBusinesses();
     if (total === 0) return 0;
     return Math.round((this.getVerifiedBusinesses() / total) * 100);
+  }
+
+  isBusinessVerified(business: Business): boolean {
+    const hasVerifiedDocs = (business.summary?.verifiedDocuments ?? 0) > 0;
+    const hasVerifiedPayments = (business.summary?.verifiedPayments ?? 0) > 0;
+    const completedOnboarding = (business.onboardingStep ?? 0) >= 4 || business.summary?.canApprove === true;
+
+    if (business.isVerified || (business.status || '').toLowerCase() === 'verified') {
+      return true;
+    }
+
+    if (completedOnboarding) {
+      return true;
+    }
+
+    return hasVerifiedDocs && hasVerifiedPayments;
+  }
+
+  openWebsite(event: Event, website?: string): void {
+    event.stopPropagation();
+    if (!website) {
+      return;
+    }
+
+    const hasProtocol = /^(http|https):\/\//i.test(website);
+    const url = hasProtocol ? website : `https://${website}`;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  getVerifiedDocumentCount(business: Business): number {
+    if (business.summary?.verifiedDocuments !== undefined) {
+      return business.summary.verifiedDocuments;
+    }
+
+    const businessWithVerifiedCount = (business as Business & { verifiedDocumentsCount?: number }).verifiedDocumentsCount;
+    if (typeof businessWithVerifiedCount === 'number') {
+      return businessWithVerifiedCount;
+    }
+
+    if (Array.isArray(business.documents) && business.documents.length > 0) {
+      return business.documents.filter(doc => doc.verified).length;
+    }
+
+    if (business.isVerified) {
+      return business._count?.documents ?? 0;
+    }
+
+    return 0;
+  }
+
+  getWebsiteLabel(business: Business): string {
+    if (!business.website) {
+      return '';
+    }
+
+    try {
+      const hasProtocol = /^(http|https):\/\//i.test(business.website);
+      const url = new URL(hasProtocol ? business.website : `https://${business.website}`);
+      return url.hostname.replace(/^www\./, '');
+    } catch {
+      return business.website;
+    }
+  }
+
+  getVerifiedDocumentsLabel(business: Business): string {
+    const count = this.getVerifiedDocumentCount(business);
+    const suffix = count === 1 ? 'Verified Document' : 'Verified Documents';
+    return `${count} ${suffix}`;
+  }
+
+  getVerificationBadgeSrc(business: Business): { src: string; alt: string } {
+    if (this.isBusinessVerified(business)) {
+      return { src: '/images/verfied.png', alt: 'Verified badge' };
+    }
+
+    return { src: '/images/pending.png', alt: 'Pending verification badge' };
+  }
+
+  getFirstVerifiedDocument(business: Business): BusinessDocument | null {
+    if (Array.isArray(business.documents)) {
+      const verifiedDocument = business.documents.find(document => document.verified && !!document.url);
+      return verifiedDocument ?? null;
+    }
+
+    return null;
+  }
+
+  openVerifiedDocument(event: Event, url?: string): void {
+    event.stopPropagation();
+    if (!url) {
+      return;
+    }
+
+    const hasProtocol = /^(http|https):\/\//i.test(url);
+    const resolvedUrl = hasProtocol ? url : `${window.location.origin}${url.startsWith('/') ? url : `/${url}`}`;
+    window.open(resolvedUrl, '_blank', 'noopener');
   }
 }

@@ -50,7 +50,7 @@ import { ToastService, Toast } from './toast.service';
       backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
       animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      border-left: 4px solid;
+      border-left: 2px solid;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
     
@@ -75,7 +75,8 @@ import { ToastService, Toast } from './toast.service';
     }
     
     .timer-bar {
-      @apply absolute bottom-0 left-0 right-0 h-1 bg-gray-600/30 rounded-b-xl overflow-hidden;
+      @apply absolute bottom-0 left-0 right-0 bg-gray-600/30 rounded-b-xl overflow-hidden;
+      height: 2px;
     }
     
     .timer-fill {
