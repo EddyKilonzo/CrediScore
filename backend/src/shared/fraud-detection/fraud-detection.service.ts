@@ -76,10 +76,6 @@ export class FraudDetectionService {
     request: FraudDetectionRequest,
   ): Promise<FraudDetectionResponse> {
     try {
-      this.logger.log(
-        `Detecting fraud for review: ${request.review_text.substring(0, 50)}...`,
-      );
-
       const response = await axios.post(
         `${this.fraudDetectionUrl}/detect-fraud`,
         request,
@@ -92,10 +88,6 @@ export class FraudDetectionService {
       );
 
       const data = response.data as FraudDetectionResponse;
-      this.logger.log(
-        `Fraud detection completed. Risk score: ${data.riskScore}, Fraudulent: ${data.isFraudulent}`,
-      );
-
       return data;
     } catch (error) {
       this.logger.error('Fraud detection service error:', error);
@@ -173,7 +165,6 @@ export class FraudDetectionService {
     userId: string,
   ): Promise<ReviewPatternAnalysis> {
     try {
-      this.logger.log(`Analyzing review patterns for user: ${userId}`);
 
       // Get user's reviews from the last 30 days
       const thirtyDaysAgo = new Date();
@@ -297,7 +288,6 @@ export class FraudDetectionService {
    */
   async checkUserForFlagging(userId: string): Promise<UserFlaggingResult> {
     try {
-      this.logger.log(`Checking user for flagging: ${userId}`);
 
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
@@ -405,11 +395,6 @@ export class FraudDetectionService {
         },
       });
 
-      this.logger.warn(
-        `User ${userId} flagged with reason: ${flagReason} - Credibility reduced by ${reduction} points (${riskLevel} risk)`,
-      );
-
-      this.logger.log(`User ${userId} flagged successfully`);
     } catch (error) {
       this.logger.error('Error flagging user:', error);
       throw error;
@@ -483,8 +468,6 @@ export class FraudDetectionService {
    */
   async unflagUser(userId: string, adminId: string): Promise<void> {
     try {
-      this.logger.log(`Unflagging user: ${userId} by admin: ${adminId}`);
-
       // TODO: Uncomment after Prisma client regeneration with new fields
       // await this.prisma.user.update({
       //   where: { id: userId },
@@ -495,15 +478,8 @@ export class FraudDetectionService {
       //   },
       // });
 
-      // Temporary: Just log the action
-      this.logger.log(`User ${userId} would be unflagged by admin: ${adminId}`);
-
       // Simulate async operation
       await new Promise((resolve) => setTimeout(resolve, 0));
-
-      this.logger.warn(`User ${userId} unflagged by admin: ${adminId}`);
-
-      this.logger.log(`User ${userId} unflagged successfully`);
     } catch (error) {
       this.logger.error('Error unflagging user:', error);
       throw error;
@@ -589,9 +565,6 @@ export class FraudDetectionService {
       // TODO: Implement progressive penalties after Prisma client regeneration
       // For now, apply a general penalty for spam behavior
       await this.reduceCredibilityForSpam(userId, 'MEDIUM');
-      this.logger.warn(
-        `User ${userId} penalized for spam behavior - MEDIUM penalty applied`,
-      );
     } catch (error) {
       this.logger.error('Error checking and penalizing spam users:', error);
     }
@@ -623,9 +596,6 @@ export class FraudDetectionService {
         },
       });
 
-      this.logger.warn(
-        `User ${userId} credibility reduced by ${reduction} points due to ${severity} spam behavior`,
-      );
     } catch (error) {
       this.logger.error('Error reducing user credibility:', error);
       throw error;

@@ -145,6 +145,22 @@ export class BusinessController {
     return this.businessService.createBusiness(req.user.id, businessData);
   }
 
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get business dashboard data for current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Business dashboard data retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getBusinessDashboard(
+    @Request() req: { user: UserWithoutPassword },
+  ) {
+    return this.businessService.getBusinessDashboard(req.user.id);
+  }
+
   @Get('my-businesses')
   @ApiOperation({ summary: 'Get current user businesses' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -731,6 +747,7 @@ export class BusinessController {
 export class PublicBusinessController {
   constructor(private readonly businessService: BusinessService) {}
 
+  @Public()
   @Get('search')
   @ApiOperation({ summary: 'Search businesses (Public)' })
   @ApiQuery({ name: 'query', required: false, type: String })
@@ -748,6 +765,7 @@ export class PublicBusinessController {
     return this.businessService.searchBusinesses(searchParams);
   }
 
+  @Public()
   @Get('featured')
   @ApiOperation({ summary: 'Get featured businesses (Public)' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -759,6 +777,7 @@ export class PublicBusinessController {
     return this.businessService.getFeaturedBusinesses(limit);
   }
 
+  @Public()
   @Get('category/:categoryId')
   @ApiOperation({ summary: 'Get businesses by category (Public)' })
   @ApiParam({ name: 'categoryId', description: 'Category ID' })
@@ -780,6 +799,7 @@ export class PublicBusinessController {
     );
   }
 
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get business by ID (Public)' })
   @ApiParam({ name: 'id', description: 'Business ID' })

@@ -10,6 +10,7 @@ import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { UpdateBusinessStatusDto } from '../business/dto/business.dto';
 import { MailerService } from '../shared/mailer/mailer.service';
+import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
 
 export interface AdminUserStats {
   totalUsers: number;
@@ -54,6 +55,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailerService: MailerService,
+    private readonly fraudDetectionService: FraudDetectionService,
   ) {}
 
   // User Management
@@ -1457,6 +1459,152 @@ export class AdminService {
     }
   }
 
+  // Helper method to recalculate business trust score
+  private async recalculateBusinessTrustScore(businessId: string): Promise<void> {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          reviews: {
+            where: { isActive: true },
+          },
+          documents: {
+            where: { verified: true },
+          },
+          payments: {
+            where: { verified: true },
+          },
+          fraudReports: {
+            where: { status: 'RESOLVED' },
+          },
+        },
+      });
+
+      if (!business) {
+        return;
+      }
+
+      let score = 0;
+      const factors: Record<string, any> = {};
+
+      // Base score from verification status
+      if (business.isVerified) {
+        score += 20;
+        factors.verified = 20;
+      }
+
+      // Score from reviews (weighted by verification status)
+      if (business.reviews.length > 0) {
+        const verifiedReviews = business.reviews.filter(
+          (review) => review.isVerified,
+        );
+        const unverifiedReviews = business.reviews.filter(
+          (review) => !review.isVerified,
+        );
+
+        // Calculate weighted average rating
+        let weightedRatingSum = 0;
+        let totalWeight = 0;
+
+        // Verified reviews get 2x weight
+        verifiedReviews.forEach((review) => {
+          weightedRatingSum += review.rating * 2;
+          totalWeight += 2;
+        });
+
+        // Unverified reviews get 1x weight
+        unverifiedReviews.forEach((review) => {
+          weightedRatingSum += review.rating;
+          totalWeight += 1;
+        });
+
+        const avgRating = totalWeight > 0 ? weightedRatingSum / totalWeight : 0;
+        const reviewScore = Math.min(avgRating * 8, 40); // Max 40 points from reviews
+
+        // Bonus points for verified reviews
+        const verificationBonus = Math.min(verifiedReviews.length * 2, 10); // Max 10 bonus points
+        const totalReviewScore = reviewScore + verificationBonus;
+
+        score += totalReviewScore;
+        factors.reviews = {
+          averageRating: avgRating,
+          totalReviews: business.reviews.length,
+          verifiedReviews: verifiedReviews.length,
+          unverifiedReviews: unverifiedReviews.length,
+          verificationRate:
+            business.reviews.length > 0
+              ? (verifiedReviews.length / business.reviews.length) * 100
+              : 0,
+          baseScore: reviewScore,
+          verificationBonus: verificationBonus,
+          totalScore: totalReviewScore,
+        };
+      }
+
+      // Score from verified documents
+      const documentScore = Math.min(business.documents.length * 5, 20); // Max 20 points from documents
+      score += documentScore;
+      factors.documents = {
+        count: business.documents.length,
+        score: documentScore,
+      };
+
+      // Score from verified payment methods
+      const paymentScore = Math.min(business.payments.length * 3, 15); // Max 15 points from payments
+      score += paymentScore;
+      factors.payments = {
+        count: business.payments.length,
+        score: paymentScore,
+      };
+
+      // Penalty for fraud reports
+      const fraudPenalty = Math.min(business.fraudReports.length * 5, 25); // Max 25 point penalty
+      score -= fraudPenalty;
+      factors.fraudReports = {
+        count: business.fraudReports.length,
+        penalty: fraudPenalty,
+      };
+
+      // Ensure score is between 0 and 100
+      score = Math.max(0, Math.min(100, score));
+
+      // Determine grade
+      let grade: string;
+      if (score >= 90) grade = 'A+';
+      else if (score >= 80) grade = 'A';
+      else if (score >= 70) grade = 'B';
+      else if (score >= 60) grade = 'C';
+      else if (score >= 50) grade = 'D';
+      else grade = 'F';
+
+      // Update or create trust score
+      await this.prisma.trustScore.upsert({
+        where: { businessId: businessId },
+        update: {
+          grade,
+          score: Math.round(score),
+          factors,
+        },
+        create: {
+          businessId: businessId,
+          grade,
+          score: Math.round(score),
+          factors,
+        },
+      });
+
+      this.logger.log(
+        `Trust score recalculated for business: ${businessId} - Grade: ${grade}, Score: ${Math.round(score)}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error recalculating trust score for business ${businessId}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
   // Review Management
   async getPendingReviews(page: number = 1, limit: number = 10) {
     try {
@@ -1477,6 +1625,9 @@ export class AdminService {
                 name: true,
                 email: true,
                 reputation: true,
+                isFlagged: true,
+                flagCount: true,
+                flagReason: true,
               },
             },
             business: {
@@ -1501,12 +1652,36 @@ export class AdminService {
         reviews: reviews.map((review) => ({
           id: review.id,
           reviewer: review.user.name,
-          business: review.business.name,
+          businessName: review.business.name,
           rating: review.rating,
           content: review.comment,
           date: review.createdAt,
           status: review.isVerified ? 'approved' : 'pending',
-          user: review.user,
+          credibility: review.credibility,
+          validationResult: review.validationResult,
+          receiptData: review.receiptData,
+          receiptUrl: review.receiptUrl,
+          amount: review.amount,
+          reviewDate: review.reviewDate,
+          user: {
+            ...review.user,
+            isFlagged: review.user.isFlagged || false,
+            flagCount: review.user.flagCount || 0,
+            flagReason: review.user.flagReason || null,
+          },
+          business: review.business,
+          // AI Analysis flags
+          aiFlags: {
+            lowCredibility: review.credibility < 50,
+            hasFraudDetection: review.validationResult && 
+              typeof review.validationResult === 'object' &&
+              'fraudDetection' in review.validationResult,
+            needsManualReview: review.credibility < 30 || 
+              (review.validationResult && 
+               typeof review.validationResult === 'object' &&
+               'fraudDetection' in review.validationResult &&
+               (review.validationResult as any).fraudDetection?.isFraudulent),
+          },
         })),
         pagination: {
           page,
@@ -1528,6 +1703,9 @@ export class AdminService {
     try {
       const review = await this.prisma.review.findUnique({
         where: { id: reviewId },
+        include: {
+          business: true,
+        },
       });
 
       if (!review) {
@@ -1541,6 +1719,25 @@ export class AdminService {
           updatedAt: new Date(),
         },
       });
+
+      // Recalculate business trust score after review approval
+      // Use setTimeout to ensure the review update transaction is committed first
+      setTimeout(async () => {
+        try {
+          await this.recalculateBusinessTrustScore(review.businessId);
+          this.logger.log(
+            `Trust score recalculated successfully for business ${review.businessId} after review approval`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to recalculate trust score for business ${review.businessId}:`,
+            error,
+          );
+          if (error instanceof Error) {
+            this.logger.error('Error stack:', error.stack);
+          }
+        }
+      }, 100); // Small delay to ensure transaction is committed
 
       this.logger.log(`Review approved: ${reviewId} by admin: ${adminUserId}`);
       return { message: 'Review approved successfully' };
@@ -1594,22 +1791,61 @@ export class AdminService {
     try {
       const review = await this.prisma.review.findUnique({
         where: { id: reviewId },
+        include: {
+          user: true,
+        },
       });
 
       if (!review) {
         throw new NotFoundException('Review not found');
       }
 
+      // Update validation result with flagging information
+      const currentValidationResult = review.validationResult || {};
+      const updatedValidationResult = {
+        ...(typeof currentValidationResult === 'object' 
+          ? currentValidationResult 
+          : {}),
+        flagged: true,
+        flaggedBy: adminUserId,
+        flaggedAt: new Date().toISOString(),
+        flagReason: reason || 'Flagged by admin for review',
+        previousStatus: {
+          isVerified: review.isVerified,
+          credibility: review.credibility,
+        },
+      };
+
       // For flagging, we'll keep the review active but mark it as needing attention
-      // We could add a flagged field to the Review model in the future
+      // Update the review with flagging information in validationResult
       await this.prisma.review.update({
         where: { id: reviewId },
         data: {
+          isVerified: false, // Unverify when flagged
+          validationResult: updatedValidationResult as any,
           updatedAt: new Date(),
         },
       });
 
-      this.logger.log(`Review flagged: ${reviewId} by admin: ${adminUserId}`);
+      // Also check if the user should be flagged based on this review
+      try {
+        const flaggingResult = await this.fraudDetectionService.checkUserForFlagging(
+          review.userId,
+        );
+
+        if (flaggingResult.shouldFlag) {
+          await this.fraudDetectionService.flagUser(
+            review.userId,
+            flaggingResult.flagReason || `Review flagged: ${reason || 'Suspicious review'}`,
+            flaggingResult.riskLevel,
+          );
+        }
+      } catch (error) {
+        this.logger.error('Error checking user for flagging after review flag:', error);
+        // Don't fail the review flagging if user flagging check fails
+      }
+
+      this.logger.log(`Review flagged: ${reviewId} by admin: ${adminUserId}. Reason: ${reason || 'No reason provided'}`);
       return { message: 'Review flagged successfully' };
     } catch (error) {
       this.logger.error('Error flagging review:', error);

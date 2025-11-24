@@ -20,6 +20,7 @@ import {
   SubmitForReviewDto,
   VerifyDocumentDto,
   SocialLinksDto,
+  BusinessStatus,
 } from './dto/business.dto';
 import { DocumentType } from '@prisma/client';
 import axios, { AxiosResponse } from 'axios';
@@ -241,6 +242,12 @@ export class BusinessService {
 
   async getBusinessById(businessId: string, userId?: string) {
     try {
+      // Validate business ID format (UUID)
+      if (!businessId || typeof businessId !== 'string' || businessId.trim().length === 0) {
+        this.logger.warn(`Invalid business ID provided: ${businessId}`);
+        throw new BadRequestException('Invalid business ID format');
+      }
+
       const business = await this.prisma.business.findUnique({
         where: { id: businessId },
         include: {
@@ -285,7 +292,38 @@ export class BusinessService {
       });
 
       if (!business) {
+        this.logger.warn(`Business not found with ID: ${businessId}${userId ? ` (requested by user: ${userId})` : ''}`);
         throw new NotFoundException('Business not found');
+      }
+
+      // Check and update business verification status if it has verified documents
+      const hasVerifiedDocument = business.documents.some(
+        (doc) => doc.verified || doc.aiVerified,
+      );
+
+      if (
+        hasVerifiedDocument &&
+        business.status !== BusinessStatus.VERIFIED &&
+        !business.isVerified
+      ) {
+        // Update business status to VERIFIED
+        await this.prisma.business.update({
+          where: { id: businessId },
+          data: {
+            status: BusinessStatus.VERIFIED,
+            isVerified: true,
+            reviewedAt: new Date(),
+          },
+        });
+
+        // Update the business object to reflect the change
+        business.status = BusinessStatus.VERIFIED;
+        business.isVerified = true;
+        business.reviewedAt = new Date();
+
+        this.logger.log(
+          `Business ${businessId} automatically verified based on existing verified documents`,
+        );
       }
 
       // Check if user is the owner for additional data
@@ -300,8 +338,11 @@ export class BusinessService {
 
       return business;
     } catch (error) {
-      this.logger.error('Error fetching business:', error);
-      if (error instanceof NotFoundException) {
+      this.logger.error(`Error fetching business with ID: ${businessId}${userId ? ` (requested by user: ${userId})` : ''}:`, error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException('Failed to fetch business');
@@ -821,6 +862,33 @@ export class BusinessService {
 
       if (shouldAutoVerify) {
         await this.calculateTrustScore(document.businessId);
+        
+        // Check if business should be marked as VERIFIED
+        // Get all documents for this business
+        const businessDocuments = await this.prisma.document.findMany({
+          where: { businessId: document.businessId },
+        });
+
+        // Check if business has at least one verified document (AI or manual)
+        const hasVerifiedDocument = businessDocuments.some(
+          (doc) => doc.verified || doc.aiVerified,
+        );
+
+        if (hasVerifiedDocument) {
+          // Update business status to VERIFIED and isVerified to true
+          await this.prisma.business.update({
+            where: { id: document.businessId },
+            data: {
+              status: BusinessStatus.VERIFIED,
+              isVerified: true,
+              reviewedAt: new Date(),
+            },
+          });
+
+          this.logger.log(
+            `Business ${document.businessId} automatically verified after AI document verification`,
+          );
+        }
       }
 
       if (isLowConfidence) {
@@ -1716,6 +1784,63 @@ export class BusinessService {
     }
   }
 
+  // Business Dashboard
+  async getBusinessDashboard(userId: string) {
+    try {
+      // Get user's businesses
+      const businesses = await this.prisma.business.findMany({
+        where: { ownerId: userId },
+        include: {
+          trustScore: true,
+          businessCategory: true,
+          _count: {
+            select: {
+              reviews: { where: { isActive: true } },
+              documents: true,
+              payments: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1, // Get the first/most recent business
+      });
+
+      if (businesses.length === 0) {
+        // Return empty dashboard if no businesses
+        return {
+          business: null,
+          analytics: null,
+          message: 'No business found. Please create a business first.',
+        };
+      }
+
+      const business = businesses[0];
+
+      // Get analytics for the first business
+      const analytics = await this.getBusinessAnalytics(userId, business.id);
+
+      return {
+        business: {
+          id: business.id,
+          name: business.name,
+          description: business.description,
+          status: business.status,
+          isVerified: business.isVerified,
+          trustScore: business.trustScore,
+          businessCategory: business.businessCategory,
+          _count: business._count,
+        },
+        analytics,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching business dashboard:', error);
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch business dashboard');
+    }
+  }
+
   // Business Analytics
   async getBusinessAnalytics(userId: string, businessId: string) {
     try {
@@ -2368,6 +2493,36 @@ export class BusinessService {
           verificationNotes: verifyData.notes,
         },
       });
+
+      // If document is verified, check if business should be marked as VERIFIED
+      if (verifyData.verified) {
+        // Get all documents for this business
+        const businessDocuments = await this.prisma.document.findMany({
+          where: { businessId: document.businessId },
+        });
+
+        // Check if business has at least one verified document (AI or manual)
+        const hasVerifiedDocument = businessDocuments.some(
+          (doc) => doc.verified || doc.aiVerified,
+        );
+
+        if (hasVerifiedDocument) {
+          // Update business status to VERIFIED and isVerified to true
+          await this.prisma.business.update({
+            where: { id: document.businessId },
+            data: {
+              status: BusinessStatus.VERIFIED,
+              isVerified: true,
+              reviewedAt: new Date(),
+              reviewedBy: adminUserId,
+            },
+          });
+
+          this.logger.log(
+            `Business ${document.businessId} verified after manual document verification`,
+          );
+        }
+      }
 
       this.logger.log(
         `Document verification updated: ${documentId} -> ${verifyData.verified}`,

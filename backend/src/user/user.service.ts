@@ -145,6 +145,158 @@ export class UserService {
     }
   }
 
+  async getUserDashboard(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          _count: {
+            select: {
+              reviews: true,
+              businesses: true,
+            },
+          },
+          reviews: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            include: {
+              business: {
+                select: {
+                  id: true,
+                  name: true,
+                  category: true,
+                  isVerified: true,
+                },
+              },
+            },
+          },
+          businesses: {
+            include: {
+              trustScore: true,
+              businessCategory: true,
+              _count: {
+                select: {
+                  reviews: true,
+                  documents: true,
+                  payments: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Calculate average rating from user reviews
+      const totalReviews = user._count.reviews;
+      const averageRating =
+        totalReviews > 0
+          ? Number(
+              (
+                user.reviews.reduce((sum, review) => sum + review.rating, 0) /
+                totalReviews
+              ).toFixed(2),
+            )
+          : 0;
+
+      const userBusinesses = user.businesses || [];
+      const verifiedBusinesses = userBusinesses.filter((b) => b.isVerified);
+
+      // Map reviews to recent activity format
+      const recentActivity = user.reviews.map((review) => ({
+        id: review.id,
+        type: 'review',
+        title: `Reviewed ${review.business?.name ?? 'a business'}`,
+        description: review.comment ?? '',
+        timestamp: review.createdAt,
+        status: review.isVerified ? 'verified' : 'pending',
+        businessName: review.business?.name ?? undefined,
+        rating: review.rating,
+      }));
+
+      // Map businesses for dashboard cards
+      const businessCards = await Promise.all(
+        userBusinesses.map(async (business) => {
+          const businessReviews = await this.prisma.review.findMany({
+            where: { businessId: business.id },
+            select: {
+              rating: true,
+            },
+          });
+
+          const reviewCount = businessReviews.length;
+          const averageRating =
+            reviewCount > 0
+              ? Number(
+                  (
+                    businessReviews.reduce(
+                      (sum, review) => sum + review.rating,
+                      0,
+                    ) / reviewCount
+                  ).toFixed(2),
+                )
+              : 0;
+
+          const lastActivity =
+            await this.prisma.review.findFirst({
+              where: { businessId: business.id },
+              orderBy: { createdAt: 'desc' },
+              select: { createdAt: true },
+            }) ??
+            (await this.prisma.payment.findFirst({
+              where: { businessId: business.id },
+              orderBy: { addedAt: 'desc' },
+              select: { addedAt: true },
+            })) ??
+            null;
+
+          return {
+            id: business.id,
+            name: business.name,
+            category:
+              business.businessCategory?.name ??
+              business.category ??
+              'Uncategorized',
+            grade: business.trustScore?.grade ?? 'N/A',
+            reviewCount,
+            averageRating,
+            isVerified: business.isVerified,
+            lastActivity:
+              (lastActivity && 'createdAt' in lastActivity
+                ? lastActivity.createdAt
+                : null) ??
+              (lastActivity && 'addedAt' in lastActivity
+                ? lastActivity.addedAt
+                : null) ??
+              business.updatedAt,
+          };
+        }),
+      );
+
+      return {
+        stats: {
+          totalReviews,
+          totalBusinesses: user._count.businesses,
+          averageRating,
+          verifiedBusinesses: verifiedBusinesses.length,
+          monthlyGrowth: 0,
+        },
+        recentActivity,
+        businesses: businessCards,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching user dashboard data:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch dashboard data');
+    }
+  }
+
   async getRoleBasedProfileData(userId: string) {
     try {
       const user = await this.prisma.user.findUnique({
@@ -1087,15 +1239,12 @@ export class UserService {
 
       let isVerified = false;
       let receiptData: unknown = null;
+      let validationResult: unknown = null;
       let credibility = 0;
 
       // If receipt is provided, validate it with AI
       if (reviewData.receiptUrl) {
         try {
-          this.logger.log(
-            `Validating receipt for review: ${reviewData.receiptUrl}`,
-          );
-
           const businessDetails = {
             name: business.name,
             address: business.location || undefined,
@@ -1112,17 +1261,26 @@ export class UserService {
 
           isVerified = validation.isValid;
           receiptData = validation.extractedData;
-
-          this.logger.log(
-            `Receipt validation result: ${isVerified ? 'VERIFIED' : 'NOT VERIFIED'}`,
-          );
+          validationResult = {
+            isValid: validation.isValid,
+            confidence: validation.confidence,
+            matchedFields: validation.matchedFields,
+            validationNotes: validation.validationNotes,
+            extractedData: validation.extractedData,
+          };
         } catch (error) {
           this.logger.error('Error validating receipt:', error);
           // Continue with unverified review if validation fails
+          validationResult = {
+            isValid: false,
+            confidence: 0,
+            error: error instanceof Error ? error.message : 'Validation failed',
+          };
         }
       }
 
       // Generate AI credibility score and fraud detection
+      let fraudDetectionResult: unknown = null;
       try {
         // First, check for fraud using dedicated fraud detection service
         const fraudDetection = await this.fraudDetectionService.analyzeReview(
@@ -1137,10 +1295,14 @@ export class UserService {
           },
         );
 
+        fraudDetectionResult = {
+          isFraudulent: fraudDetection.isFraudulent,
+          confidence: fraudDetection.confidence,
+          fraudReasons: fraudDetection.fraudReasons,
+          riskScore: fraudDetection.riskScore,
+        };
+
         if (fraudDetection.isFraudulent) {
-          this.logger.warn(
-            `Fraudulent review detected: ${fraudDetection.fraudReasons.join(', ')}`,
-          );
           // Mark as unverified if fraud is detected
           isVerified = false;
           credibility = Math.max(0, 100 - fraudDetection.riskScore);
@@ -1160,6 +1322,29 @@ export class UserService {
         );
         // Use basic credibility calculation as fallback
         credibility = isVerified ? 80 : 50;
+        fraudDetectionResult = {
+          isFraudulent: false,
+          confidence: 0,
+          fraudReasons: ['Analysis failed'],
+          riskScore: 0,
+          error: error instanceof Error ? error.message : 'Analysis failed',
+        };
+      }
+
+      // Store comprehensive validation result including fraud detection
+      if (validationResult && typeof validationResult === 'object') {
+        validationResult = {
+          ...(validationResult as Record<string, unknown>),
+          fraudDetection: fraudDetectionResult,
+          credibility,
+          analyzedAt: new Date().toISOString(),
+        };
+      } else {
+        validationResult = {
+          fraudDetection: fraudDetectionResult,
+          credibility,
+          analyzedAt: new Date().toISOString(),
+        };
       }
 
       const review = await this.prisma.review.create({
@@ -1168,16 +1353,16 @@ export class UserService {
           rating: reviewData.rating,
           comment: reviewData.comment,
           userId: userId,
-          // receiptUrl: reviewData.receiptUrl || null, // Field not in schema
-
-          // receiptData: receiptData, // Field not in schema
-          // validationResult: validationResult, // Field not in schema
-          // amount: reviewData.amount, // Field not in schema
-          // reviewDate: reviewData.reviewDate
-          //   ? new Date(reviewData.reviewDate)
-          //   : null, // Field not in schema
+          receiptUrl: reviewData.receiptUrl || null,
+          receiptData: receiptData as any,
+          validationResult: validationResult as any,
+          amount: reviewData.amount || null,
+          reviewDate: reviewData.reviewDate
+            ? new Date(reviewData.reviewDate)
+            : null,
           isVerified: isVerified,
           credibility: credibility,
+          isActive: true, // Explicitly set to ensure review is active
         },
         include: {
           user: {
@@ -1207,15 +1392,11 @@ export class UserService {
         //     },
         //   },
         // });
-        this.logger.log(
-          `User ${userId} unverified review count would be incremented`,
-        );
 
         // Check and penalize for spam behavior
         try {
           await this.fraudDetectionService.checkAndPenalizeSpamUsers(userId);
         } catch (error) {
-          this.logger.error('Error checking spam penalties:', error);
           // Don't fail the review creation if spam check fails
         }
       }
@@ -1226,10 +1407,6 @@ export class UserService {
           await this.fraudDetectionService.checkUserForFlagging(userId);
 
         if (flaggingResult.shouldFlag) {
-          this.logger.warn(
-            `User ${userId} flagged for suspicious behavior: ${flaggingResult.flagReason}`,
-          );
-
           await this.fraudDetectionService.flagUser(
             userId,
             flaggingResult.flagReason,
@@ -1237,11 +1414,32 @@ export class UserService {
           );
         }
       } catch (error) {
-        this.logger.error('Error checking user for flagging:', error);
         // Don't fail the review creation if flagging check fails
       }
 
-      this.logger.log(`Review created: ${review.id} by user: ${userId}`);
+      // Recalculate business trust score after review creation (async, non-blocking)
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          const reviewCheck = await this.prisma.review.findUnique({
+            where: { id: review.id },
+            select: { id: true },
+          });
+          
+          if (reviewCheck) {
+            await this.recalculateBusinessTrustScoreInternal(review.businessId);
+          }
+        } catch (error) {
+          // Silently retry once
+          setTimeout(async () => {
+            try {
+              await this.recalculateBusinessTrustScoreInternal(review.businessId);
+            } catch (retryError) {
+              // Fail silently - trust score will be recalculated on next business view
+            }
+          }, 1000);
+        }
+      })();
       return review;
     } catch (error) {
       this.logger.error('Error creating review:', error);
@@ -1891,6 +2089,187 @@ export class UserService {
         throw error;
       }
       throw new InternalServerErrorException('Failed to fetch review replies');
+    }
+  }
+
+  // Public method to manually recalculate business trust score
+  async recalculateBusinessTrustScore(businessId: string): Promise<{ message: string; trustScore: any }> {
+    await this.recalculateBusinessTrustScoreInternal(businessId);
+    const trustScore = await this.prisma.trustScore.findUnique({
+      where: { businessId },
+    });
+    return {
+      message: 'Trust score recalculated successfully',
+      trustScore,
+    };
+  }
+
+  // Internal helper method to recalculate business trust score
+  private async recalculateBusinessTrustScoreInternal(businessId: string): Promise<void> {
+    try {
+      
+      // First, check all reviews (including inactive) to see what we have
+      const allReviews = await this.prisma.review.findMany({
+        where: { businessId },
+        select: { id: true, isActive: true, isVerified: true, rating: true },
+      });
+      
+      this.logger.debug(
+        `All reviews for business ${businessId}: ${allReviews.length} total (${allReviews.filter(r => r.isActive).length} active, ${allReviews.filter(r => !r.isActive).length} inactive)`,
+      );
+      
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+        include: {
+          reviews: {
+            where: { isActive: true },
+          },
+          documents: {
+            where: { verified: true },
+          },
+          payments: {
+            where: { verified: true },
+          },
+          fraudReports: {
+            where: { status: 'RESOLVED' },
+          },
+        },
+      });
+
+      if (!business) {
+        return;
+      }
+
+      let score = 0;
+      const factors: Record<string, any> = {};
+
+      // Base score from verification status
+      if (business.isVerified) {
+        score += 20;
+        factors.verified = 20;
+      }
+
+      // Score from reviews (weighted by verification status)
+      if (business.reviews.length > 0) {
+        const verifiedReviews = business.reviews.filter(
+          (review) => review.isVerified,
+        );
+        const unverifiedReviews = business.reviews.filter(
+          (review) => !review.isVerified,
+        );
+
+        // Calculate weighted average rating
+        let weightedRatingSum = 0;
+        let totalWeight = 0;
+
+        // Verified reviews get 2x weight
+        verifiedReviews.forEach((review) => {
+          weightedRatingSum += review.rating * 2;
+          totalWeight += 2;
+        });
+
+        // Unverified reviews get 1x weight
+        unverifiedReviews.forEach((review) => {
+          weightedRatingSum += review.rating;
+          totalWeight += 1;
+        });
+
+        const avgRating = totalWeight > 0 ? weightedRatingSum / totalWeight : 0;
+        const reviewScore = Math.min(avgRating * 8, 40); // Max 40 points from reviews
+
+        // Bonus points for verified reviews
+        const verificationBonus = Math.min(verifiedReviews.length * 2, 10); // Max 10 bonus points
+        const totalReviewScore = reviewScore + verificationBonus;
+
+        score += totalReviewScore;
+        factors.reviews = {
+          averageRating: avgRating,
+          totalReviews: business.reviews.length,
+          verifiedReviews: verifiedReviews.length,
+          unverifiedReviews: unverifiedReviews.length,
+          verificationRate:
+            business.reviews.length > 0
+              ? (verifiedReviews.length / business.reviews.length) * 100
+              : 0,
+          baseScore: reviewScore,
+          verificationBonus: verificationBonus,
+          totalScore: totalReviewScore,
+        };
+
+      } else {
+        factors.reviews = {
+          averageRating: 0,
+          totalReviews: 0,
+          verifiedReviews: 0,
+          unverifiedReviews: 0,
+          verificationRate: 0,
+          baseScore: 0,
+          verificationBonus: 0,
+          totalScore: 0,
+        };
+      }
+
+      // Score from verified documents
+      const documentScore = Math.min(business.documents.length * 5, 20); // Max 20 points from documents
+      score += documentScore;
+      factors.documents = {
+        count: business.documents.length,
+        score: documentScore,
+      };
+
+      // Score from verified payment methods
+      const paymentScore = Math.min(business.payments.length * 3, 15); // Max 15 points from payments
+      score += paymentScore;
+      factors.payments = {
+        count: business.payments.length,
+        score: paymentScore,
+      };
+
+      // Penalty for fraud reports
+      const fraudPenalty = Math.min(business.fraudReports.length * 5, 25); // Max 25 point penalty
+      score -= fraudPenalty;
+      factors.fraudReports = {
+        count: business.fraudReports.length,
+        penalty: fraudPenalty,
+      };
+
+      // Ensure score is between 0 and 100
+      score = Math.max(0, Math.min(100, score));
+
+      // Determine grade
+      let grade: string;
+      if (score >= 90) grade = 'A+';
+      else if (score >= 80) grade = 'A';
+      else if (score >= 70) grade = 'B';
+      else if (score >= 60) grade = 'C';
+      else if (score >= 50) grade = 'D';
+      else grade = 'F';
+
+      // Update or create trust score
+      const savedTrustScore = await this.prisma.trustScore.upsert({
+        where: { businessId: businessId },
+        update: {
+          grade,
+          score: Math.round(score),
+          factors,
+        },
+        create: {
+          businessId: businessId,
+          grade,
+          score: Math.round(score),
+          factors,
+        },
+      });
+
+    } catch (error) {
+      this.logger.error(
+        `Error recalculating trust score for business ${businessId}:`,
+        error,
+      );
+      if (error instanceof Error) {
+        this.logger.error('Error stack:', error.stack);
+      }
+      throw error;
     }
   }
 

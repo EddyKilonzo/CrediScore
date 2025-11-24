@@ -13,7 +13,12 @@ import {
   HttpCode,
   HttpStatus,
   ValidationPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -36,13 +41,17 @@ import {
 } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
+import { CloudinaryService } from '../shared/cloudinary/cloudinary.service';
 
 @ApiTags('User')
 @Controller('user')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
 
   // Profile Management
   @Patch('profile')
@@ -83,6 +92,24 @@ export class UserController {
   })
   async getUserStats(@Request() req: { user: UserWithoutPassword }) {
     return this.userService.getUserStats(req.user.id);
+  }
+
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get dashboard data for the current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard data retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getUserDashboard(@Request() req: { user: UserWithoutPassword }) {
+    return this.userService.getUserDashboard(req.user.id);
   }
 
   @Get('profile-data')
@@ -214,6 +241,71 @@ export class UserController {
   }
 
   // Review Management
+  @Post('reviews/upload-receipt')
+  @UseInterceptors(FileInterceptor('file'))
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Upload receipt image for review verification' })
+  @ApiResponse({
+    status: 200,
+    description: 'Receipt uploaded successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid file',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async uploadReceipt(
+    @Request() req: { user: UserWithoutPassword },
+    @UploadedFile() file: any,
+    @Body('businessId') businessId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    // Validate file type
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('File must be an image');
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size must be less than 5MB');
+    }
+
+    try {
+      const uploadResult = await this.cloudinaryService.uploadFile(
+        {
+          buffer: file.buffer,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+        },
+        {
+          folder: `reviews/receipts/${req.user.id}`,
+          tags: ['review-receipt', businessId || 'general'],
+          resource_type: 'image',
+        },
+      );
+
+      return {
+        url: uploadResult.secure_url,
+        receiptUrl: uploadResult.secure_url,
+        publicId: uploadResult.public_id,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        format: uploadResult.format,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to upload receipt: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   @Post('reviews')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -556,5 +648,21 @@ export class BusinessController {
   })
   async getReviewReplies(@Param('reviewId') reviewId: string) {
     return this.userService.getReviewReplies(reviewId);
+  }
+
+  @Post('businesses/:businessId/recalculate-trust-score')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Manually recalculate business trust score' })
+  @ApiParam({ name: 'businessId', description: 'Business ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trust score recalculated successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Business not found',
+  })
+  async recalculateTrustScore(@Param('businessId') businessId: string) {
+    return this.userService.recalculateBusinessTrustScore(businessId);
   }
 }
