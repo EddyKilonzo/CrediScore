@@ -1,0 +1,70 @@
+/* Analytics Component Styles */
+
+/* Match the design system colors */
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  margin-top: 5rem;
+  --primary-blue: #2D5A87;
+  --secondary-blue: #5C8BA5;
+  --accent-green: #10B981;
+  --light-bg: #E8EEF3;
+  --lighter-bg: #F5F8FA;
+}
+
+/* Card box-shadow styling */
+:host ::ng-deep .bg-white.rounded-xl.shadow-sm,
+:host ::ng-deep .bg-white.rounded-xl {
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset !important;
+}
+
+/* Stat cards hover effect */
+.stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Chart animations */
+.chart-bar {
+  transition: width 0.5s ease-in-out;
+}
+
+/* Review card */
+.review-card {
+  transition: all 0.3s ease;
+}
+
+.review-card:hover {
+  transform: translateX(4px);
+}
+
+/* Period selector active state */
+.period-btn-active {
+  background-color: var(--primary-blue);
+  color: white;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

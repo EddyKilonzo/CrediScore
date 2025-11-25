@@ -178,14 +178,19 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.get<Business>(`${this.API_URL}/business/${id}`)
+    // Use public endpoint for viewing business details (no authentication required)
+    // If you need authenticated access, use: `${this.API_URL}/business/${id}`
+    return this.http.get<Business>(`${this.API_URL}/public/business/${id}`)
       .pipe(
         tap(business => {
           this.currentBusiness.set(business);
           this.isLoading.set(false);
         }),
         catchError(error => {
-          this.error.set('Failed to load business details');
+          console.error('Error loading business:', error);
+          this.error.set(error.status === 404 
+            ? 'Business not found' 
+            : 'Failed to load business details. Please try again.');
           this.isLoading.set(false);
           throw error;
         })
@@ -254,8 +259,25 @@ export class BusinessService {
     this.isLoading.set(true);
     this.error.set(null);
     
-    return this.http.get<Business[]>(`${this.API_URL}/business/search?q=${encodeURIComponent(query)}`)
+    // Use the public endpoint for searching businesses (no authentication required)
+    const searchQuery = query && query.trim() ? query.trim() : '';
+    const url = searchQuery 
+      ? `${this.API_URL}/public/business/search?query=${encodeURIComponent(searchQuery)}`
+      : `${this.API_URL}/public/business/search`;
+    
+    return this.http.get<any>(url)
       .pipe(
+        map((response: any): Business[] => {
+          // Handle paginated response format from backend: { businesses: Business[], pagination: {...} }
+          // Or handle direct array response (for backward compatibility)
+          if (Array.isArray(response)) {
+            return response;
+          } else if (response?.businesses && Array.isArray(response.businesses)) {
+            return response.businesses;
+          } else {
+            return [];
+          }
+        }),
         tap(businesses => {
           this.businesses.set(businesses);
           this.isLoading.set(false);

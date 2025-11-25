@@ -82,7 +82,7 @@
                 </div>
                 <div class="reviewer-details">
                   <h3>{{ review.reviewer }}</h3>
-                  <p>{{ review.business }}</p>
+                  <p>{{ review.businessName || review.business?.name }}</p>
                 </div>
               </div>
               <div class="review-rating">
@@ -96,10 +96,76 @@
             
             <div class="review-content">
               <p class="review-text">{{ review.content }}</p>
+              
+              <!-- AI Analysis Flags -->
+              <div class="ai-flags" *ngIf="review.aiFlags">
+                <div class="ai-flag-item" *ngIf="review.aiFlags.lowCredibility" class="flag-warning">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  <span>Low Credibility ({{ review.credibility || 0 }}%)</span>
+                </div>
+                <div class="ai-flag-item" *ngIf="review.aiFlags.hasFraudDetection" class="flag-danger">
+                  <i class="fas fa-shield-alt"></i>
+                  <span>Fraud Detection Active</span>
+                </div>
+                <div class="ai-flag-item" *ngIf="review.aiFlags.needsManualReview" class="flag-info">
+                  <i class="fas fa-user-check"></i>
+                  <span>Requires Manual Review</span>
+                </div>
+              </div>
+
+              <!-- Review Media/Receipt -->
+              <div class="review-media-section" *ngIf="review.receiptUrl">
+                <div class="review-media-header">
+                  <i class="fas fa-receipt"></i>
+                  <span>Receipt Evidence</span>
+                </div>
+                <div class="review-media-preview">
+                  <img 
+                    [src]="review.receiptUrl" 
+                    [alt]="'Receipt for ' + (review.businessName || review.business?.name || 'Business')"
+                    class="receipt-preview-image"
+                    (click)="openImageModal(review.receiptUrl!)"
+                  />
+                  <div class="receipt-overlay">
+                    <i class="fas fa-expand"></i>
+                  </div>
+                </div>
+                <div class="receipt-info" *ngIf="review.amount">
+                  <i class="fas fa-dollar-sign"></i>
+                  <span>Amount: {{ review.amount | currency:'KES ':'symbol':'1.0-0' }}</span>
+                </div>
+              </div>
+
+              <!-- User Flagging Info -->
+              <div class="user-flag-info" *ngIf="review.user?.isFlagged">
+                <div class="flag-badge">
+                  <i class="fas fa-flag"></i>
+                  <span>User Flagged</span>
+                  <span class="flag-count" *ngIf="review.user?.flagCount">({{ review.user?.flagCount }} times)</span>
+                </div>
+                <p class="flag-reason" *ngIf="review.user?.flagReason">{{ review.user?.flagReason }}</p>
+              </div>
+
+              <!-- Validation Result Info -->
+              <div class="validation-info" *ngIf="review.validationResult">
+                <div class="validation-summary">
+                  <span class="validation-status" [class.valid]="review.validationResult.isValid" [class.invalid]="!review.validationResult.isValid">
+                    <i [class]="review.validationResult.isValid ? 'fas fa-check-circle' : 'fas fa-times-circle'"></i>
+                    {{ review.validationResult.isValid ? 'Validated' : 'Not Validated' }}
+                  </span>
+                  <span class="validation-confidence" *ngIf="review.validationResult.confidence">
+                    Confidence: {{ (review.validationResult.confidence * 100) | number:'1.0-0' }}%
+                  </span>
+                </div>
+              </div>
+
               <div class="review-meta">
                 <span class="review-date">{{ review.date | date:'MMM d, y' }}</span>
                 <span class="review-status" [class]="'status-' + review.status">
                   {{ review.status | titlecase }}
+                </span>
+                <span class="review-credibility" *ngIf="review.credibility">
+                  Credibility: {{ review.credibility }}%
                 </span>
               </div>
             </div>

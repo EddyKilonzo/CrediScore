@@ -310,3 +310,15 @@ export class VerifyDocumentDto {
   @IsString()
   notes?: string;
 }
+
+export class CreateReviewReplyDto {
+  @ApiProperty({ description: 'Reply content' })
+  @IsString()
+  content: string;
+}
+
+export class UpdateReviewReplyDto {
+  @ApiProperty({ description: 'Reply content' })
+  @IsString()
+  content: string;
+}

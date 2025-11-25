@@ -375,6 +375,27 @@ input[type="checkbox"]:checked {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
+/* Responsive base styles */
+:host {
+  display: block;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.min-h-screen {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.max-w-5xl {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 1024px) {
   .lg\\:hidden {
@@ -384,11 +405,22 @@ input[type="checkbox"]:checked {
   .signup-main {
     padding: 1rem;
   }
+  
+  .max-w-5xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
 }
 
 @media (max-width: 768px) {
+  .min-h-screen {
+    padding: 0.5rem;
+    padding-top: 1rem;
+  }
+  
   .signup-card {
     padding: 1.5rem;
+    border-radius: 0.75rem !important;
   }
   
   .step-indicator::after {
@@ -400,6 +432,11 @@ input[type="checkbox"]:checked {
     padding: 1.5rem;
   }
   
+  .p-4,
+  .sm\\:p-6 {
+    padding: 1rem !important;
+  }
+  
   /* Compact form spacing on mobile */
   .space-y-3 > * + * {
     margin-top: 0.75rem;
@@ -408,22 +445,39 @@ input[type="checkbox"]:checked {
   /* Smaller input padding on mobile */
   input, textarea, select {
     padding: 0.5rem 0.75rem !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
   }
   
   /* Compact button sizing */
   button {
     padding: 0.5rem 1rem !important;
   }
+  
+  /* Stack form fields on mobile */
+  .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+  
+  .bg-white.rounded-xl {
+    min-height: auto !important;
+    max-height: 95vh !important;
+  }
 }
 
 @media (max-width: 640px) {
   /* Extra small screens */
+  .min-h-screen {
+    padding: 0.5rem;
+  }
+  
   .max-w-5xl {
-    max-width: 95%;
+    max-width: 100%;
+    margin: 0;
   }
   
   .min-h-\[500px\] {
-    min-height: 400px;
+    min-height: auto !important;
   }
   
   .max-h-\[90vh\] {
@@ -432,7 +486,78 @@ input[type="checkbox"]:checked {
   
   /* Stack form fields on very small screens */
   .grid-cols-2 {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Compact spacing */
+  .space-y-3,
+  .sm\\:space-y-4 {
+    gap: 0.5rem !important;
+  }
+  
+  /* Smaller text */
+  .text-xl {
+    font-size: 1.125rem !important;
+  }
+  
+  h3 {
+    font-size: 1.125rem !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .min-h-screen {
+    padding: 2rem 1rem;
+  }
+  
+  .max-w-5xl {
+    max-width: 90%;
+  }
+}
+
+/* Laptop adjustments - Larger elements */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .min-h-screen {
+    padding: 2rem;
+  }
+  
+  .max-w-5xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+  
+  .bg-white.rounded-xl {
+    min-height: 600px !important;
+    max-height: 85vh !important;
+  }
+  
+  /* Larger inputs and buttons on laptop */
+  input, textarea, select {
+    padding: 0.875rem 1rem !important;
+    font-size: 1rem !important;
+  }
+  
+  button {
+    padding: 0.875rem 1.5rem !important;
+    font-size: 1rem !important;
+  }
+  
+  label {
+    font-size: 1rem !important;
+  }
+  
+  /* Better spacing on laptop */
+  .space-y-3,
+  .sm\\:space-y-4 {
+    gap: 1rem !important;
+  }
+}
+
+/* Desktop adjustments */
+@media (min-width: 1440px) {
+  .max-w-5xl {
+    max-width: 1200px;
   }
 }
 

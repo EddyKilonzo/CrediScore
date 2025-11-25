@@ -142,7 +142,7 @@ interface ReviewReply {
     .btn-primary, .btn-secondary, .btn-edit, .btn-delete {
       padding: 0.5rem 1rem;
       border-radius: 6px;
-      border: none;
+      border: 1px solid transparent;
       font-size: 0.9rem;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -176,25 +176,31 @@ interface ReviewReply {
     }
 
     .btn-edit {
-      background: #f59e0b;
-      color: white;
+      background: transparent;
+      color: #f59e0b;
+      border: 1px solid #f59e0b;
       font-size: 0.8rem;
       padding: 0.25rem 0.5rem;
     }
 
     .btn-edit:hover {
-      background: #d97706;
+      background: rgba(245, 158, 11, 0.1);
+      border-color: #d97706;
+      color: #d97706;
     }
 
     .btn-delete {
-      background: #ef4444;
-      color: white;
+      background: transparent;
+      color: #ef4444;
+      border: 1px solid #ef4444;
       font-size: 0.8rem;
       padding: 0.25rem 0.5rem;
     }
 
     .btn-delete:hover {
-      background: #dc2626;
+      background: rgba(239, 68, 68, 0.1);
+      border-color: #dc2626;
+      color: #dc2626;
     }
 
     .replies-list {
@@ -319,20 +325,41 @@ export class ReviewReplyComponent {
     if (!this.replyContent.trim()) return;
 
     this.isSubmitting.set(true);
-    this.authService.createReviewReply(this.reviewId, this.replyContent.trim())
-      .subscribe({
-        next: (reply) => {
-          this.replyAdded.emit(reply);
-          this.replyContent = '';
-          this.isSubmitting.set(false);
-          this.toastService.show('Reply posted successfully', 'success');
-        },
-        error: (error) => {
-          console.error('Error posting reply:', error);
-          this.isSubmitting.set(false);
-          this.toastService.show('Failed to post reply', 'error');
-        }
-      });
+    
+    if (this.editingReply) {
+      // Update existing reply
+      this.authService.updateReviewReply(this.editingReply.id, this.replyContent.trim())
+        .subscribe({
+          next: (reply) => {
+            this.replyUpdated.emit(reply);
+            this.replyContent = '';
+            this.editingReply = null;
+            this.isSubmitting.set(false);
+            this.toastService.show('Reply updated successfully', 'success');
+          },
+          error: (error) => {
+            console.error('Error updating reply:', error);
+            this.isSubmitting.set(false);
+            this.toastService.show('Failed to update reply', 'error');
+          }
+        });
+    } else {
+      // Create new reply
+      this.authService.createReviewReply(this.reviewId, this.replyContent.trim())
+        .subscribe({
+          next: (reply) => {
+            this.replyAdded.emit(reply);
+            this.replyContent = '';
+            this.isSubmitting.set(false);
+            this.toastService.show('Reply posted successfully', 'success');
+          },
+          error: (error) => {
+            console.error('Error posting reply:', error);
+            this.isSubmitting.set(false);
+            this.toastService.show('Failed to post reply', 'error');
+          }
+        });
+    }
   }
 
   cancelReply(): void {

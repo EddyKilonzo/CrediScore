@@ -5,7 +5,10 @@ import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../core/services/auth.service';
 import { BusinessService, Business, BusinessAnalytics, BusinessStatus } from '../../shared/services/business.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
+import { ReviewService } from '../../core/services/review.service';
 import { Subject, takeUntil } from 'rxjs';
+import { signal } from '@angular/core';
 
 interface BusinessDashboardStats {
   totalReviews: number;
@@ -44,6 +47,8 @@ interface CustomerCard {
   averageRating: number;
   isVerified?: boolean;
   lastActivity: Date;
+  latestReviewId?: string;
+  userId?: string; // Add userId to identify the customer
 }
 
 interface QuickAction {
@@ -57,7 +62,7 @@ interface QuickAction {
 @Component({
   selector: 'app-business-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, ReviewReplyComponent],
   templateUrl: './business-dashboard.component.html',
   styleUrl: './business-dashboard.component.css'
 })
@@ -68,6 +73,7 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private businessService = inject(BusinessService);
   private toastService = inject(ToastService);
+  private reviewService = inject(ReviewService);
 
   // Authentication state
   currentUser = this.authService.currentUser;
@@ -97,6 +103,18 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
 
   recentActivities: RecentActivity[] = [];
   businessCustomers: CustomerCard[] = [];
+  
+  // Review reply state
+  expandedReviewId: string | null = null;
+  expandedCustomerId: string | null = null;
+  reviewReplies: Map<string, any[]> = new Map();
+  loadingReplies: Set<string> = new Set();
+
+  // Modal state
+  showCustomerModal = false;
+  selectedCustomer: CustomerCard | null = null;
+  customerReviews: any[] = [];
+  loadingCustomerReviews = false;
 
   // Quick actions for business owners
   quickActions: QuickAction[] = [
@@ -202,12 +220,31 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
         next: (analytics) => {
           this.businessAnalytics = analytics;
           this.updateDashboardStatsFromAnalytics(analytics);
+          // Also load full business data to get reviews with receipt info
+          this.loadFullBusinessData(businessId);
           this.isLoading = false;
         },
         error: (error) => {
           console.error('Error loading business analytics:', error);
           this.toastService.error('Failed to load business analytics');
           this.isLoading = false;
+        }
+      });
+  }
+
+  private loadFullBusinessData(businessId: string): void {
+    this.businessService.getBusinessById(businessId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (business) => {
+          // Update current business with full data including reviews
+          if (business.reviews) {
+            this.currentBusiness = business;
+          }
+        },
+        error: (error) => {
+          console.error('Error loading full business data:', error);
+          // Non-critical error, continue without full review data
         }
       });
   }
@@ -525,5 +562,197 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
       case 'not_verified': return 'fas fa-exclamation-triangle';
       default: return 'fas fa-exclamation-triangle';
     }
+  }
+
+  // Review Reply Methods
+  toggleReviewExpansion(activity: RecentActivity): void {
+    if (activity.type !== 'review') return;
+    
+    if (this.expandedReviewId === activity.id) {
+      this.expandedReviewId = null;
+    } else {
+      this.expandedReviewId = activity.id;
+      this.loadReviewReplies(activity.id);
+    }
+  }
+
+  isReviewExpanded(activityId: string): boolean {
+    return this.expandedReviewId === activityId;
+  }
+
+  loadReviewReplies(reviewId: string): void {
+    if (this.reviewReplies.has(reviewId)) {
+      return; // Already loaded
+    }
+
+    this.loadingReplies.add(reviewId);
+    this.reviewService.getReviewReplies(reviewId).subscribe({
+      next: (replies) => {
+        this.reviewReplies.set(reviewId, replies);
+        this.loadingReplies.delete(reviewId);
+      },
+      error: (error) => {
+        console.error('Error loading replies:', error);
+        this.reviewReplies.set(reviewId, []);
+        this.loadingReplies.delete(reviewId);
+      }
+    });
+  }
+
+  getReviewReplies(reviewId: string): any {
+    const replies = this.reviewReplies.get(reviewId) || [];
+    return signal(replies);
+  }
+
+  onReplyAdded(reply: any): void {
+    const reviewId = reply.reviewId || this.expandedReviewId;
+    if (!reviewId) return;
+
+    const replies = this.reviewReplies.get(reviewId) || [];
+    replies.push(reply);
+    this.reviewReplies.set(reviewId, replies);
+    
+    // Update activity status
+    const activity = this.recentActivities.find(a => a.id === reviewId);
+    if (activity) {
+      activity.status = 'responded';
+    }
+
+    // Update review status in customer reviews
+    const customerReview = this.customerReviews.find(r => r.id === reviewId);
+    if (customerReview) {
+      customerReview.status = 'responded';
+    }
+  }
+
+  onReplyUpdated(reply: any): void {
+    const reviewId = reply.reviewId || this.expandedReviewId;
+    if (!reviewId) return;
+
+    const replies = this.reviewReplies.get(reviewId) || [];
+    const index = replies.findIndex((r: any) => r.id === reply.id);
+    if (index !== -1) {
+      replies[index] = reply;
+      this.reviewReplies.set(reviewId, replies);
+    }
+  }
+
+  onReplyDeleted(replyId: string): void {
+    const reviewId = this.expandedReviewId;
+    if (!reviewId) return;
+
+    const replies = this.reviewReplies.get(reviewId) || [];
+    const filtered = replies.filter((r: any) => r.id !== replyId);
+    this.reviewReplies.set(reviewId, filtered);
+  }
+
+  // Customer Engagement Reply Methods
+  openCustomerModal(customer: CustomerCard): void {
+    this.selectedCustomer = customer;
+    this.showCustomerModal = true;
+    this.customerReviews = [];
+    this.loadingCustomerReviews = true;
+    
+    // Load customer reviews
+    this.loadCustomerReviews(customer);
+  }
+
+  loadCustomerReviews(customer: CustomerCard): void {
+    if (!this.currentBusiness) {
+      this.loadingCustomerReviews = false;
+      return;
+    }
+
+    // Get reviews from recent activities that match this customer
+    const customerReviewActivities = this.recentActivities.filter(
+      activity => activity.type === 'review' && 
+                  ((activity.customerName && activity.customerName === customer.name) || 
+                   activity.title?.toLowerCase().includes(customer.name.toLowerCase()))
+    );
+
+    // Map activities to review objects
+    this.customerReviews = customerReviewActivities.map(activity => {
+      // Try to find full review data from current business if available
+      let receiptUrl: string | undefined;
+      let receiptData: any | undefined;
+      
+      if (this.currentBusiness?.reviews && activity.id) {
+        const fullReview = this.currentBusiness.reviews.find(r => r.id === activity.id);
+        if (fullReview) {
+          receiptUrl = fullReview.receiptUrl || undefined;
+          receiptData = fullReview.receiptData || undefined;
+        }
+      }
+
+      return {
+        id: activity.id,
+        rating: activity.rating || 0,
+        comment: activity.description || activity.title || '',
+        createdAt: activity.timestamp,
+        customerName: activity.customerName || customer.name,
+        status: activity.status,
+        receiptUrl: receiptUrl,
+        receiptData: receiptData
+      };
+    });
+
+    // Load replies for each review
+    this.customerReviews.forEach(review => {
+      if (review.id) {
+        this.loadReviewReplies(review.id);
+      }
+    });
+
+    this.loadingCustomerReviews = false;
+  }
+
+  closeCustomerModal(): void {
+    this.showCustomerModal = false;
+    this.selectedCustomer = null;
+    this.expandedReviewId = null;
+    this.customerReviews = [];
+    this.loadingCustomerReviews = false;
+  }
+
+  toggleCustomerReviewExpansion(customer: CustomerCard): void {
+    // Find the customer's review ID if not already set
+    if (!customer.latestReviewId) {
+      const customerReview = this.recentActivities.find(
+        activity => activity.type === 'review' && (activity.customerName && activity.customerName === customer.name)
+      );
+      if (customerReview) {
+        customer.latestReviewId = customerReview.id;
+      } else {
+        this.toastService.warning('No review found for this customer');
+        return;
+      }
+    }
+
+    if (this.expandedCustomerId === customer.id) {
+      this.expandedCustomerId = null;
+      this.expandedReviewId = null;
+    } else {
+      this.expandedCustomerId = customer.id;
+      const reviewId = this.getCustomerReviewId(customer);
+      if (reviewId) {
+        this.expandedReviewId = reviewId;
+        this.loadReviewReplies(reviewId);
+      }
+    }
+  }
+
+  isCustomerReviewExpanded(customerId: string): boolean {
+    return this.expandedCustomerId === customerId;
+  }
+
+  getCustomerReviewId(customer: CustomerCard): string | null {
+    if (customer.latestReviewId) {
+      return customer.latestReviewId;
+    }
+    // Try to find from recent activities
+    const customerReview = this.recentActivities.find(
+      activity => activity.type === 'review' && (activity.customerName && activity.customerName === customer.name)
+    );
+    return customerReview?.id || null;
   }
 }

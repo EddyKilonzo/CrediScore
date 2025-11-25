@@ -42,6 +42,12 @@ export const routes: Routes = [
     ]
   },
 
+  // Search Route
+  {
+    path: 'search',
+    loadComponent: () => import('./search/search.component').then(m => m.SearchComponent)
+  },
+
   // Profile Route
   {
     path: 'profile',
@@ -53,6 +59,14 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     loadComponent: () => import('./user/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['CUSTOMER', 'user'] }
+  },
+
+  // My Reviews Route
+  {
+    path: 'my-reviews',
+    loadComponent: () => import('./user/my-reviews/my-reviews.component').then(m => m.MyReviewsComponent),
     canActivate: [AuthGuard, RoleGuard],
     data: { roles: ['CUSTOMER', 'user'] }
   },
@@ -74,11 +88,23 @@ export const routes: Routes = [
         data: { roles: ['BUSINESS_OWNER', 'business'] }
       },
       {
+        path: 'analytics',
+        loadComponent: () => import('./business/analytics/analytics.component').then(m => m.AnalyticsComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['BUSINESS_OWNER', 'business'] }
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'
       }
     ]
+  },
+
+  // Public Business View Route
+  {
+    path: 'business/:id',
+    loadComponent: () => import('./business/business-view/business-view.component').then(m => m.BusinessViewComponent)
   },
 
   // Admin Routes

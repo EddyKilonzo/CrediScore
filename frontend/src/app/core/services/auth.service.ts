@@ -316,7 +316,7 @@ export class AuthService {
     const token = this.getToken();
     const headers = { 'Authorization': `Bearer ${token}` };
     
-    return this.http.post(`${this.API_URL}/user/reviews/${reviewId}/replies`, 
+    return this.http.post(`${this.API_URL}/business/reviews/${reviewId}/replies`, 
       { content }, { headers });
   }
 
@@ -324,7 +324,7 @@ export class AuthService {
     const token = this.getToken();
     const headers = { 'Authorization': `Bearer ${token}` };
     
-    return this.http.put(`${this.API_URL}/user/replies/${replyId}`, 
+    return this.http.patch(`${this.API_URL}/business/replies/${replyId}`, 
       { content }, { headers });
   }
 
@@ -332,14 +332,14 @@ export class AuthService {
     const token = this.getToken();
     const headers = { 'Authorization': `Bearer ${token}` };
     
-    return this.http.delete(`${this.API_URL}/user/replies/${replyId}`, { headers });
+    return this.http.delete(`${this.API_URL}/business/replies/${replyId}`, { headers });
   }
 
   getReviewReplies(reviewId: string): Observable<any> {
     const token = this.getToken();
     const headers = { 'Authorization': `Bearer ${token}` };
     
-    return this.http.get(`${this.API_URL}/user/reviews/${reviewId}/replies`, { headers });
+    return this.http.get(`${this.API_URL}/business/reviews/${reviewId}/replies`, { headers });
   }
 
   // Email verification methods

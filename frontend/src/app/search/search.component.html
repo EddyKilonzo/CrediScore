@@ -1,0 +1,357 @@
+<div class="search-container">
+  <div class="search-main">
+    <div class="search-content">
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <h1 class="welcome-title">Search Businesses</h1>
+        <p class="welcome-subtitle">Find verified businesses and check their trust scores</p>
+      </div>
+
+      <!-- Search Bar and Filter Toggle -->
+      <div class="search-filters-container">
+        <!-- Search Bar -->
+        <div class="search-bar-container">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          <input
+            type="text"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="applySearchAndFilters()"
+            placeholder="Search by business name, registration number, or till number..."
+            class="search-input"
+            (keyup.enter)="onSearch()"
+          />
+            <button (click)="onSearch()" class="search-button">
+              Search
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Toggle (Mobile) -->
+        <div class="filter-toggle-container">
+          <button (click)="toggleFilters()" class="filter-toggle-btn">
+            <svg class="filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            <span>Filters</span>
+            <span *ngIf="selectedStars || selectedGrade" class="filter-badge">{{ (selectedStars ? 1 : 0) + (selectedGrade ? 1 : 0) }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content with Sidebar Layout -->
+      <div class="main-layout">
+        <!-- Filters Sidebar -->
+        <aside class="filters-sidebar" [class.active]="showFilters">
+          <div class="filters-content">
+            <div class="filters-header">
+              <h3 class="filters-title">
+                <i class="uil uil-filter"></i>
+                <span>Filters</span>
+              </h3>
+              <button (click)="toggleFilters()" class="close-filters-btn" *ngIf="showFilters">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Star Rating Filter -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-star"></i>
+                Star Rating
+              </h3>
+              <div class="star-filter-options">
+                <button
+                  *ngFor="let stars of starOptions"
+                  (click)="onStarFilterChange(stars)"
+                  class="star-filter-btn"
+                  [class.active]="selectedStars === stars"
+                >
+                  <div class="star-rating-display">
+                    <span *ngFor="let i of [1,2,3,4,5]" class="star-icon">
+                      <i *ngIf="i <= stars" class="uil uil-star"></i>
+                      <i *ngIf="i > stars" class="uil uil-star star-empty"></i>
+                    </span>
+                  </div>
+                  <span class="star-label">{{ stars }} stars & up</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Grade Filter -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-shield-check"></i>
+                Trust Grade
+              </h3>
+              <div class="grade-filter-options">
+                <button
+                  *ngFor="let grade of gradeOptions"
+                  (click)="onGradeFilterChange(grade)"
+                  class="grade-filter-btn"
+                  [class.active]="selectedGrade === grade"
+                  [style.border-color]="getGradeColor(grade)"
+                >
+                  <span class="grade-letter" [style.color]="getGradeColor(grade)">{{ grade }}</span>
+                  <span class="grade-label">Grade {{ grade }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Clear Filters -->
+            <div class="filter-actions" *ngIf="selectedStars || selectedGrade">
+              <button (click)="clearFilters()" class="clear-filters-btn">
+                <i class="uil uil-times-circle"></i>
+                Clear All Filters
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Results Section -->
+        <div class="results-section">
+          <div class="results-container">
+      <!-- Loading State -->
+      <div *ngIf="isLoading" class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Searching businesses...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error && !isLoading" class="error-state">
+        <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p>{{ error }}</p>
+      </div>
+
+      <!-- Results Count and View Toggle -->
+      <div *ngIf="!isLoading && !error" class="results-header">
+        <h2 class="results-count">
+          {{ filteredBusinesses.length }} {{ filteredBusinesses.length === 1 ? 'business' : 'businesses' }} found
+          <span *ngIf="selectedStars || selectedGrade" class="filtered-badge">(filtered)</span>
+          <span *ngIf="viewMode === 'map'" class="map-count-badge">
+            ({{ getBusinessesWithLocation().length }} with location)
+          </span>
+        </h2>
+        <div class="view-toggle">
+          <button 
+            (click)="toggleViewMode()" 
+            [class.active]="viewMode === 'list'"
+            class="view-toggle-btn"
+            title="List View"
+          >
+            <i class="uil uil-list-ul"></i>
+            <span>List</span>
+          </button>
+          <button 
+            (click)="toggleViewMode()" 
+            [class.active]="viewMode === 'map'"
+            class="view-toggle-btn"
+            title="Map View"
+          >
+            <i class="uil uil-map"></i>
+            <span>Map</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Map View -->
+      <div *ngIf="!isLoading && !error && viewMode === 'map'" class="map-view-container">
+        <div *ngIf="getBusinessesWithLocation().length > 0; else noLocationData" class="map-view-wrapper">
+          <!-- Main Map -->
+          <div class="businesses-map">
+            <iframe
+              *ngIf="getMapUrl()"
+              [src]="sanitizeMapUrl(getMapUrl())"
+              width="100%"
+              height="600"
+              style="border:0; border-radius: 0.75rem;"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              class="businesses-map-iframe"
+              title="Business locations on Google Maps"
+            ></iframe>
+            <div *ngIf="!getMapUrl()" class="map-loading-placeholder">
+              <i class="uil uil-map"></i>
+              <p>Loading map...</p>
+            </div>
+          </div>
+          
+          <!-- Businesses List with Map Links -->
+          <div class="map-businesses-list">
+            <h3 class="map-list-title">
+              <i class="uil uil-map-marker"></i>
+              Businesses with Location ({{ getBusinessesWithLocation().length }})
+            </h3>
+            <div class="map-businesses-grid">
+              <div
+                *ngFor="let business of getBusinessesWithLocation()"
+                class="map-business-card"
+                (click)="viewBusiness(business.id)"
+              >
+                <div class="map-card-header">
+                  <h4 class="map-business-name">{{ business.name }}</h4>
+                  <div class="map-business-badges">
+                    <div class="map-grade-badge" *ngIf="getBusinessGrade(business) !== 'N/A'" 
+                         [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'" 
+                         [style.color]="getGradeColor(getBusinessGrade(business))">
+                      {{ getBusinessGrade(business) }}
+                    </div>
+                    <img *ngIf="business.isVerified" src="/images/verfied.png" alt="Verified" 
+                         class="map-verified-badge" (error)="$event.target.style.display='none'" />
+                  </div>
+                </div>
+                <div class="map-card-body">
+                  <p class="map-business-location" *ngIf="business.location">
+                    <i class="uil uil-map-marker"></i>
+                    {{ business.location }}
+                  </p>
+                  <div class="map-card-actions">
+                    <a
+                      [href]="getGoogleMapsDirectionsUrl(business)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="map-directions-btn"
+                      (click)="$event.stopPropagation()"
+                    >
+                      <i class="uil uil-directions"></i>
+                      Get Directions
+                    </a>
+                    <button class="map-view-btn" (click)="viewBusiness(business.id); $event.stopPropagation()">
+                      <i class="uil uil-eye"></i>
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <ng-template #noLocationData>
+          <div class="no-location-data">
+            <i class="uil uil-map-marker-slash"></i>
+            <h3>No businesses with location data</h3>
+            <p>None of the filtered businesses have uploaded their location information.</p>
+            <button (click)="viewMode = 'list'" class="back-to-list-btn">
+              <i class="uil uil-list-ul"></i>
+              Back to List View
+            </button>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Business Cards Grid (List View) -->
+      <div *ngIf="!isLoading && !error && viewMode === 'list'" class="business-cards-grid">
+        <div
+          *ngFor="let business of filteredBusinesses"
+          class="business-card"
+          (click)="viewBusiness(business.id)"
+        >
+          <!-- Card Header with Logo -->
+          <div class="card-header">
+            <div class="logo-wrapper">
+              <div class="logo-container">
+                <img
+                  *ngIf="business.logo"
+                  [src]="business.logo"
+                  [alt]="business.name"
+                  class="business-logo"
+                  (error)="$event.target.style.display='none'"
+                />
+                <div *ngIf="!business.logo" class="business-logo-placeholder">
+                  <i class="uil uil-building"></i>
+                </div>
+                <!-- Verified Badge Overlay on Logo -->
+                <div class="verified-badge-overlay" *ngIf="business.isVerified">
+                  <i class="uil uil-check-circle"></i>
+                </div>
+              </div>
+            </div>
+            <!-- Verified Badge in Header -->
+            <div class="verified-badge" *ngIf="business.isVerified">
+              <i class="uil uil-shield-check"></i>
+              <span>Verified Business</span>
+            </div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="card-body">
+            <h3 class="business-name">{{ business.name }}</h3>
+            <p class="business-description" *ngIf="business.description">
+              {{ business.description.length > 100 ? (business.description | slice:0:100) + '...' : business.description }}
+            </p>
+            <p class="business-category" *ngIf="business.category">
+              <i class="uil uil-tag"></i>
+              {{ business.category }}
+            </p>
+          </div>
+
+          <!-- Card Footer with Stats -->
+          <div class="card-footer">
+            <!-- Rating -->
+            <div class="stat-item">
+              <div class="star-rating">
+                <i
+                  *ngFor="let i of [1,2,3,4,5]"
+                  class="uil uil-star"
+                  [class.star-filled]="i <= (business.averageRating || 0)"
+                  [class.star-empty]="i > (business.averageRating || 0)"
+                ></i>
+              </div>
+              <span class="rating-value">{{ business.averageRating || 0 }}/5</span>
+              <span class="review-count">({{ business.totalReviews || 0 }})</span>
+            </div>
+
+            <!-- Trust Score -->
+            <div class="stat-item trust-score">
+              <div class="grade-badge-wrapper">
+                <div class="grade-badge" [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'" [style.color]="getGradeColor(getBusinessGrade(business))">
+                  <span class="grade-text">{{ getBusinessGrade(business) }}</span>
+                </div>
+                <!-- Verified Badge next to grade -->
+                <div class="verified-badge-grade" *ngIf="business.isVerified">
+                  <img src="/images/verfied.png" alt="Verified" class="verified-badge-image" 
+                       (error)="$event.target.style.display='none'" />
+                </div>
+              </div>
+              <span class="score-value">{{ getBusinessScore(business) }}%</span>
+            </div>
+          </div>
+
+          <!-- Location -->
+          <div class="card-location" *ngIf="business.location">
+            <i class="uil uil-map-marker"></i>
+            <span>{{ business.location }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!isLoading && !error && filteredBusinesses.length === 0" class="empty-state">
+        <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3>No businesses found</h3>
+        <p *ngIf="selectedStars || selectedGrade">
+          Try adjusting your filters or search for a different term.
+        </p>
+        <p *ngIf="!selectedStars && !selectedGrade">
+          Try searching for a different term.
+        </p>
+        <button *ngIf="selectedStars || selectedGrade" (click)="clearFilters()" class="clear-filters-btn">
+          Clear Filters
+        </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

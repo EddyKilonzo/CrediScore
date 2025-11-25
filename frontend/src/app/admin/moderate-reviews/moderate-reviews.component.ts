@@ -4,13 +4,38 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
 interface Review {
-  id: number;
+  id: string;
   reviewer: string;
-  business: string;
+  businessName: string;
   rating: number;
   content: string;
-  date: Date;
+  date: Date | string;
   status: 'pending' | 'approved' | 'flagged' | 'rejected';
+  credibility?: number;
+  validationResult?: any;
+  receiptData?: any;
+  receiptUrl?: string;
+  amount?: number;
+  reviewDate?: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    reputation: number;
+    isFlagged?: boolean;
+    flagCount?: number;
+    flagReason?: string | null;
+  };
+  business?: {
+    id: string;
+    name: string;
+    category: string;
+  };
+  aiFlags?: {
+    lowCredibility: boolean;
+    hasFraudDetection: boolean;
+    needsManualReview: boolean;
+  };
 }
 
 @Component({
@@ -83,7 +108,7 @@ export class ModerateReviewsComponent implements OnInit {
     await this.loadReviews();
   }
 
-  async approveReview(reviewId: number): Promise<void> {
+  async approveReview(reviewId: string): Promise<void> {
     try {
       this.isProcessing = true;
       this.error = null;
@@ -108,7 +133,7 @@ export class ModerateReviewsComponent implements OnInit {
     }
   }
 
-  async flagReview(reviewId: number): Promise<void> {
+  async flagReview(reviewId: string): Promise<void> {
     try {
       this.isProcessing = true;
       this.error = null;
@@ -136,7 +161,7 @@ export class ModerateReviewsComponent implements OnInit {
     }
   }
 
-  async rejectReview(reviewId: number): Promise<void> {
+  async rejectReview(reviewId: string): Promise<void> {
     try {
       this.isProcessing = true;
       this.error = null;
@@ -167,5 +192,10 @@ export class ModerateReviewsComponent implements OnInit {
 
   getStars(rating: number): boolean[] {
     return Array(5).fill(false).map((_, index) => index < rating);
+  }
+
+  openImageModal(imageUrl: string): void {
+    // Open image in new window/tab for full view
+    window.open(imageUrl, '_blank', 'noopener,noreferrer');
   }
 }

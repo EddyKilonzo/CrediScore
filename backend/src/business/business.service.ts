@@ -21,6 +21,8 @@ import {
   VerifyDocumentDto,
   SocialLinksDto,
   BusinessStatus,
+  CreateReviewReplyDto,
+  UpdateReviewReplyDto,
 } from './dto/business.dto';
 import { DocumentType } from '@prisma/client';
 import axios, { AxiosResponse } from 'axios';
@@ -269,6 +271,20 @@ export class BusinessService {
                   name: true,
                   reputation: true,
                 },
+              },
+              replies: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      avatar: true,
+                      role: true,
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'asc' },
               },
             },
             orderBy: { createdAt: 'desc' },
@@ -2559,5 +2575,236 @@ export class BusinessService {
 
     const extension = mimeToExtension[mimeType.toLowerCase()];
     return extension || 'jpg'; // Default to jpg if unknown type
+  }
+
+  // Review Reply Management
+  async createReviewReply(
+    userId: string,
+    reviewId: string,
+    replyData: CreateReviewReplyDto,
+  ) {
+    try {
+      // Verify the review exists and get the business
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+        include: {
+          business: {
+            select: {
+              id: true,
+              ownerId: true,
+            },
+          },
+        },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      // Verify the user is the business owner
+      if (review.business.ownerId !== userId) {
+        throw new ForbiddenException(
+          'Only the business owner can reply to reviews',
+        );
+      }
+
+      // Create the reply
+      const reply = await this.prisma.reviewReply.create({
+        data: {
+          content: replyData.content,
+          reviewId: reviewId,
+          userId: userId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+      // Update the review status to verified when a reply is added
+      await this.prisma.review.update({
+        where: { id: reviewId },
+        data: { isVerified: true },
+      });
+
+      this.logger.log(
+        `Review reply created: ${reply.id} for review: ${reviewId} by user: ${userId}. Review marked as verified.`,
+      );
+      return reply;
+    } catch (error) {
+      this.logger.error('Error creating review reply:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to create review reply');
+    }
+  }
+
+  async updateReviewReply(
+    userId: string,
+    replyId: string,
+    replyData: UpdateReviewReplyDto,
+  ) {
+    try {
+      // Verify the reply exists and get the review/business
+      const reply = await this.prisma.reviewReply.findUnique({
+        where: { id: replyId },
+        include: {
+          review: {
+            include: {
+              business: {
+                select: {
+                  id: true,
+                  ownerId: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!reply) {
+        throw new NotFoundException('Review reply not found');
+      }
+
+      // Verify the user is the owner of the reply
+      if (reply.userId !== userId) {
+        throw new ForbiddenException(
+          'You can only update your own replies',
+        );
+      }
+
+      // Update the reply
+      const updatedReply = await this.prisma.reviewReply.update({
+        where: { id: replyId },
+        data: {
+          content: replyData.content,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+      this.logger.log(
+        `Review reply updated: ${replyId} by user: ${userId}`,
+      );
+      return updatedReply;
+    } catch (error) {
+      this.logger.error('Error updating review reply:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update review reply');
+    }
+  }
+
+  async deleteReviewReply(userId: string, replyId: string) {
+    try {
+      // Verify the reply exists and get the review/business
+      const reply = await this.prisma.reviewReply.findUnique({
+        where: { id: replyId },
+        include: {
+          review: {
+            include: {
+              business: {
+                select: {
+                  id: true,
+                  ownerId: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!reply) {
+        throw new NotFoundException('Review reply not found');
+      }
+
+      // Verify the user is the owner of the reply
+      if (reply.userId !== userId) {
+        throw new ForbiddenException(
+          'You can only delete your own replies',
+        );
+      }
+
+      // Delete the reply
+      await this.prisma.reviewReply.delete({
+        where: { id: replyId },
+      });
+
+      this.logger.log(
+        `Review reply deleted: ${replyId} by user: ${userId}`,
+      );
+      return { message: 'Review reply deleted successfully' };
+    } catch (error) {
+      this.logger.error('Error deleting review reply:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete review reply');
+    }
+  }
+
+  async getReviewReplies(reviewId: string) {
+    try {
+      // Verify the review exists
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      // Get all replies for the review
+      const replies = await this.prisma.reviewReply.findMany({
+        where: { reviewId: reviewId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      return replies;
+    } catch (error) {
+      this.logger.error('Error fetching review replies:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch review replies');
+    }
   }
 }

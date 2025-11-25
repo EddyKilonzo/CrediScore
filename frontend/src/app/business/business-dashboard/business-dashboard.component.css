@@ -134,6 +134,35 @@
   background: #a8a8a8;
 }
 
+/* Quick Actions Sticky Container */
+.quick-actions-sticky {
+  position: relative;
+}
+
+@media (min-width: 1280px) {
+  .quick-actions-sticky {
+    min-height: calc(100vh - 8rem);
+    max-height: calc(100vh - 8rem);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .quick-actions-sticky > div:first-child {
+    flex-shrink: 0;
+  }
+  
+  .quick-actions-sticky > div:last-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  
+  .quick-actions-sticky > div:last-child > div {
+    flex: 1;
+  }
+}
+
 /* Quick Action Cards - Enhanced hover effects */
 .quick-action-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

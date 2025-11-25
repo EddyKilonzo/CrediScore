@@ -1,5 +1,5 @@
 <!-- Hero Section with Integrated Navbar -->
-<section class="relative min-h-screen flex flex-col overflow-hidden">
+<section class="relative flex flex-col" style="height: 100vh; max-height: 100vh; overflow: hidden;">
   <!-- Parallax Background -->
   <div 
     class="parallax-bg absolute inset-0 bg-cover bg-center bg-no-repeat w-full h-full"
@@ -108,23 +108,23 @@
   </nav>
   
   <!-- Hero Content -->
-  <div class="relative z-10 flex-1 flex items-center justify-center p-8">
+  <div class="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
     <div class="max-w-7xl w-full text-center">
     <!-- Main Heading -->
-    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight hero-title">
+    <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-5 lg:mb-6 leading-tight hero-title">
       <span class="hero-word text-primary">Verify.</span>
       <span class="hero-word text-accent mx-2">Review.</span>
       <span class="hero-word text-secondary">Trust.</span>
     </h1>
 
     <!-- Subtitle -->
-    <p class="text-lg md:text-xl text-white max-w-4xl mx-auto mb-12 leading-relaxed hero-subtitle">
+    <p class="text-base sm:text-lg md:text-xl text-white max-w-4xl mx-auto mb-6 sm:mb-8 lg:mb-10 leading-relaxed hero-subtitle px-4">
       Kenya's trusted platform for business verification and reviews. Make informed
       decisions with AI-powered authenticity scoring and comprehensive business insights.
     </p>
 
     <!-- Search Section -->
-    <div class="max-w-3xl mx-auto mb-12 hero-search-section">
+    <div class="max-w-3xl mx-auto mb-6 sm:mb-8 lg:mb-10 hero-search-section px-4">
       <div class="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg shadow-2xl mb-6">
         <!-- Search Input -->
         <div class="relative flex-1 w-full flex items-center hero-search-input">
@@ -201,14 +201,14 @@
     </div>
 
     <!-- CTA Buttons -->
-    <div class="flex flex-col sm:flex-row gap-6 justify-center items-center hero-cta-buttons">
-      <button routerLink="/auth/register" class="hero-cta-primary inline-flex items-center px-8 py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-primary/40 hover:scale-105">
+    <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center hero-cta-buttons px-4">
+      <button routerLink="/auth/register" class="hero-cta-primary inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-primary/40 hover:scale-105 text-sm sm:text-base w-full sm:w-auto justify-center">
         <svg class="relative w-5 h-5 mr-2 z-10 cta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="relative z-10">Verify Your Business</span>
       </button>
-      <button routerLink="/auth/login" class="hero-cta-secondary inline-flex items-center px-8 py-4 bg-white text-gray-900 border-2 border-white rounded-lg font-semibold hover:bg-transparent hover:text-white transition-all duration-300 transform hover:-translate-y-1 hover:scale-105">
+      <button routerLink="/auth/login" class="hero-cta-secondary inline-flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-900 border-2 border-white rounded-lg font-semibold hover:bg-transparent hover:text-white transition-all duration-300 transform hover:-translate-y-1 hover:scale-105 text-sm sm:text-base w-full sm:w-auto justify-center">
         <svg class="relative w-5 h-5 mr-2 z-10 cta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>

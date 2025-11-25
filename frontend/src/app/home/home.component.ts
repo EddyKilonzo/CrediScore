@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChildren, QueryList, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
@@ -29,6 +29,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   // Inject services
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private router = inject(Router);
 
   // Authentication state
   currentUser = this.authService.currentUser;
@@ -247,7 +248,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onSearch() {
-    console.log('Searching for:', this.searchQuery, 'in category:', this.searchCategory);
+    if (this.searchQuery.trim()) {
+      this.router.navigate(['/search'], { queryParams: { q: this.searchQuery } });
+    } else {
+      this.router.navigate(['/search']);
+    }
   }
 
   searchPopular(term: string) {

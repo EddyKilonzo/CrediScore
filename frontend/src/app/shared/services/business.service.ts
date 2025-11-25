@@ -77,17 +77,17 @@ export interface Document {
 export interface Review {
   id: string;
   rating: number;
-  comment?: string;
+  comment: string | null;
   userId: string;
   businessId: string;
   credibility: number;
   isVerified: boolean;
   isActive: boolean;
-  receiptUrl?: string;
-  receiptData?: any;
-  validationResult?: any;
-  amount?: number;
-  reviewDate?: Date;
+  receiptUrl?: string | null;
+  receiptData?: any | null;
+  validationResult?: any | null;
+  amount?: number | null;
+  reviewDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   user?: {

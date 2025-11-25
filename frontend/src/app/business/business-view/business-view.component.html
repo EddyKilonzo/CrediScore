@@ -1,0 +1,926 @@
+<div class="business-view-container">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading business details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <h3>{{ error }}</h3>
+    <button (click)="goBack()" class="back-button">Go Back to Search</button>
+  </div>
+
+  <!-- Business Details -->
+  <div *ngIf="business && !loading" class="business-details">
+    <!-- Hero Section with Logo and Basic Info -->
+    <div class="hero-section">
+      <div class="hero-background"></div>
+      <div class="hero-content">
+        <div class="hero-header-actions">
+          <button (click)="goBack()" class="back-button-hero">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Back to Search</span>
+          </button>
+          <button (click)="refreshBusiness()" class="refresh-button-hero" [disabled]="loading" title="Refresh">
+            <i class="uil uil-refresh" [class.spinning]="loading"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+        
+        <div class="hero-main">
+          <div class="logo-section">
+            <div class="logo-container">
+              <img
+                *ngIf="business.logo"
+                [src]="business.logo"
+                [alt]="business.name"
+                class="business-logo"
+                (error)="$event.target.style.display='none'"
+              />
+              <div *ngIf="!business.logo" class="business-logo-placeholder">
+                <i class="uil uil-building"></i>
+              </div>
+              <!-- Verified Badge Overlay -->
+              <div class="verified-badge-overlay" *ngIf="isBusinessVerified()">
+                <img src="/images/verfied.png" alt="Verified" class="verified-badge-overlay-image" 
+                     (error)="$event.target.style.display='none'" />
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-info">
+            <div class="business-header">
+              <h1 class="business-name">{{ business.name }}</h1>
+              <div class="verified-badge" *ngIf="isBusinessVerified()">
+                <img src="/images/verfied.png" alt="Verified" class="verified-badge-image" 
+                     (error)="$event.target.style.display='none'" />
+              </div>
+            </div>
+            
+            <p class="catchphrase" *ngIf="business.catchphrase">{{ business.catchphrase }}</p>
+            
+            <div class="business-meta">
+              <div class="category-badge" *ngIf="business.category">
+                <i class="uil uil-tag"></i>
+                <span>{{ business.category }}</span>
+              </div>
+              
+              <div class="location-info" *ngIf="business.location || business.address">
+                <i class="uil uil-map-marker"></i>
+                <span>{{ business.location || business.address }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trust Score and Rating Section -->
+    <div class="trust-rating-section">
+      <div class="trust-score-card">
+        <div class="score-header">
+          <h3>Trust Score</h3>
+          <div class="grade-badge-large" [style.background-color]="getGradeColor(getBusinessGrade()) + '20'" [style.color]="getGradeColor(getBusinessGrade())">
+            <span class="grade-text">{{ getBusinessGrade() }}</span>
+          </div>
+        </div>
+        <div class="score-value">{{ getBusinessScore() }}%</div>
+        <div class="score-bar">
+          <div class="score-bar-fill" [style.width.%]="getBusinessScore()" [style.background]="'linear-gradient(90deg, ' + getGradeColor(getBusinessGrade()) + ', ' + getGradeColor(getBusinessGrade()) + 'CC)'"></div>
+        </div>
+      </div>
+
+      <div class="rating-card">
+        <div class="rating-header">
+          <h3>Customer Rating</h3>
+          <div class="star-rating-large">
+            <i
+              *ngFor="let i of [1,2,3,4,5]"
+              class="uil uil-star"
+              [class.star-filled]="i <= (averageRating || 0)"
+              [class.star-empty]="i > (averageRating || 0)"
+            ></i>
+          </div>
+        </div>
+        <div class="rating-value">{{ averageRating || 0 }}/5</div>
+        <div class="review-count-text">{{ totalReviews || 0 }} {{ (totalReviews || 0) === 1 ? 'review' : 'reviews' }}</div>
+      </div>
+    </div>
+
+    <!-- Business Info Prominent Section -->
+    <div class="business-info-prominent">
+      <div class="business-info-container">
+        <h2 class="business-info-title">
+          <i class="uil uil-info-circle"></i>
+          Business Information
+        </h2>
+        <div class="business-info-grid">
+          <div class="business-info-item" *ngIf="business.category">
+            <div class="info-item-icon">
+              <i class="uil uil-tag"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Category</span>
+              <span class="info-item-value">{{ business.category }}</span>
+            </div>
+          </div>
+          
+          <div class="business-info-item" *ngIf="business.phone">
+            <div class="info-item-icon">
+              <i class="uil uil-phone-alt"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Phone</span>
+              <a [href]="'tel:' + business.phone" class="info-item-value">{{ business.phone }}</a>
+            </div>
+          </div>
+
+          <div class="business-info-item" *ngIf="business.email">
+            <div class="info-item-icon">
+              <i class="uil uil-envelope"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Email</span>
+              <a [href]="'mailto:' + business.email" class="info-item-value">{{ business.email }}</a>
+            </div>
+          </div>
+
+          <div class="business-info-item" *ngIf="business.website">
+            <div class="info-item-icon">
+              <i class="uil uil-globe"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Website</span>
+              <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="info-item-value website-link">
+                {{ business.website }}
+                <i class="uil uil-external-link-alt"></i>
+              </a>
+            </div>
+          </div>
+
+          <div class="business-info-item" *ngIf="business.location || business.address">
+            <div class="info-item-icon">
+              <i class="uil uil-map-marker"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Location</span>
+              <span class="info-item-value">{{ business.location || business.address }}</span>
+            </div>
+          </div>
+
+          <div class="business-info-item" *ngIf="business.createdAt">
+            <div class="info-item-icon">
+              <i class="uil uil-calendar-alt"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Member Since</span>
+              <span class="info-item-value">{{ formatDate(business.createdAt) }}</span>
+            </div>
+          </div>
+
+          <div class="business-info-item" *ngIf="business.status && business.status !== 'VERIFIED'">
+            <div class="info-item-icon">
+              <i class="uil uil-check-circle"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Status</span>
+              <span class="info-item-value status-badge" [class]="'status-' + business.status.toLowerCase()">
+                {{ business.status }}
+              </span>
+            </div>
+          </div>
+
+          <div class="business-info-item" *ngIf="isBusinessVerified()">
+            <div class="info-item-icon verified">
+              <i class="uil uil-shield-check"></i>
+            </div>
+            <div class="info-item-content">
+              <span class="info-item-label">Verification</span>
+              <span class="info-item-value verified-text">
+                <img src="/images/verfied.png" alt="Verified" class="verified-badge-small" 
+                     (error)="$event.target.style.display='none'" />
+                Verified Business
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+      <!-- Left Column -->
+      <div class="content-main">
+        <!-- Description Section -->
+        <section class="info-section" *ngIf="business.description">
+          <h2 class="section-title">
+            <i class="uil uil-file-info-alt"></i>
+            About
+          </h2>
+          <p class="description-text">{{ business.description }}</p>
+        </section>
+
+        <!-- Payment Methods Section -->
+        <section class="info-section" *ngIf="business.payments && business.payments.length > 0">
+          <h2 class="section-title">
+            <i class="uil uil-money-bill"></i>
+            Payment Methods
+          </h2>
+          <div class="payment-methods-grid">
+            <div class="payment-method-card" *ngFor="let payment of business.payments">
+              <div class="payment-icon">
+                <i [class]="getPaymentIcon(payment.type)"></i>
+              </div>
+              <div class="payment-details">
+                <span class="payment-type">{{ payment.type }}</span>
+                <span class="payment-number">{{ payment.number }}</span>
+              </div>
+              <div class="payment-verified" *ngIf="payment.verified">
+                <i class="uil uil-check-circle"></i>
+                <span>Verified</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Location Map Section -->
+        <section class="info-section map-section" *ngIf="business.location || business.latitude || business.longitude">
+          <h2 class="section-title">
+            <i class="uil uil-map"></i>
+            Location & Map
+          </h2>
+          <div class="map-container">
+            <div class="map-wrapper">
+              <iframe
+                *ngIf="getMapUrl()"
+                [src]="sanitizeMapUrl(getMapUrl()!)"
+                width="100%"
+                height="400"
+                style="border:0; border-radius: 0.75rem;"
+                allowfullscreen=""
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                class="google-map"
+                title="Business location on Google Maps"
+              ></iframe>
+              <div *ngIf="!getMapUrl()" class="map-placeholder">
+                <i class="uil uil-map-marker"></i>
+                <p>{{ business.location || business.address }}</p>
+                <a
+                  *ngIf="business.location || business.address"
+                  [href]="getGoogleMapsSearchUrl()"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="open-maps-btn"
+                >
+                  <i class="uil uil-external-link-alt"></i>
+                  Open in Google Maps
+                </a>
+              </div>
+            </div>
+            <div class="map-info" *ngIf="business.location || business.address || business.latitude">
+              <i class="uil uil-map-marker"></i>
+              <span>{{ business.location || business.address || (business.latitude && business.longitude ? business.latitude + ', ' + business.longitude : '') }}</span>
+              <a
+                [href]="getGoogleMapsSearchUrl()"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="directions-link"
+              >
+                <i class="uil uil-directions"></i>
+                Get Directions
+                <i class="uil uil-arrow-right"></i>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Write Review Section -->
+        <section class="info-section write-review-section" *ngIf="isAuthenticated()">
+          <h2 class="section-title">
+            <i class="uil uil-edit"></i>
+            Write a Review
+          </h2>
+          
+          <div class="review-form-container">
+            <form (ngSubmit)="submitReview()" [formGroup]="reviewForm" *ngIf="!reviewSubmitted">
+              <!-- Rating Selection -->
+              <div class="form-group">
+                <label class="form-label">Your Rating <span class="required">*</span></label>
+                <div class="rating-selector">
+                  <button
+                    type="button"
+                    *ngFor="let star of [1,2,3,4,5]"
+                    (click)="setRating(star)"
+                    [class.active]="selectedRating >= star"
+                    [class.hover]="hoveredRating >= star"
+                    (mouseenter)="hoveredRating = star"
+                    (mouseleave)="hoveredRating = 0"
+                    class="star-button"
+                  >
+                    <i class="uil uil-star"></i>
+                  </button>
+                </div>
+                <span class="rating-text" *ngIf="selectedRating > 0">
+                  {{ getRatingText(selectedRating) }}
+                </span>
+              </div>
+
+              <!-- Comment Textarea -->
+              <div class="form-group">
+                <label for="comment" class="form-label">Your Review</label>
+                <textarea
+                  id="comment"
+                  formControlName="comment"
+                  rows="5"
+                  class="form-textarea"
+                  placeholder="Share your experience with this business..."
+                  maxlength="1000"
+                ></textarea>
+                <span class="char-count">{{ reviewForm.get('comment')?.value?.length || 0 }}/1000</span>
+              </div>
+
+              <!-- Image Upload Section -->
+              <div class="form-group">
+                <label class="form-label">Add Evidence (Optional)</label>
+                <p class="form-help-text">Upload images like receipts, photos, or screenshots to support your review</p>
+                
+                <!-- Drag and Drop Zone -->
+                <div
+                  class="image-drop-zone"
+                  [class.drag-over]="isDragOver"
+                  [class.has-images]="uploadedImages.length > 0"
+                  (dragover)="onDragOver($event)"
+                  (dragleave)="onDragLeave($event)"
+                  (drop)="onDrop($event)"
+                  (click)="fileInput.click()"
+                >
+                  <input
+                    #fileInput
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    (change)="onFileSelected($event)"
+                    class="file-input-hidden"
+                  />
+                  
+                  <div class="drop-zone-content" *ngIf="uploadedImages.length === 0">
+                    <i class="uil uil-image-upload"></i>
+                    <p class="drop-zone-text">
+                      <strong>Drag & drop images here</strong> or click to browse
+                    </p>
+                    <p class="drop-zone-hint">Supports JPG, PNG, GIF (Max 5MB each)</p>
+                  </div>
+
+                  <!-- Image Preview Grid -->
+                  <div class="image-preview-grid" *ngIf="uploadedImages.length > 0">
+                    <div class="image-preview-item" *ngFor="let image of uploadedImages; let i = index">
+                      <img [src]="image.preview" [alt]="'Evidence ' + (i + 1)" class="preview-image" />
+                      <button
+                        type="button"
+                        (click)="removeImage(i); $event.stopPropagation()"
+                        class="remove-image-btn"
+                        title="Remove image"
+                      >
+                        <i class="uil uil-times"></i>
+                      </button>
+                      <div class="image-name" [title]="image.name">
+                        {{ image.name }}
+                      </div>
+                    </div>
+                    <div class="add-more-images" *ngIf="uploadedImages.length < 5" (click)="fileInput.click(); $event.stopPropagation()">
+                      <i class="uil uil-plus"></i>
+                      <span>Add More</span>
+                    </div>
+                  </div>
+                </div>
+                <p class="image-limit-text" *ngIf="uploadedImages.length > 0">
+                  {{ uploadedImages.length }}/5 images uploaded
+                </p>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  [disabled]="!isFormValid() || isSubmitting"
+                  class="submit-review-btn"
+                  [class.loading]="isSubmitting"
+                >
+                  <span *ngIf="!isSubmitting">
+                    <i class="uil uil-check"></i>
+                    Submit Review
+                  </span>
+                  <span *ngIf="isSubmitting">
+                    <i class="uil uil-spinner-alt"></i>
+                    Submitting...
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  (click)="resetForm()"
+                  class="cancel-review-btn"
+                  [disabled]="isSubmitting"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+
+            <!-- Success Message -->
+            <div class="review-success-message" *ngIf="reviewSubmitted">
+              <i class="uil uil-check-circle"></i>
+              <h3>Thank you for your review!</h3>
+              <p>Your review has been submitted successfully and will be visible after moderation.</p>
+              <button (click)="resetForm()" class="submit-another-btn">Write Another Review</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Login Prompt for Reviews -->
+        <section class="info-section write-review-section" *ngIf="!isAuthenticated()">
+          <h2 class="section-title">
+            <i class="uil uil-edit"></i>
+            Write a Review
+          </h2>
+          <div class="login-prompt">
+            <p>Please <a routerLink="/auth/login">log in</a> to write a review and share your experience with this business.</p>
+          </div>
+        </section>
+
+        <!-- Reviews Section -->
+        <section class="info-section reviews-section">
+          <h2 class="section-title">
+            <i class="uil uil-star"></i>
+            Customer Reviews
+            <span class="reviews-count-badge" *ngIf="totalReviews">{{ totalReviews }}</span>
+          </h2>
+
+          <div *ngIf="reviews && reviews.length > 0; else noReviews">
+            <div class="reviews-grid-compact">
+              <div 
+                class="review-card-compact" 
+                *ngFor="let review of reviews"
+                (click)="openReviewModal(review)"
+              >
+                <div class="review-card-header-compact">
+                  <div class="reviewer-info-compact">
+                    <div class="reviewer-avatar-compact">
+                      <span>{{ (review.user?.name || 'A')[0].toUpperCase() }}</span>
+                    </div>
+                    <div class="reviewer-details-compact">
+                      <span class="reviewer-name-compact">{{ review.user?.name || 'Anonymous' }}</span>
+                      <span class="review-date-compact">{{ formatDate(review.createdAt) }}</span>
+                    </div>
+                  </div>
+                  <div class="review-rating-compact">
+                    <div class="review-stars-compact">
+                      <i
+                        *ngFor="let i of [1,2,3,4,5]"
+                        class="uil uil-star"
+                        [class.star-filled]="i <= review.rating"
+                        [class.star-empty]="i > review.rating"
+                      ></i>
+                    </div>
+                    <span class="review-rating-value-compact">{{ review.rating }}/5</span>
+                  </div>
+                </div>
+                <p class="review-comment-compact" *ngIf="review.comment">
+                  {{ (review.comment.length > 100 ? review.comment.substring(0, 100) + '...' : review.comment) }}
+                </p>
+                <p class="review-comment-compact no-comment" *ngIf="!review.comment">
+                  No comment provided
+                </p>
+                
+                <!-- Review Images Preview -->
+                <div class="review-media-compact" *ngIf="getReviewMedia(review).length > 0">
+                  <div class="review-media-grid-compact">
+                    <div
+                      *ngFor="let media of getReviewMedia(review).slice(0, 3)"
+                      class="review-media-item-compact"
+                      (click)="$event.stopPropagation(); openMediaInModal(media.url)"
+                    >
+                      <img 
+                        [src]="media.url" 
+                        [alt]="media.type === 'receipt' ? 'Receipt' : 'Review image'"
+                        class="review-media-image-compact"
+                        (error)="handleImageError($event)"
+                        loading="lazy"
+                      />
+                      <div class="review-media-overlay-compact">
+                        <i class="uil uil-expand-arrows-alt"></i>
+                      </div>
+                    </div>
+                    <div 
+                      class="review-media-more-compact" 
+                      *ngIf="getReviewMedia(review).length > 3"
+                      (click)="$event.stopPropagation(); openReviewModal(review)"
+                    >
+                      <span>+{{ getReviewMedia(review).length - 3 }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="review-footer-compact">
+                  <div class="review-badges-compact">
+                    <div class="review-badge-compact verified" *ngIf="review.isVerified">
+                      <i class="uil uil-check-circle"></i>
+                      <span>Verified</span>
+                    </div>
+                    <div class="review-badge-compact credibility" *ngIf="review.credibility">
+                      <i class="uil uil-shield-check"></i>
+                      <span>{{ review.credibility }}%</span>
+                    </div>
+                    <div class="review-badge-compact media" *ngIf="review.receiptUrl || getReviewMedia(review).length > 0">
+                      <i class="uil uil-image"></i>
+                      <span>{{ getReviewMedia(review).length || 1 }}</span>
+                    </div>
+                  </div>
+                  <div class="review-actions-compact">
+                    <div class="review-click-hint">
+                      <i class="uil uil-eye"></i>
+                      <span>Click to view details</span>
+                    </div>
+                    <div class="review-owner-actions" *ngIf="isReviewOwner(review)">
+                      <button 
+                        class="review-action-btn edit-btn" 
+                        (click)="openEditReview(review, $event)"
+                        title="Edit review"
+                      >
+                        <i class="uil uil-edit"></i>
+                      </button>
+                      <button 
+                        class="review-action-btn delete-btn" 
+                        (click)="openDeleteConfirm(review, $event)"
+                        title="Delete review"
+                      >
+                        <i class="uil uil-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noReviews>
+            <div class="no-reviews">
+              <i class="uil uil-comment-slash"></i>
+              <p>No reviews yet. Be the first to review this business!</p>
+            </div>
+          </ng-template>
+        </section>
+      </div>
+
+      <!-- Right Sidebar -->
+      <aside class="content-sidebar">
+        <!-- Quick Stats Card -->
+        <div class="sidebar-card stats-card">
+          <h3 class="sidebar-title">Quick Stats</h3>
+          <div class="stats-list">
+            <div class="stat-item">
+              <i class="uil uil-star"></i>
+              <div class="stat-details">
+                <span class="stat-label">Average Rating</span>
+                <span class="stat-value">{{ averageRating || 0 }}/5</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <i class="uil uil-comment-dots"></i>
+              <div class="stat-details">
+                <span class="stat-label">Total Reviews</span>
+                <span class="stat-value">{{ totalReviews || 0 }}</span>
+              </div>
+            </div>
+            <div class="stat-item" *ngIf="isBusinessVerified()">
+              <i class="uil uil-shield-check"></i>
+              <div class="stat-details">
+                <span class="stat-label">Verification</span>
+                <span class="stat-value verified-text">Verified</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Information Sidebar -->
+        <div class="sidebar-card contact-sidebar">
+          <h3 class="sidebar-title">
+            <i class="uil uil-phone"></i>
+            Contact Information
+          </h3>
+          <div class="sidebar-contact-list">
+            <div class="sidebar-contact-item" *ngIf="business.phone">
+              <div class="sidebar-contact-icon">
+                <i class="uil uil-phone-alt"></i>
+              </div>
+              <div class="sidebar-contact-details">
+                <span class="sidebar-contact-label">Phone</span>
+                <a [href]="'tel:' + business.phone" class="sidebar-contact-value">{{ business.phone }}</a>
+              </div>
+            </div>
+
+            <div class="sidebar-contact-item" *ngIf="business.email">
+              <div class="sidebar-contact-icon">
+                <i class="uil uil-envelope"></i>
+              </div>
+              <div class="sidebar-contact-details">
+                <span class="sidebar-contact-label">Email</span>
+                <a [href]="'mailto:' + business.email" class="sidebar-contact-value">{{ business.email }}</a>
+              </div>
+            </div>
+
+            <div class="sidebar-contact-item" *ngIf="business.website">
+              <div class="sidebar-contact-icon">
+                <i class="uil uil-globe"></i>
+              </div>
+              <div class="sidebar-contact-details">
+                <span class="sidebar-contact-label">Website</span>
+                <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="sidebar-contact-value website-link">
+                  {{ business.website }}
+                  <i class="uil uil-external-link-alt"></i>
+                </a>
+              </div>
+            </div>
+
+            <div class="sidebar-contact-item" *ngIf="business.location || business.address">
+              <div class="sidebar-contact-icon">
+                <i class="uil uil-map-marker"></i>
+              </div>
+              <div class="sidebar-contact-details">
+                <span class="sidebar-contact-label">Location</span>
+                <span class="sidebar-contact-value">{{ business.location || business.address }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Social Links Sidebar -->
+        <div class="sidebar-card" *ngIf="business.socialLinks && hasSocialLinks()">
+          <h3 class="sidebar-title">
+            <i class="uil uil-share-alt"></i>
+            Follow Us
+          </h3>
+          <div class="sidebar-social-links">
+            <a *ngIf="business.socialLinks.facebook" [href]="business.socialLinks.facebook" target="_blank" rel="noopener noreferrer" class="sidebar-social-link facebook">
+              <i class="uil uil-facebook-f"></i>
+              <span>Facebook</span>
+            </a>
+            <a *ngIf="business.socialLinks.twitter" [href]="business.socialLinks.twitter" target="_blank" rel="noopener noreferrer" class="sidebar-social-link twitter">
+              <i class="uil uil-twitter"></i>
+              <span>Twitter</span>
+            </a>
+            <a *ngIf="business.socialLinks.instagram" [href]="business.socialLinks.instagram" target="_blank" rel="noopener noreferrer" class="sidebar-social-link instagram">
+              <i class="uil uil-instagram"></i>
+              <span>Instagram</span>
+            </a>
+            <a *ngIf="business.socialLinks.linkedin" [href]="business.socialLinks.linkedin" target="_blank" rel="noopener noreferrer" class="sidebar-social-link linkedin">
+              <i class="uil uil-linkedin"></i>
+              <span>LinkedIn</span>
+            </a>
+            <a *ngIf="business.socialLinks.youtube" [href]="business.socialLinks.youtube" target="_blank" rel="noopener noreferrer" class="sidebar-social-link youtube">
+              <i class="uil uil-youtube"></i>
+              <span>YouTube</span>
+            </a>
+            <a *ngIf="business.socialLinks.tiktok" [href]="business.socialLinks.tiktok" target="_blank" rel="noopener noreferrer" class="sidebar-social-link tiktok">
+              <i class="uil uil-music"></i>
+              <span>TikTok</span>
+            </a>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- Review Detail Modal -->
+<div class="review-modal-overlay" *ngIf="showReviewModal && selectedReview" (click)="closeReviewModal()">
+  <div class="review-modal-content" (click)="$event.stopPropagation()">
+    <button class="review-modal-close" (click)="closeReviewModal()">
+      <i class="uil uil-times"></i>
+    </button>
+    
+    <div class="review-modal-header" *ngIf="selectedReview">
+      <div class="reviewer-info-modal">
+        <div class="reviewer-avatar-modal">
+          <span>{{ (selectedReview.user?.name || 'A')[0].toUpperCase() }}</span>
+        </div>
+        <div class="reviewer-details-modal">
+          <h3 class="reviewer-name-modal">{{ selectedReview.user?.name || 'Anonymous' }}</h3>
+          <span class="review-date-modal">{{ formatDate(selectedReview.createdAt) }}</span>
+        </div>
+      </div>
+      <div class="review-rating-modal">
+        <div class="review-stars-modal">
+          <i
+            *ngFor="let i of [1,2,3,4,5]"
+            class="uil uil-star"
+            [class.star-filled]="i <= selectedReview.rating"
+            [class.star-empty]="i > selectedReview.rating"
+          ></i>
+        </div>
+        <span class="review-rating-value-modal">{{ selectedReview.rating }}/5</span>
+      </div>
+      <div class="review-modal-actions" *ngIf="isReviewOwner(selectedReview)">
+        <button 
+          class="review-action-btn-modal edit-btn" 
+          (click)="openEditReview(selectedReview, $event)"
+          title="Edit review"
+        >
+          <i class="uil uil-edit"></i>
+        </button>
+        <button 
+          class="review-action-btn-modal delete-btn" 
+          (click)="openDeleteConfirm(selectedReview, $event)"
+          title="Delete review"
+        >
+          <i class="uil uil-trash-alt"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="review-modal-body" *ngIf="selectedReview">
+      <div class="review-comment-modal" *ngIf="selectedReview.comment">
+        <p>{{ selectedReview.comment }}</p>
+      </div>
+      <div class="review-comment-modal no-comment" *ngIf="!selectedReview.comment">
+        <p>No comment provided</p>
+      </div>
+
+      <!-- Review Media Gallery -->
+      <div class="review-media-modal" *ngIf="getReviewMedia(selectedReview).length > 0">
+        <div class="review-media-title-modal">
+          <i class="uil uil-image"></i>
+          <span>Evidence ({{ getReviewMedia(selectedReview).length }})</span>
+        </div>
+        <div class="review-media-grid-modal">
+          <div
+            *ngFor="let media of getReviewMedia(selectedReview)"
+            class="review-media-item-modal"
+            (click)="openMediaInModal(media.url)"
+          >
+            <img 
+              [src]="media.url" 
+              [alt]="media.type === 'receipt' ? 'Receipt' : 'Review image'"
+              class="review-media-image-modal"
+              (error)="handleImageError($event)"
+              loading="lazy"
+            />
+            <div class="review-media-overlay-modal">
+              <i class="uil uil-expand-arrows-alt"></i>
+              <span>Click to view full size</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review Details -->
+      <div class="review-details-modal">
+        <div class="review-detail-item" *ngIf="selectedReview.amount">
+          <i class="uil uil-money-bill"></i>
+          <span>Amount: KSh {{ selectedReview.amount | number:'1.2-2' }}</span>
+        </div>
+        <div class="review-detail-item">
+          <i class="uil uil-calendar-alt"></i>
+          <span>Review Date: {{ formatDate(selectedReview.createdAt) }}</span>
+        </div>
+        <div class="review-detail-item" *ngIf="selectedReview.credibility">
+          <i class="uil uil-shield-check"></i>
+          <span>Credibility: {{ selectedReview.credibility }}%</span>
+        </div>
+        <div class="review-detail-item" *ngIf="selectedReview.isVerified">
+          <i class="uil uil-check-circle"></i>
+          <span>Verified Review</span>
+        </div>
+      </div>
+
+      <!-- Review Replies (only for business owners) -->
+      <div *ngIf="isBusinessOwner() && selectedReview">
+        <app-review-reply 
+          [reviewId]="selectedReview.id"
+          [replies]="getReviewReplies(selectedReview.id)"
+          (replyAdded)="onReplyAdded($event)"
+          (replyUpdated)="onReplyUpdated($event)"
+          (replyDeleted)="onReplyDeleted($event)">
+        </app-review-reply>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Review Modal -->
+<div class="review-modal-overlay" *ngIf="editingReview" (click)="closeEditReview()">
+  <div class="review-modal-content edit-review-modal" (click)="$event.stopPropagation()">
+    <button class="review-modal-close" (click)="closeEditReview()">
+      <i class="uil uil-times"></i>
+    </button>
+    
+    <div class="review-modal-header">
+      <h2 class="review-modal-title">Edit Review</h2>
+    </div>
+
+    <form [formGroup]="editReviewForm" (ngSubmit)="updateReview()" class="edit-review-form">
+      <!-- Rating Selection -->
+      <div class="form-group">
+        <label class="form-label">Rating *</label>
+        <div class="rating-input">
+          <div class="rating-stars-large">
+            <i
+              *ngFor="let i of [1,2,3,4,5]"
+              class="uil uil-star"
+              [class.star-filled]="i <= editSelectedRating"
+              [class.star-empty]="i > editSelectedRating"
+              (click)="setEditRating(i)"
+              (mouseenter)="hoveredRating = i"
+              (mouseleave)="hoveredRating = 0"
+            ></i>
+          </div>
+          <span class="rating-text" *ngIf="editSelectedRating > 0">
+            {{ getRatingText(editSelectedRating) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Comment -->
+      <div class="form-group">
+        <label class="form-label">Comment</label>
+        <textarea
+          formControlName="comment"
+          class="form-textarea"
+          rows="5"
+          placeholder="Share your experience..."
+          maxlength="1000"
+        ></textarea>
+        <div class="form-hint">
+          {{ editReviewForm.get('comment')?.value?.length || 0 }}/1000 characters
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeEditReview()"
+          [disabled]="isUpdating"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="!isEditFormValid() || isUpdating"
+        >
+          <span *ngIf="!isUpdating">Update Review</span>
+          <span *ngIf="isUpdating">Updating...</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Review Confirmation Modal -->
+<div class="review-modal-overlay" *ngIf="deletingReview" (click)="closeDeleteConfirm()">
+  <div class="review-modal-content delete-confirm-modal" (click)="$event.stopPropagation()">
+    <button class="review-modal-close" (click)="closeDeleteConfirm()">
+      <i class="uil uil-times"></i>
+    </button>
+    
+    <div class="delete-confirm-content">
+      <div class="delete-confirm-icon">
+        <i class="uil uil-exclamation-triangle"></i>
+      </div>
+      <h2 class="delete-confirm-title">Delete Review</h2>
+      <p class="delete-confirm-message">
+        Are you sure you want to delete this review? This action cannot be undone.
+      </p>
+      
+      <div class="delete-confirm-actions">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeDeleteConfirm()"
+          [disabled]="isDeleting"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="confirmDeleteReview()"
+          [disabled]="isDeleting"
+        >
+          <span *ngIf="!isDeleting">Delete Review</span>
+          <span *ngIf="isDeleting">Deleting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+

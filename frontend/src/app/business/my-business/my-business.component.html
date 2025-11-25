@@ -18,11 +18,22 @@
       </p>
       
       <!-- Business Status Badge -->
-      <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="mt-4">
+      <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="mt-4 flex flex-wrap items-center gap-3">
         <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300" 
               style="background: #F5F8FA; border: 1px solid #E8EEF3; color: #2D5A87;">
           <i class="fas fa-building mr-2" style="color: #2D5A87;"></i>
           {{ getBusinessReputationLevel() }}
+        </span>
+        <!-- Business Verification Status Badge -->
+        <span *ngIf="currentBusiness?.isVerified" 
+              class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-200 transition-all duration-300">
+          <i class="fas fa-check-circle mr-2"></i>
+          Verified Business
+        </span>
+        <span *ngIf="currentBusiness && !currentBusiness.isVerified" 
+              class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 transition-all duration-300">
+          <i class="fas fa-clock mr-2"></i>
+          Pending Verification
         </span>
       </div>
     </div>
@@ -43,8 +54,25 @@
       <!-- Business Verification Progress - Enhanced with Arrows -->
       <div class="dashboard-card verification-progress-card">
         <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Business Verification Progress</h2>
-          <p class="text-sm text-gray-600">Complete these steps to get your business verified</p>
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">Business Verification Progress</h2>
+              <p class="text-sm text-gray-600">Complete these steps to get your business verified</p>
+            </div>
+            <!-- Verification Status Badge -->
+            <div *ngIf="currentBusiness">
+              <span *ngIf="currentBusiness.isVerified" 
+                    class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800 border border-green-300 shadow-sm">
+                <i class="fas fa-check-circle mr-2"></i>
+                Verified
+              </span>
+              <span *ngIf="!currentBusiness.isVerified" 
+                    class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-sm">
+                <i class="fas fa-clock mr-2"></i>
+                Not Verified
+              </span>
+            </div>
+          </div>
         </div>
         
         <div class="p-6">

@@ -4,6 +4,11 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../core/services/auth.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { firstValueFrom } from 'rxjs';
+import {
+  UserDashboardService,
+  UserDashboardResponse,
+} from '../../core/services/user-dashboard.service';
 
 interface DashboardStats {
   totalReviews: number;
@@ -32,7 +37,7 @@ interface BusinessCard {
   reviewCount: number;
   averageRating: number;
   isVerified: boolean;
-  lastActivity: Date;
+  lastActivity: Date | null;
 }
 
 interface QuickAction {
@@ -54,6 +59,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Inject services
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private userDashboardService = inject(UserDashboardService);
 
   // Authentication state
   currentUser = this.authService.currentUser;
@@ -105,8 +111,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     
     this.loadDashboardData();
     this.setupQuickActions();
-    this.loadRecentActivities();
-    this.loadUserBusinesses();
   }
 
   ngOnDestroy() {
@@ -149,17 +153,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else {
       this.quickActions = [
         {
-          title: 'Write Review',
-          description: 'Share your experience',
+          title: 'My Reviews',
+          description: 'View all your reviews',
           icon: 'uil uil-star',
-          route: '/reviews/write',
-          color: 'bg-blue-500'
+          route: '/my-reviews',
+          color: 'bg-purple-500'
         },
         {
           title: 'Search Businesses',
           description: 'Find trusted businesses',
           icon: 'uil uil-search',
-          route: '/business/search',
+          route: '/search',
           color: 'bg-green-500'
         },
         {
@@ -191,15 +195,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // TODO: Replace with actual API calls when backend services are ready
-      // For now, we'll use the user's actual data from the auth service
-      this.dashboardStats = {
-        totalReviews: 0, // Will be loaded from reviews service
-        totalBusinesses: 0, // Will be loaded from business service
-        averageRating: 4.5, // Will be calculated from reviews
-        monthlyGrowth: 12,
-        verifiedBusinesses: user.isVerified ? 1 : 0
-      };
+      const dashboard = await firstValueFrom(
+        this.userDashboardService.getDashboard()
+      );
+
+      this.setDashboardStats(dashboard);
+      this.setRecentActivities(dashboard);
+      this.setUserBusinesses(dashboard);
 
       this.isLoading = false;
     } catch (error) {
@@ -209,85 +211,40 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async loadRecentActivities() {
-    // Mock data - replace with actual API calls
-    this.recentActivities = [
-      {
-        id: '1',
-        type: 'review',
-        title: 'Reviewed Mama Mboga Shop',
-        description: 'Left a 5-star review for excellent service',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        status: 'verified',
-        businessName: 'Mama Mboga Shop',
-        rating: 5
-      },
-      {
-        id: '2',
-        type: 'business_created',
-        title: 'Created Business Profile',
-        description: 'Successfully registered "Tech Solutions Ltd"',
-        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-        status: 'pending'
-      },
-      {
-        id: '3',
-        type: 'document_uploaded',
-        title: 'Uploaded Business Certificate',
-        description: 'Business registration document uploaded',
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-        status: 'verified'
-      },
-      {
-        id: '4',
-        type: 'review',
-        title: 'Reviewed Jua Kali Garage',
-        description: 'Left a 4-star review for good work',
-        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-        status: 'verified',
-        businessName: 'Jua Kali Garage',
-        rating: 4
-      }
-    ];
+  private setDashboardStats(dashboard: UserDashboardResponse) {
+    this.dashboardStats = {
+      totalReviews: dashboard.stats?.totalReviews ?? 0,
+      totalBusinesses: dashboard.stats?.totalBusinesses ?? 0,
+      averageRating: Number(dashboard.stats?.averageRating ?? 0),
+      monthlyGrowth: dashboard.stats?.monthlyGrowth ?? 0,
+      verifiedBusinesses: dashboard.stats?.verifiedBusinesses ?? 0,
+    };
   }
 
-  private async loadUserBusinesses() {
-    // Mock data - replace with actual API calls
-    this.userBusinesses = [
-      {
-        id: '1',
-        name: 'Tech Solutions Ltd',
-        category: 'Technology',
-        trustScore: 92,
-        grade: 'A+',
-        reviewCount: 15,
-        averageRating: 4.8,
-        isVerified: true,
-        lastActivity: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: '2',
-        name: 'Mama Mboga Shop',
-        category: 'Retail',
-        trustScore: 78,
-        grade: 'B+',
-        reviewCount: 8,
-        averageRating: 4.2,
-        isVerified: true,
-        lastActivity: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: '3',
-        name: 'Quick Fix Services',
-        category: 'Services',
-        trustScore: 65,
-        grade: 'C+',
-        reviewCount: 3,
-        averageRating: 3.8,
-        isVerified: false,
-        lastActivity: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      }
-    ];
+  private setRecentActivities(dashboard: UserDashboardResponse) {
+    this.recentActivities = (dashboard.recentActivity ?? []).map((activity) => ({
+      id: activity.id,
+      type: this.mapActivityType(activity.type),
+      title: activity.title,
+      description: activity.description ?? '',
+      timestamp: new Date(activity.timestamp),
+      status: this.mapActivityStatus(activity.status ?? undefined),
+      businessName: activity.businessName ?? undefined,
+      rating: activity.rating ?? undefined,
+    }));
+  }
+
+  private setUserBusinesses(dashboard: UserDashboardResponse) {
+    this.userBusinesses = (dashboard.businesses ?? []).map((business) => ({
+      id: business.id,
+      name: business.name,
+      category: business.category,
+      grade: business.grade,
+      reviewCount: business.reviewCount ?? 0,
+      averageRating: Number(business.averageRating ?? 0),
+      isVerified: business.isVerified ?? false,
+      lastActivity: business.lastActivity ? new Date(business.lastActivity) : null,
+    }));
   }
 
   getTimeframeLabel(): string {
@@ -332,14 +289,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  getTrustScoreColor(score: number): string {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 80) return 'text-blue-600';
-    if (score >= 70) return 'text-yellow-600';
-    if (score >= 60) return 'text-orange-600';
-    return 'text-red-600';
-  }
-
   getTrustGradeColor(grade: string): string {
     switch (grade) {
       case 'A+': return 'bg-green-500';
@@ -351,7 +300,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  formatTimeAgo(date: Date): string {
+  formatTimeAgo(date: Date | null | undefined): string {
+    if (!date) {
+      return 'No recent activity';
+    }
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
@@ -403,6 +355,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (mockReputation >= 60) return 'text-green-600';
     if (mockReputation >= 40) return 'text-yellow-600';
     return 'text-gray-600';
+  }
+
+  private mapActivityType(type: string): RecentActivity['type'] {
+    switch (type) {
+      case 'business':
+      case 'business_created':
+        return 'business_created';
+      case 'document':
+      case 'document_uploaded':
+        return 'document_uploaded';
+      case 'payment':
+      case 'payment_added':
+        return 'payment_added';
+      default:
+        return 'review';
+    }
+  }
+
+  private mapActivityStatus(
+    status?: string,
+  ): RecentActivity['status'] | undefined {
+    if (!status) {
+      return undefined;
+    }
+
+    switch (status.toLowerCase()) {
+      case 'verified':
+        return 'verified';
+      case 'pending':
+      case 'under_review':
+        return 'pending';
+      case 'rejected':
+        return 'rejected';
+      default:
+        return undefined;
+    }
   }
 
   logout() {

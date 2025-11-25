@@ -37,6 +37,8 @@ import {
   UpdateBusinessCategoryDto,
   SubmitForReviewDto,
   UpdateOnboardingStepDto,
+  CreateReviewReplyDto,
+  UpdateReviewReplyDto,
 } from './dto/business.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -739,6 +741,113 @@ export class BusinessController {
       businessId,
       submitData,
     );
+  }
+
+  // Review Reply Endpoints
+  @Post('reviews/:reviewId/replies')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a reply to a review' })
+  @ApiParam({ name: 'reviewId', description: 'Review ID' })
+  @ApiBody({ type: CreateReviewReplyDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Review reply created successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Only business owners can reply to reviews',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async createReviewReply(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('reviewId') reviewId: string,
+    @Body(ValidationPipe) replyData: CreateReviewReplyDto,
+  ) {
+    return this.businessService.createReviewReply(
+      req.user.id,
+      reviewId,
+      replyData,
+    );
+  }
+
+  @Get('reviews/:reviewId/replies')
+  @ApiOperation({ summary: 'Get all replies for a review' })
+  @ApiParam({ name: 'reviewId', description: 'Review ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review replies retrieved successfully',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review not found',
+  })
+  async getReviewReplies(@Param('reviewId') reviewId: string) {
+    return this.businessService.getReviewReplies(reviewId);
+  }
+
+  @Patch('replies/:replyId')
+  @ApiOperation({ summary: 'Update a review reply' })
+  @ApiParam({ name: 'replyId', description: 'Reply ID' })
+  @ApiBody({ type: UpdateReviewReplyDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Review reply updated successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only update your own replies',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review reply not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async updateReviewReply(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('replyId') replyId: string,
+    @Body(ValidationPipe) replyData: UpdateReviewReplyDto,
+  ) {
+    return this.businessService.updateReviewReply(
+      req.user.id,
+      replyId,
+      replyData,
+    );
+  }
+
+  @Delete('replies/:replyId')
+  @ApiOperation({ summary: 'Delete a review reply' })
+  @ApiParam({ name: 'replyId', description: 'Reply ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review reply deleted successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - You can only delete your own replies',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Review reply not found',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async deleteReviewReply(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('replyId') replyId: string,
+  ) {
+    return this.businessService.deleteReviewReply(req.user.id, replyId);
   }
 }
 

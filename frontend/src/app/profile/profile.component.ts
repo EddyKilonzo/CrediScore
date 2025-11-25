@@ -39,6 +39,7 @@ interface Activity {
   trustScore?: number;
   category?: string;
   status?: string;
+  replies?: any[];
 }
 
 interface RoleBasedData {
@@ -336,8 +337,11 @@ export class ProfileComponent implements OnInit {
   }
 
   getReviewReplies(reviewId: string): any {
-    // For now, return empty array signal - this would be populated from the backend
-    // In a real implementation, you'd fetch replies for each review
+    // Extract replies from the activity data
+    const activity = this.getRecentActivity().find(a => a.id === reviewId);
+    if (activity && activity.replies) {
+      return signal(activity.replies);
+    }
     return signal([]);
   }
 
