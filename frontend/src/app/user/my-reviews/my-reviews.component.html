@@ -7,6 +7,64 @@
         <p class="welcome-subtitle">View and manage all your reviews</p>
       </div>
 
+      <!-- Statistics Summary -->
+      <div class="statistics-summary" *ngIf="!isLoading && !error">
+        <div class="stat-card">
+          <div class="stat-icon total">
+            <i class="uil uil-layers"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ statistics.total }}</span>
+            <span class="stat-label">Total Reviews</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon verified">
+            <i class="uil uil-check-circle"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ statistics.verified }}</span>
+            <span class="stat-label">Verified</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon pending">
+            <i class="uil uil-clock"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ statistics.pending }}</span>
+            <span class="stat-label">Pending</span>
+          </div>
+        </div>
+        <div class="stat-card" *ngIf="statistics.rejected > 0">
+          <div class="stat-icon rejected">
+            <i class="uil uil-times-circle"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ statistics.rejected }}</span>
+            <span class="stat-label">Rejected</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon rating">
+            <i class="uil uil-star"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ statistics.averageRating | number:'1.1-1' }}</span>
+            <span class="stat-label">Avg Rating</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon credibility">
+            <i class="uil uil-shield"></i>
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ statistics.averageCredibility | number:'1.0-0' }}%</span>
+            <span class="stat-label">Avg Credibility</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Search and Filter Toggle -->
       <div class="search-filters-container">
         <!-- Search Bar -->
@@ -25,7 +83,7 @@
           </div>
         </div>
 
-        <!-- Filter Toggle (Mobile) -->
+        <!-- Filter Toggle -->
         <div class="filter-toggle-container">
           <button (click)="toggleFilters()" class="filter-toggle-btn">
             <svg class="filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,6 +166,51 @@
                   <i class="uil uil-clock"></i>
                   <span>Pending</span>
                 </button>
+                <button
+                  (click)="onStatusFilterChange('rejected')"
+                  class="status-filter-btn"
+                  [class.active]="selectedStatus === 'rejected'"
+                >
+                  <i class="uil uil-times-circle"></i>
+                  <span>Rejected</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sort Section -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-sort-amount-down"></i>
+                Sort By
+              </h3>
+              <div class="sort-options">
+                <button
+                  (click)="onSortChange('date')"
+                  class="sort-btn"
+                  [class.active]="sortBy === 'date'"
+                >
+                  <i class="uil uil-calendar-alt"></i>
+                  <span>Date</span>
+                  <i *ngIf="sortBy === 'date'" class="uil" [ngClass]="sortOrder === 'asc' ? 'uil-arrow-up' : 'uil-arrow-down'"></i>
+                </button>
+                <button
+                  (click)="onSortChange('rating')"
+                  class="sort-btn"
+                  [class.active]="sortBy === 'rating'"
+                >
+                  <i class="uil uil-star"></i>
+                  <span>Rating</span>
+                  <i *ngIf="sortBy === 'rating'" class="uil" [ngClass]="sortOrder === 'asc' ? 'uil-arrow-up' : 'uil-arrow-down'"></i>
+                </button>
+                <button
+                  (click)="onSortChange('credibility')"
+                  class="sort-btn"
+                  [class.active]="sortBy === 'credibility'"
+                >
+                  <i class="uil uil-shield"></i>
+                  <span>Credibility</span>
+                  <i *ngIf="sortBy === 'credibility'" class="uil" [ngClass]="sortOrder === 'asc' ? 'uil-arrow-up' : 'uil-arrow-down'"></i>
+                </button>
               </div>
             </div>
 
@@ -166,10 +269,24 @@
                       </div>
                     </div>
                   </div>
-                  <div class="review-status-badge" [class.verified]="review.isVerified" [class.pending]="!review.isVerified">
-                    <i *ngIf="review.isVerified" class="uil uil-check-circle"></i>
-                    <i *ngIf="!review.isVerified" class="uil uil-clock"></i>
-                    <span>{{ review.isVerified ? 'Verified' : 'Pending' }}</span>
+                  <div class="header-actions">
+                    <div class="review-status-badge" [ngClass]="getStatusClass(review)">
+                      <i *ngIf="review.isVerified && review.isActive" class="uil uil-check-circle"></i>
+                      <i *ngIf="!review.isVerified && review.isActive" class="uil uil-clock"></i>
+                      <i *ngIf="!review.isActive" class="uil uil-times-circle"></i>
+                      <span>{{ getStatusLabel(review) }}</span>
+                    </div>
+                    <div class="action-buttons">
+                      <button (click)="openEditModal(review)" class="action-btn edit-btn" title="Edit review">
+                        <i class="uil uil-edit"></i>
+                      </button>
+                      <button (click)="openReceiptUploadModal(review)" class="action-btn upload-btn" title="Upload receipt">
+                        <i class="uil uil-upload"></i>
+                      </button>
+                      <button (click)="openDeleteModal(review)" class="action-btn delete-btn" title="Delete review">
+                        <i class="uil uil-trash-alt"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -341,6 +458,172 @@
         <i class="uil uil-external-link-alt"></i>
         View Full Size
       </a>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Review Modal -->
+<div *ngIf="showEditModal && editingReview" class="modal-overlay" (click)="closeEditModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">
+        <i class="uil uil-edit"></i>
+        Edit Review
+      </h2>
+      <button class="modal-close-btn" (click)="closeEditModal()" [disabled]="isSaving">
+        <i class="uil uil-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Business</label>
+        <div class="business-info-display">
+          <i class="uil uil-store"></i>
+          <span>{{ editingReview.business.name }}</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rating</label>
+        <div class="rating-selector">
+          <button
+            *ngFor="let star of [1,2,3,4,5]"
+            (click)="editForm.rating = star"
+            class="star-btn"
+            [class.selected]="star <= editForm.rating"
+            type="button"
+          >
+            <i class="uil uil-star"></i>
+          </button>
+          <span class="rating-text">{{ editForm.rating }}/5</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comment</label>
+        <textarea
+          [(ngModel)]="editForm.comment"
+          class="form-textarea"
+          rows="5"
+          placeholder="Share your experience (optional)..."
+          [disabled]="isSaving"
+        ></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button (click)="closeEditModal()" class="btn btn-secondary" [disabled]="isSaving">
+        Cancel
+      </button>
+      <button (click)="saveReview()" class="btn btn-primary" [disabled]="isSaving">
+        <span *ngIf="!isSaving">Save Changes</span>
+        <span *ngIf="isSaving">
+          <i class="uil uil-spinner spinner"></i>
+          Saving...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteModal && deletingReview" class="modal-overlay" (click)="closeDeleteModal()">
+  <div class="modal-content modal-sm" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">
+        <i class="uil uil-exclamation-triangle"></i>
+        Delete Review
+      </h2>
+      <button class="modal-close-btn" (click)="closeDeleteModal()" [disabled]="isDeleting">
+        <i class="uil uil-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="delete-warning">
+        Are you sure you want to delete your review for <strong>{{ deletingReview.business.name }}</strong>?
+      </p>
+      <p class="delete-notice">
+        This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button (click)="closeDeleteModal()" class="btn btn-secondary" [disabled]="isDeleting">
+        Cancel
+      </button>
+      <button (click)="confirmDelete()" class="btn btn-danger" [disabled]="isDeleting">
+        <span *ngIf="!isDeleting">Delete Review</span>
+        <span *ngIf="isDeleting">
+          <i class="uil uil-spinner spinner"></i>
+          Deleting...
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Upload Modal -->
+<div *ngIf="showReceiptUploadModal && uploadingReceiptForReview" class="modal-overlay" (click)="closeReceiptUploadModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title">
+        <i class="uil uil-upload"></i>
+        Upload Receipt
+      </h2>
+      <button class="modal-close-btn" (click)="closeReceiptUploadModal()" [disabled]="isUploadingReceipt">
+        <i class="uil uil-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Business</label>
+        <div class="business-info-display">
+          <i class="uil uil-store"></i>
+          <span>{{ uploadingReceiptForReview.business.name }}</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Select Receipt Image</label>
+        <div class="file-upload-area">
+          <input
+            type="file"
+            id="receipt-file"
+            accept="image/*"
+            (change)="onReceiptFileSelected($event)"
+            class="file-input"
+            [disabled]="isUploadingReceipt"
+          />
+          <label for="receipt-file" class="file-upload-label">
+            <i class="uil uil-cloud-upload"></i>
+            <span *ngIf="!selectedReceiptFile">Click to select receipt image</span>
+            <span *ngIf="selectedReceiptFile">{{ selectedReceiptFile.name }}</span>
+          </label>
+        </div>
+        <p class="help-text">Upload a clear image of your receipt to verify your purchase</p>
+      </div>
+      <div class="current-receipt" *ngIf="getReviewMedia(uploadingReceiptForReview).length > 0">
+        <label class="form-label">Current Receipt(s)</label>
+        <div class="receipt-preview-grid">
+          <img
+            *ngFor="let media of getReviewMedia(uploadingReceiptForReview)"
+            [src]="media.url"
+            alt="Current receipt"
+            class="receipt-preview"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button (click)="closeReceiptUploadModal()" class="btn btn-secondary" [disabled]="isUploadingReceipt">
+        Cancel
+      </button>
+      <button
+        (click)="uploadReceipt()"
+        class="btn btn-primary"
+        [disabled]="!selectedReceiptFile || isUploadingReceipt"
+      >
+        <span *ngIf="!isUploadingReceipt">Upload Receipt</span>
+        <span *ngIf="isUploadingReceipt">
+          <i class="uil uil-spinner spinner"></i>
+          Uploading...
+        </span>
+      </button>
     </div>
   </div>
 </div>

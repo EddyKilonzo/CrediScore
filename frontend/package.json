@@ -33,6 +33,7 @@
     "@angular/ssr": "^20.3.3",
     "@iconscout/unicons": "^4.2.0",
     "express": "^5.1.0",
+    "leaflet": "^1.9.4",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
@@ -43,6 +44,7 @@
     "@angular/compiler-cli": "^20.3.0",
     "@types/express": "^5.0.1",
     "@types/jasmine": "~5.1.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20.17.19",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",

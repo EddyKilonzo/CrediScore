@@ -1,0 +1,90 @@
+<div class="business-location-picker">
+  <!-- Header -->
+  <div class="picker-header">
+    <h3 class="picker-title">Set Your Business Location</h3>
+    <p class="picker-description">
+      Search for your address, click on the map, or drag the marker to set your exact location
+    </p>
+  </div>
+
+  <!-- Search Box -->
+  <div class="search-container">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="searchAddress"
+        (keyup.enter)="searchLocation()"
+        placeholder="Search for address... (e.g., Nairobi, Kenya)"
+        class="search-input"
+        [disabled]="isLoadingLocation"
+      />
+      <button
+        (click)="searchLocation()"
+        [disabled]="!searchAddress.trim() || isLoadingLocation"
+        class="search-button"
+      >
+        <i class="uil uil-search"></i>
+        Search
+      </button>
+    </div>
+    
+    <button
+      (click)="getUserLocation()"
+      [disabled]="isLoadingLocation"
+      class="current-location-button"
+      title="Use my current location"
+    >
+      <i class="uil uil-location-point"></i>
+      Current Location
+    </button>
+  </div>
+
+  <!-- Error Message -->
+  @if (errorMessage) {
+    <div class="error-message">
+      <i class="uil uil-exclamation-triangle"></i>
+      {{ errorMessage }}
+    </div>
+  }
+
+  <!-- Loading Indicator -->
+  @if (isLoadingLocation) {
+    <div class="loading-indicator">
+      <div class="spinner"></div>
+      <span>Loading location...</span>
+    </div>
+  }
+
+  <!-- Map Container -->
+  <div class="map-container">
+    <div #mapContainer class="leaflet-map"></div>
+  </div>
+
+  <!-- Selected Location Display -->
+  @if (selectedAddress) {
+    <div class="selected-location">
+      <div class="location-info">
+        <i class="uil uil-map-marker"></i>
+        <div class="location-details">
+          <span class="location-label">Selected Location:</span>
+          <span class="location-address">{{ selectedAddress }}</span>
+        </div>
+      </div>
+      <button (click)="clearSelection()" class="clear-button">
+        <i class="uil uil-times"></i>
+        Clear
+      </button>
+    </div>
+  }
+
+  <!-- Instructions -->
+  <div class="instructions">
+    <h4>How to use:</h4>
+    <ul>
+      <li><i class="uil uil-search"></i> Search for your business address in the search box</li>
+      <li><i class="uil uil-location-point"></i> Click "Current Location" to use your device's location</li>
+      <li><i class="uil uil-cursor"></i> Click anywhere on the map to place a marker</li>
+      <li><i class="uil uil-draggabledots"></i> Drag the marker to fine-tune your exact location</li>
+    </ul>
+  </div>
+</div>

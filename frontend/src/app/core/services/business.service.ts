@@ -118,6 +118,9 @@ export interface CreateBusinessRequest {
   website?: string;
   category: string;
   businessHours?: BusinessHours[];
+  location?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpdateBusinessRequest extends Partial<CreateBusinessRequest> {
@@ -284,6 +287,26 @@ export class BusinessService {
         }),
         catchError(error => {
           this.error.set('Failed to search businesses');
+          this.isLoading.set(false);
+          throw error;
+        })
+      );
+  }
+
+  getAllPublicBusinesses(): Observable<any> {
+    this.isLoading.set(true);
+    this.error.set(null);
+    
+    // Use the public endpoint to get all businesses for map view
+    return this.http.get<any>(`${this.API_URL}/public/business/search`)
+      .pipe(
+        tap(response => {
+          const businesses = Array.isArray(response) ? response : (response?.businesses || []);
+          this.businesses.set(businesses);
+          this.isLoading.set(false);
+        }),
+        catchError(error => {
+          this.error.set('Failed to load businesses');
           this.isLoading.set(false);
           throw error;
         })

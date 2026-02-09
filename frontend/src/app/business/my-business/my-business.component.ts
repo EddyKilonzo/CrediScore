@@ -6,6 +6,7 @@ import { AuthService, User } from '../../core/services/auth.service';
 import { BusinessService, Business, DocumentType as BusinessDocumentType, OCRHealthStatus } from '../../core/services/business.service';
 import { CloudinaryService } from '../../core/services/cloudinary.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { BusinessLocationPickerComponent } from '../business-location-picker/business-location-picker.component';
 import { Subject, takeUntil, interval } from 'rxjs';
 import { HttpEventType } from '@angular/common/http';
 import { filter, map, finalize } from 'rxjs/operators';
@@ -98,7 +99,7 @@ const DEFAULT_SOCIAL_LINKS: Record<SocialLinkKey, string> = {
 @Component({
   selector: 'app-my-business',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, BusinessLocationPickerComponent],
   templateUrl: './my-business.component.html',
   styleUrl: './my-business.component.css'
 })
@@ -216,6 +217,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Location and Social Media
   businessLocation: string = '';
+  businessLatitude: number | null = null;
+  businessLongitude: number | null = null;
+  showLocationPicker = false;
   socialLinks = { ...DEFAULT_SOCIAL_LINKS };
   isSavingSocialLinks = false;
 
@@ -382,6 +386,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     
     // Load location from business data if available
     this.businessLocation = (this.currentBusiness as any).location || '';
+    this.businessLatitude = (this.currentBusiness as any).latitude || null;
+    this.businessLongitude = (this.currentBusiness as any).longitude || null;
     this.updateSocialsAndLocationCompletion();
   }
 
@@ -1323,30 +1329,57 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Location Picker Methods
   openLocationPicker() {
-    // This would typically open a map picker modal
-    this.toastService.show('Location picker feature coming soon', 'info');
+    this.showLocationPicker = !this.showLocationPicker;
+  }
+
+  onLocationSelected(location: { latitude: number; longitude: number; location: string }) {
+    this.businessLatitude = location.latitude;
+    this.businessLongitude = location.longitude;
+    this.businessLocation = location.location;
+    console.log('Location selected:', location);
   }
 
   updateLocation() {
-    if (!this.businessLocation.trim()) {
-      this.toastService.show('Please enter a business address', 'warning');
+    if (!this.businessLocation.trim() || !this.businessLatitude || !this.businessLongitude) {
+      this.toastService.show('Please select a location on the map', 'warning');
       return;
     }
 
-    // This would typically call an API to update the business location
-    this.toastService.show('Location updated successfully', 'success');
-    this.updateSocialsAndLocationCompletion();
+    if (!this.currentBusiness) {
+      this.toastService.show('No business found', 'error');
+      return;
+    }
+
+    // Update business location via API
+    this.businessService.updateBusiness({
+      id: this.currentBusiness.id,
+      location: this.businessLocation,
+      latitude: this.businessLatitude,
+      longitude: this.businessLongitude
+    }).subscribe({
+      next: (business) => {
+        this.currentBusiness = business;
+        this.toastService.show('Location updated successfully!', 'success');
+        this.updateSocialsAndLocationCompletion();
+      },
+      error: (error) => {
+        console.error('Error updating location:', error);
+        this.toastService.show('Failed to update location. Please try again.', 'error');
+      }
+    });
   }
 
   viewOnMap() {
-    if (!this.businessLocation.trim()) {
-      this.toastService.show('Please enter a business address first', 'warning');
-      return;
+    if (this.businessLatitude && this.businessLongitude) {
+      // Open OpenStreetMap with coordinates
+      window.open(`https://www.openstreetmap.org/?mlat=${this.businessLatitude}&mlon=${this.businessLongitude}#map=16/${this.businessLatitude}/${this.businessLongitude}`, '_blank');
+    } else if (this.businessLocation.trim()) {
+      // Fallback to search by address
+      const encodedAddress = encodeURIComponent(this.businessLocation);
+      window.open(`https://www.openstreetmap.org/search?query=${encodedAddress}`, '_blank');
+    } else {
+      this.toastService.show('Please select a location first', 'warning');
     }
-
-    // This would typically open the location in Google Maps or similar
-    const encodedAddress = encodeURIComponent(this.businessLocation);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
   }
 
   // Social Media Methods

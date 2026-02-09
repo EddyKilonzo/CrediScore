@@ -1,0 +1,149 @@
+<div class="business-map-view">
+  <!-- Header -->
+  <div class="map-header">
+    <div class="header-content">
+      <h2 class="map-title">Find Businesses Near You</h2>
+      <p class="map-description">Explore businesses on the map and get directions</p>
+    </div>
+    <button (click)="toggleListView()" class="toggle-view-button">
+      <i [class]="showList ? 'uil uil-map' : 'uil uil-list-ul'"></i>
+      {{ showList ? 'Map View' : 'List View' }}
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-container">
+    <div class="search-filter">
+      <i class="uil uil-search"></i>
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="filterBusinesses()"
+        placeholder="Search businesses by name or location..."
+        class="filter-input"
+      />
+    </div>
+
+    <div class="category-filter">
+      <i class="uil uil-filter"></i>
+      <select
+        [(ngModel)]="selectedCategory"
+        (ngModelChange)="filterBusinesses()"
+        class="filter-select"
+      >
+        <option value="all">All Categories</option>
+        @for (category of categories; track category) {
+          <option [value]="category">
+            {{ category }}
+          </option>
+        }
+      </select>
+    </div>
+
+    <div class="results-count">
+      <i class="uil uil-location-point"></i>
+      {{ filteredBusinesses.length }} business{{ filteredBusinesses.length !== 1 ? 'es' : '' }} found
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  @if (isLoading) {
+    <div class="loading-overlay">
+      <div class="spinner-large"></div>
+      <p>Loading businesses...</p>
+    </div>
+  }
+
+  <!-- Error Message -->
+  @if (errorMessage) {
+    <div class="error-message">
+      <i class="uil uil-exclamation-triangle"></i>
+      {{ errorMessage }}
+    </div>
+  }
+
+  <!-- Map and List Container -->
+  <div class="content-container">
+    <!-- Map View -->
+    <div class="map-section" [class.full-width]="!showList">
+      <div #mapContainer class="leaflet-map"></div>
+    </div>
+
+    <!-- List View -->
+    @if (showList) {
+      <div class="list-section">
+        <div class="business-list">
+          @for (business of filteredBusinesses; track business.id) {
+            <div
+              class="business-card"
+              (click)="zoomToBusiness(business)"
+              [class.selected]="selectedBusiness?.id === business.id"
+            >
+              <div class="card-header">
+                @if (business.logo) {
+                  <img
+                    [src]="business.logo"
+                    [alt]="business.name"
+                    class="card-logo"
+                  />
+                } @else {
+                  <div class="card-logo-placeholder">
+                    <i class="uil uil-store"></i>
+                  </div>
+                }
+                <div class="card-info">
+                  <h4 class="card-title">{{ business.name }}</h4>
+                  @if (business.category) {
+                    <span class="card-category">
+                      {{ business.category }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <div class="card-body">
+                <div class="card-item">
+                  <i class="uil uil-map-marker"></i>
+                  <span>{{ business.location }}</span>
+                </div>
+
+                @if (userLocation) {
+                  <div class="card-item">
+                    <i class="uil uil-direction"></i>
+                    <span>{{ getDistance(business) }} away</span>
+                  </div>
+                }
+              </div>
+
+              <div class="card-actions">
+                <button
+                  (click)="viewBusinessDetails(business.id); $event.stopPropagation()"
+                  class="card-button primary"
+                >
+                  <i class="uil uil-eye"></i>
+                  View
+                </button>
+                <button
+                  (click)="getDirections(business); $event.stopPropagation()"
+                  class="card-button secondary"
+                >
+                  <i class="uil uil-directions"></i>
+                  Directions
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Empty State -->
+          @if (filteredBusinesses.length === 0 && !isLoading) {
+            <div class="empty-state">
+              <i class="uil uil-map-marker-slash"></i>
+              <h3>No businesses found</h3>
+              <p>Try adjusting your search or filter criteria</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
