@@ -40,7 +40,7 @@ export class RegisterComponent implements OnInit {
       password: ['', [
         Validators.required, 
         Validators.minLength(8),
-        Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+        Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#_\-.])[A-Za-z\d@$!%*?&#_\-.]/)
       ]],
       confirmPassword: ['', [Validators.required]],
       phone: ['', [Validators.pattern(/^\+?[1-9]\d{1,14}$/)]],
@@ -183,7 +183,13 @@ export class RegisterComponent implements OnInit {
           return 'Please enter a valid phone number (e.g., +254712345678)';
         }
         if (fieldName === 'password') {
-          return 'Password does not meet security requirements';
+          const pw = this.signupForm.get('password')?.value || '';
+          const missing: string[] = [];
+          if (!/[A-Z]/.test(pw)) missing.push('uppercase letter');
+          if (!/[a-z]/.test(pw)) missing.push('lowercase letter');
+          if (!/\d/.test(pw)) missing.push('number');
+          if (!/[@$!%*?&#_\-.]/.test(pw)) missing.push('special character');
+          return missing.length ? `Add: ${missing.join(', ')}` : 'Password does not meet requirements';
         }
         return 'Please enter a valid format';
       }
@@ -221,7 +227,7 @@ export class RegisterComponent implements OnInit {
     const hasLower = /[a-z]/.test(password);
     const hasUpper = /[A-Z]/.test(password);
     const hasNumber = /\d/.test(password);
-    const hasSpecial = /[@$!%*?&]/.test(password);
+    const hasSpecial = /[@$!%*?&#_\-.]/.test(password);
     
     const requirements = [hasLower, hasUpper, hasNumber, hasSpecial];
     const metRequirements = requirements.filter(Boolean).length;
@@ -244,7 +250,7 @@ export class RegisterComponent implements OnInit {
            /[a-z]/.test(password) && 
            /[A-Z]/.test(password) && 
            /\d/.test(password) && 
-           /[@$!%*?&]/.test(password);
+           /[@$!%*?&#_\-.]/.test(password);
   }
 
   // Password requirement checkers for template
@@ -270,7 +276,7 @@ export class RegisterComponent implements OnInit {
 
   hasSpecialChar(): boolean {
     const password = this.signupForm.get('password')?.value || '';
-    return /[@$!%*?&]/.test(password);
+    return /[@$!%*?&#_\-.]/.test(password);
   }
 
   // Debug method to check role selection

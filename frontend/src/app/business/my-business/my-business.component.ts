@@ -10,6 +10,7 @@ import { BusinessLocationPickerComponent } from '../business-location-picker/bus
 import { Subject, takeUntil, interval } from 'rxjs';
 import { HttpEventType } from '@angular/common/http';
 import { filter, map, finalize } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 enum PaymentType {
   TILL = 'TILL',
@@ -330,7 +331,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
           // Check if it's a connection error
           if (error.status === 0 || error.statusText === 'Unknown Error' || error.message?.includes('Failed to fetch')) {
             this.toastService.show(
-              'Cannot connect to server. Please make sure the backend server is running on http://localhost:3000', 
+              'Cannot connect to server. Please make sure the backend server is running.',
               'error'
             );
           } else if (error.status === 401 || error.status === 403) {
@@ -1543,7 +1544,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   loadResponseTemplates() {
     if (!this.currentBusiness?.id) return;
     this.isLoadingTemplates = true;
-    const url = `http://localhost:3000/api/business/${this.currentBusiness.id}/response-templates`;
+    const url = `${environment.apiUrl}/api/business/${this.currentBusiness.id}/response-templates`;
     // Using inject would be cleaner; we use businessService's http via a workaround
     // Since businessService has no method, we'll use fetch-like approach via window.fetch
     fetch(url, {
@@ -1577,8 +1578,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     const token = localStorage.getItem('accessToken') || '';
     const isEdit = !!this.editingTemplateId;
     const url = isEdit
-      ? `http://localhost:3000/api/business/response-templates/${this.editingTemplateId}`
-      : `http://localhost:3000/api/business/${this.currentBusiness.id}/response-templates`;
+      ? `${environment.apiUrl}/api/business/response-templates/${this.editingTemplateId}`
+      : `${environment.apiUrl}/api/business/${this.currentBusiness.id}/response-templates`;
 
     fetch(url, {
       method: isEdit ? 'PATCH' : 'POST',
@@ -1601,7 +1602,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   deleteTemplate(templateId: string) {
     if (!confirm('Delete this response template?')) return;
     const token = localStorage.getItem('accessToken') || '';
-    fetch(`http://localhost:3000/api/business/response-templates/${templateId}`, {
+    fetch(`${environment.apiUrl}/api/business/response-templates/${templateId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     }).then(r => {

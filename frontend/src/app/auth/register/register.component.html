@@ -145,38 +145,34 @@
                     {{ getFieldError('role') }}
                   </div>
                   
-                  <!-- Debug info (remove in production) -->
-                  <div class="text-xs text-gray-500 mt-1">
-                    Selected role: {{ getSelectedRole() }}
-                  </div>
                 </div>
 
                 <!-- Password -->
                 <div>
                   <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <!-- Password Requirements Helper Text -->
-                  <div class="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p class="text-xs text-blue-800 font-medium mb-1">Password must contain:</p>
-                    <ul class="text-xs text-blue-700 space-y-0.5 list-none pl-4">
-                      <li class="flex items-start">
-                        <i class="uil uil-check mr-1.5 mt-0.5 text-blue-600"></i>
+                  <!-- Password Requirements Checklist (live) -->
+                  <div class="mb-2 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p class="text-xs text-gray-600 font-medium mb-1">Password must contain:</p>
+                    <ul class="text-xs space-y-0.5 list-none">
+                      <li class="flex items-center" [class.text-green-600]="hasMinLength()" [class.text-gray-500]="!hasMinLength()">
+                        <i class="uil mr-1.5" [class.uil-check-circle]="hasMinLength()" [class.uil-circle]="!hasMinLength()"></i>
                         <span>At least 8 characters</span>
                       </li>
-                      <li class="flex items-start">
-                        <i class="uil uil-check mr-1.5 mt-0.5 text-blue-600"></i>
+                      <li class="flex items-center" [class.text-green-600]="hasUpperCase()" [class.text-gray-500]="!hasUpperCase()">
+                        <i class="uil mr-1.5" [class.uil-check-circle]="hasUpperCase()" [class.uil-circle]="!hasUpperCase()"></i>
                         <span>One uppercase letter (A-Z)</span>
                       </li>
-                      <li class="flex items-start">
-                        <i class="uil uil-check mr-1.5 mt-0.5 text-blue-600"></i>
+                      <li class="flex items-center" [class.text-green-600]="hasLowerCase()" [class.text-gray-500]="!hasLowerCase()">
+                        <i class="uil mr-1.5" [class.uil-check-circle]="hasLowerCase()" [class.uil-circle]="!hasLowerCase()"></i>
                         <span>One lowercase letter (a-z)</span>
                       </li>
-                      <li class="flex items-start">
-                        <i class="uil uil-check mr-1.5 mt-0.5 text-blue-600"></i>
+                      <li class="flex items-center" [class.text-green-600]="hasNumber()" [class.text-gray-500]="!hasNumber()">
+                        <i class="uil mr-1.5" [class.uil-check-circle]="hasNumber()" [class.uil-circle]="!hasNumber()"></i>
                         <span>One number (0-9)</span>
                       </li>
-                      <li class="flex items-start">
-                        <i class="uil uil-check mr-1.5 mt-0.5 text-blue-600"></i>
-                        <span>One special character (@$!%*?&)</span>
+                      <li class="flex items-center" [class.text-green-600]="hasSpecialChar()" [class.text-gray-500]="!hasSpecialChar()">
+                        <i class="uil mr-1.5" [class.uil-check-circle]="hasSpecialChar()" [class.uil-circle]="!hasSpecialChar()"></i>
+                        <span>One special character (@$!%*?&#_-.)</span>
                       </li>
                     </ul>
                   </div>

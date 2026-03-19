@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 interface LeaderboardUser {
   rank: number;
@@ -22,7 +23,7 @@ interface LeaderboardUser {
 })
 export class LeaderboardComponent implements OnInit {
   private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
 
   users: LeaderboardUser[] = [];
   isLoading = true;

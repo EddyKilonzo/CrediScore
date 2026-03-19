@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface Business {
   id: string;
@@ -190,7 +191,7 @@ export enum PaymentType {
   providedIn: 'root'
 })
 export class BusinessService {
-  private apiUrl = 'http://localhost:3000/api/business'; // Use direct URL for now
+  private apiUrl = `${environment.apiUrl}/api/business`; // API base (no trailing slash)
   private currentBusinessSubject = new BehaviorSubject<Business | null>(null);
   public currentBusiness$ = this.currentBusinessSubject.asObservable();
 

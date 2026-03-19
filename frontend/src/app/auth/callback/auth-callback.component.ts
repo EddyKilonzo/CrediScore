@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-auth-callback',
@@ -88,7 +89,7 @@ export class AuthCallbackComponent implements OnInit {
 
   private fetchOAuthSessionData(sessionId: string): void {
     // Fetch the OAuth data from the backend session
-    fetch(`http://localhost:3000/api/auth/oauth/session/${sessionId}`, {
+    fetch(`${environment.apiUrl}/api/auth/oauth/session/${sessionId}`, {
       method: 'GET',
       credentials: 'include', // Include cookies for session
       headers: {

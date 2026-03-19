@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
+import { environment } from '../../environments/environment';
 
 interface TrendingBusiness {
   id: string;
@@ -137,7 +138,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   loadTrendingBusinesses() {
-    this.http.get<any[]>('http://localhost:3000/api/user/trending?limit=6').subscribe({
+    this.http.get<any[]>(`${environment.apiUrl}/api/user/trending?limit=6`).subscribe({
       next: (businesses) => {
         this.trendingBusinesses = businesses || [];
         this.trendingLoading = false;

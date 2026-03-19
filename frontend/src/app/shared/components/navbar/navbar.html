@@ -151,44 +151,71 @@
           </button>
 
           <!-- Notification Panel -->
-          <div *ngIf="showNotifPanel" class="notification-panel absolute right-0 mt-2 w-80 min-w-80 shrink-0 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50">
-            <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">Notifications</h3>
-              <div class="flex items-center shrink-0 space-x-2">
-                <button (click)="markAllRead()" class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 whitespace-nowrap">Mark all read</button>
-                <button (click)="showNotifPanel = false" class="text-gray-400 hover:text-gray-600">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+          <div *ngIf="showNotifPanel" class="notif-panel absolute right-0 mt-2 z-50">
+            <!-- Header -->
+            <div class="notif-panel-header">
+              <div class="notif-panel-header-left">
+                <div class="notif-bell-icon">
+                  <i class="uil uil-bell"></i>
+                </div>
+                <div>
+                  <h3 class="notif-panel-title">Notifications</h3>
+                  <p class="notif-panel-subtitle" *ngIf="(notifService.unreadCount | async) as count">
+                    {{ count }} unread
+                  </p>
+                  <p class="notif-panel-subtitle" *ngIf="!(notifService.unreadCount | async)">All caught up</p>
+                </div>
+              </div>
+              <div class="notif-panel-header-right">
+                <button (click)="markAllRead()" class="notif-mark-all-btn" title="Mark all as read">
+                  <i class="uil uil-check-circle"></i>
+                </button>
+                <button (click)="showNotifPanel = false" class="notif-close-btn" title="Close">
+                  <i class="uil uil-times"></i>
                 </button>
               </div>
             </div>
-            <div class="max-h-80 overflow-y-auto">
-              <div *ngIf="notifLoading" class="flex items-center justify-center py-8 text-gray-400 text-sm">Loading...</div>
-              <div *ngIf="!notifLoading && notifications.length === 0" class="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
-                <svg class="w-8 h-8 mb-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <span class="text-sm whitespace-nowrap">No notifications</span>
+
+            <!-- Body -->
+            <div class="notif-panel-body">
+              <!-- Loading -->
+              <div *ngIf="notifLoading" class="notif-loading">
+                <div class="notif-loading-spinner"></div>
+                <span>Loading...</span>
               </div>
+
+              <!-- Empty state -->
+              <div *ngIf="!notifLoading && notifications.length === 0" class="notif-empty">
+                <div class="notif-empty-icon">
+                  <i class="uil uil-bell-slash"></i>
+                </div>
+                <p class="notif-empty-title">No notifications yet</p>
+                <p class="notif-empty-sub">You're all caught up! Check back later.</p>
+              </div>
+
+              <!-- Notification items -->
               <div *ngFor="let notif of notifications"
                    (click)="markRead(notif.id)"
-                   class="flex items-start px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
-                   [class.bg-blue-50]="!notif.isRead">
-                <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-3 mt-0.5"
-                     [class.bg-blue-100]="!notif.isRead"
-                     [class.bg-gray-100]="notif.isRead">
-                  <i [class]="'uil ' + getNotifIcon(notif.type) + ' text-sm'"
-                     [class.text-blue-600]="!notif.isRead"
-                     [class.text-gray-500]="notif.isRead"></i>
+                   class="notif-item"
+                   [class.notif-item-unread]="!notif.isRead">
+                <div class="notif-item-icon" [class.notif-item-icon-unread]="!notif.isRead" [class.notif-item-icon-read]="notif.isRead">
+                  <i [class]="'uil ' + getNotifIcon(notif.type)"></i>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 truncate">{{ notif.title }}</p>
-                  <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ notif.body }}</p>
-                  <p class="text-xs text-gray-400 mt-1">{{ formatNotifDate(notif.createdAt) }}</p>
+                <div class="notif-item-content">
+                  <p class="notif-item-title">{{ notif.title }}</p>
+                  <p class="notif-item-body">{{ notif.body }}</p>
+                  <p class="notif-item-time">{{ formatNotifDate(notif.createdAt) }}</p>
                 </div>
-                <div *ngIf="!notif.isRead" class="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2"></div>
+                <div *ngIf="!notif.isRead" class="notif-unread-dot"></div>
               </div>
+            </div>
+
+            <!-- Footer -->
+            <div *ngIf="!notifLoading && notifications.length > 0" class="notif-panel-footer">
+              <a routerLink="/notifications" (click)="showNotifPanel = false" class="notif-view-all">
+                View all notifications
+                <i class="uil uil-arrow-right ml-1"></i>
+              </a>
             </div>
           </div>
         </div>

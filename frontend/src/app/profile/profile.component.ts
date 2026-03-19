@@ -8,6 +8,7 @@ import { ToastService } from '../shared/components/toast/toast.service';
 import { CloudinaryService } from '../core/services/cloudinary.service';
 import { ImageService } from '../shared/services/image.service';
 import { ReviewReplyComponent } from '../shared/components/review-reply/review-reply.component';
+import { environment } from '../../environments/environment';
 
 interface Tab {
   id: string;
@@ -638,7 +639,7 @@ export class ProfileComponent implements OnInit {
   saveNotifPrefs() {
     if (this.isSavingNotifPrefs()) return;
     this.isSavingNotifPrefs.set(true);
-    this.http.patch('http://localhost:3000/api/user/notification-prefs', this.notifPrefs()).subscribe({
+    this.http.patch(`${environment.apiUrl}/api/user/notification-prefs`, this.notifPrefs()).subscribe({
       next: () => {
         this.toastService.success('Notification preferences saved');
         this.isSavingNotifPrefs.set(false);

@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface Business {
   id: string;
@@ -137,7 +138,7 @@ export interface OCRHealthStatus {
   providedIn: 'root'
 })
 export class BusinessService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
   
   // Signals for reactive state
   public businesses = signal<Business[]>([]);

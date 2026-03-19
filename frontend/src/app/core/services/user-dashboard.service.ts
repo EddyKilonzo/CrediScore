@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface UserDashboardStatsResponse {
   totalReviews: number;
@@ -42,7 +43,7 @@ export interface UserDashboardResponse {
   providedIn: 'root',
 })
 export class UserDashboardService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
 
   constructor(private http: HttpClient) {}
 

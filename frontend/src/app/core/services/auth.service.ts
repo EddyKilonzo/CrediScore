@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface User {
   id: string;
@@ -59,7 +60,7 @@ export interface SignUpResponse {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   
@@ -91,7 +92,7 @@ export class AuthService {
   signInWithGoogle(): void {
     // Redirect to Google OAuth endpoint on backend
     try {
-      const googleAuthUrl = 'http://localhost:3000/api/auth/google';
+      const googleAuthUrl = `${this.API_URL}/auth/google`;
       window.location.href = googleAuthUrl;
     } catch (error) {
       console.error('Failed to redirect to Google OAuth:', error);

@@ -4,6 +4,7 @@ import { Observable, BehaviorSubject, interval, Subscription } from 'rxjs';
 import { switchMap, tap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 export interface AppNotification {
   id: string;
@@ -17,7 +18,7 @@ export interface AppNotification {
 
 @Injectable({ providedIn: 'root' })
 export class AppNotificationsService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
