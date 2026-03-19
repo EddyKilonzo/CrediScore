@@ -28,7 +28,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     try {
@@ -61,7 +61,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
     const resetUrl = `${appUrl}/auth/reset-password?token=${resetToken}`;
 
@@ -98,7 +98,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     try {
@@ -133,7 +133,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     try {
@@ -168,7 +168,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     try {
@@ -206,7 +206,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     let subject: string;
@@ -262,7 +262,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     const subject =
@@ -307,7 +307,7 @@ export class MailerService {
   ): Promise<void> {
     const appUrl = this.configService.get<string>(
       'APP_URL',
-      'http://localhost:3000',
+      'https://credi-score.vercel.app',
     );
 
     try {
@@ -345,7 +345,7 @@ export class MailerService {
           year: new Date().getFullYear(),
           appUrl: this.configService.get<string>(
             'APP_URL',
-            'http://localhost:3000',
+            'https://credi-score.vercel.app',
           ),
         },
       });
