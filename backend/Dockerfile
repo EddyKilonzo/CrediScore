@@ -4,12 +4,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy manifests first for layer caching
-COPY backend/package*.json ./
+# .npmrc (legacy-peer-deps=true) is included in the COPY below
+COPY backend/package*.json backend/.npmrc ./
 COPY backend/prisma ./prisma/
 
-# Install all deps (including devDeps needed for build)
-RUN npm ci --legacy-peer-deps
+# Install all deps
+RUN npm ci
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -18,7 +18,7 @@ RUN npx prisma generate
 COPY backend/ .
 RUN npm run build
 
-# Prune devDependencies so node_modules is production-only for the final image
+# Prune devDependencies for the final image
 RUN npm prune --omit=dev
 
 # ── Production stage ──────────────────────────────────────────────────────────
