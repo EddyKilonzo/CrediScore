@@ -26,8 +26,7 @@ RUN npm prune --omit=dev
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
-# Install OpenSSL 1.1 compat so the Prisma linux-musl engine binary can load libssl.so.1.1
-RUN apk add --no-cache openssl openssl1.1-compat
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -36,6 +35,8 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # Copy compiled output (nest build includes .ejs templates via nest-cli.json assets)
 COPY --from=builder /app/dist ./dist
+
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 EXPOSE 3000
 
