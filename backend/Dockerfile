@@ -9,7 +9,7 @@ COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
 
 # Install all deps (including devDeps needed for build)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -28,7 +28,7 @@ COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
 
 # Install production deps only
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --legacy-peer-deps
 
 # Re-generate Prisma client in production image
 RUN npx prisma generate
