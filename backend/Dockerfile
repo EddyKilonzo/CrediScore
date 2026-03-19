@@ -1,11 +1,12 @@
 # ── Build stage ──────────────────────────────────────────────────────────────
+# Build context is repo root; Dockerfile lives at backend/Dockerfile
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Copy manifests first for layer caching
-COPY package*.json ./
-COPY prisma ./prisma/
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma/
 
 # Install all deps (including devDeps needed for build)
 RUN npm ci
@@ -13,8 +14,8 @@ RUN npm ci
 # Generate Prisma client
 RUN npx prisma generate
 
-# Copy source and build
-COPY . .
+# Copy backend source and build
+COPY backend/ .
 RUN npm run build
 
 # ── Production stage ──────────────────────────────────────────────────────────
@@ -23,8 +24,8 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Copy only what's needed at runtime
-COPY package*.json ./
-COPY prisma ./prisma/
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma/
 
 # Install production deps only
 RUN npm ci --omit=dev
