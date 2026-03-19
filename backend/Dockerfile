@@ -25,13 +25,12 @@ WORKDIR /app
 
 # Copy only what's needed at runtime
 COPY backend/package*.json ./
-COPY backend/prisma ./prisma/
 
 # Install production deps only
 RUN npm ci --omit=dev --legacy-peer-deps
 
-# Re-generate Prisma client in production image
-RUN npx prisma generate
+# Copy the already-generated Prisma client from builder (avoids npx downloading wrong prisma CLI version)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Copy compiled output (nest build includes .ejs templates via nest-cli.json assets)
 COPY --from=builder /app/dist ./dist
