@@ -2,6 +2,8 @@
 # Build context is repo root; Dockerfile lives at backend/Dockerfile
 FROM node:20-alpine AS builder
 
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # .npmrc (legacy-peer-deps=true) is included in the COPY below
@@ -23,6 +25,9 @@ RUN npm prune --omit=dev
 
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
+
+# Install OpenSSL so Prisma can detect the version and load the correct engine binary
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
