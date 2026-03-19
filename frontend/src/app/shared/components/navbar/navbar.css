@@ -1,3 +1,10 @@
 .navbar-shadow {
   box-shadow: rgba(0, 0, 0, 0.45) 0px 25px 20px -20px;
 }
+
+/* Notification dropdown: prevent narrow layout / single-column text wrap */
+.notification-panel {
+  min-width: 20rem;
+  width: 20rem;
+  max-height: 24rem;
+}

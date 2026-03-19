@@ -31,6 +31,10 @@
             <i class="uil uil-refresh" [class.spinning]="loading"></i>
             <span>Refresh</span>
           </button>
+          <button *ngIf="isAuthenticated()" (click)="toggleBookmark()" class="refresh-button-hero" [disabled]="isTogglingBookmark" title="Bookmark">
+            <i [class]="isBookmarked ? 'uil uil-bookmark-full' : 'uil uil-bookmark'" [style.color]="isBookmarked ? '#f59e0b' : ''"></i>
+            <span>{{ isBookmarked ? 'Saved' : 'Save' }}</span>
+          </button>
         </div>
         
         <div class="hero-main">
@@ -74,6 +78,10 @@
               <div class="location-info" *ngIf="business.location || business.address">
                 <i class="uil uil-map-marker"></i>
                 <span>{{ business.location || business.address }}</span>
+              </div>
+              <div *ngIf="getResponseRate() > 0" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:0.8rem;color:#166534;">
+                <i class="uil uil-comment-alt-check"></i>
+                <span>{{ getResponseRate() }}% response rate</span>
               </div>
             </div>
           </div>
@@ -203,10 +211,27 @@
             <div class="info-item-content">
               <span class="info-item-label">Verification</span>
               <span class="info-item-value verified-text">
-                <img src="/images/verfied.png" alt="Verified" class="verified-badge-small" 
+                <img src="/images/verfied.png" alt="Verified" class="verified-badge-small"
                      (error)="$event.target.style.display='none'" />
                 Verified Business
               </span>
+            </div>
+          </div>
+
+          <!-- Business Hours -->
+          <div class="business-info-item" *ngIf="business.businessHours && business.businessHours.length" style="grid-column: 1 / -1;">
+            <div class="info-item-icon">
+              <i class="uil uil-clock"></i>
+            </div>
+            <div class="info-item-content" style="width: 100%;">
+              <span class="info-item-label">Business Hours</span>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 16px; margin-top: 4px;">
+                <div *ngFor="let h of business.businessHours" style="display: flex; justify-content: space-between; font-size: 0.8rem; padding: 2px 0;">
+                  <span style="color: #374151; font-weight: 500; text-transform: capitalize;">{{ h.day.slice(0,3) }}</span>
+                  <span *ngIf="!h.isClosed" style="color: #6B7280;">{{ h.open }} &ndash; {{ h.close }}</span>
+                  <span *ngIf="h.isClosed" style="color: #EF4444; font-size: 0.75rem;">Closed</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -249,8 +274,8 @@
           </div>
         </section>
 
-        <!-- Location Map Section -->
-        <section class="info-section map-section" *ngIf="business.location || business.latitude || business.longitude">
+        <!-- Location Map Section — always show when business exists; uses name as fallback for directions -->
+        <section class="info-section map-section" *ngIf="business">
           <h2 class="section-title">
             <i class="uil uil-map"></i>
             Location & Map
@@ -271,9 +296,8 @@
               ></iframe>
               <div *ngIf="!getMapUrl()" class="map-placeholder">
                 <i class="uil uil-map-marker"></i>
-                <p>{{ business.location || business.address }}</p>
+                <p>{{ business.location || business.name }}</p>
                 <a
-                  *ngIf="business.location || business.address"
                   [href]="getGoogleMapsSearchUrl()"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -284,9 +308,9 @@
                 </a>
               </div>
             </div>
-            <div class="map-info" *ngIf="business.location || business.address || business.latitude">
+            <div class="map-info">
               <i class="uil uil-map-marker"></i>
-              <span>{{ business.location || business.address || (business.latitude && business.longitude ? business.latitude + ', ' + business.longitude : '') }}</span>
+              <span>{{ business.location || (business.latitude && business.longitude ? (business.latitude + ', ' + business.longitude) : business.name) }}</span>
               <a
                 [href]="getGoogleMapsSearchUrl()"
                 target="_blank"
@@ -405,6 +429,25 @@
                 </p>
               </div>
 
+              <!-- M-Pesa Transaction Code -->
+              <div class="form-group">
+                <label class="form-label">M-Pesa Transaction Code (Optional)</label>
+                <p class="form-help-text">Enter your M-Pesa transaction code (e.g. QHX4T2WXYZ) to verify this purchase</p>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="color:#4CAF50;font-size:1.2rem;"><i class="uil uil-mobile-android"></i></span>
+                  <input
+                    type="text"
+                    [(ngModel)]="mpesaCode"
+                    name="mpesaCode"
+                    placeholder="e.g. QHX4T2WXYZ"
+                    maxlength="10"
+                    style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:0.9rem;font-family:monospace;text-transform:uppercase;"
+                    (input)="mpesaCode = mpesaCode.toUpperCase()"
+                  />
+                  <span *ngIf="mpesaCode && mpesaCode.length === 10" style="color:#4CAF50;"><i class="uil uil-check-circle"></i></span>
+                </div>
+              </div>
+
               <!-- Form Actions -->
               <div class="form-actions">
                 <button
@@ -475,7 +518,9 @@
                       <span>{{ (review.user?.name || 'A')[0].toUpperCase() }}</span>
                     </div>
                     <div class="reviewer-details-compact">
-                      <span class="reviewer-name-compact">{{ review.user?.name || 'Anonymous' }}</span>
+                      <div class="flex items-center gap-2">
+                        <span class="reviewer-name-compact">{{ review.user?.name || 'Anonymous' }}</span>
+                      </div>
                       <span class="review-date-compact">{{ formatDate(review.createdAt) }}</span>
                     </div>
                   </div>
@@ -502,9 +547,9 @@
                 <div class="review-media-compact" *ngIf="getReviewMedia(review).length > 0">
                   <div class="review-media-grid-compact">
                     <div
-                      *ngFor="let media of getReviewMedia(review).slice(0, 3)"
+                      *ngFor="let media of getReviewMedia(review).slice(0, 3); let mi = index"
                       class="review-media-item-compact"
-                      (click)="$event.stopPropagation(); openMediaInModal(media.url)"
+                      (click)="$event.stopPropagation(); openImageModal(media.url, getReviewMediaUrls(review), mi)"
                     >
                       <img 
                         [src]="media.url" 
@@ -541,26 +586,63 @@
                       <i class="uil uil-image"></i>
                       <span>{{ getReviewMedia(review).length || 1 }}</span>
                     </div>
+                    <!-- Sentiment Tags (Feature 4) -->
+                    <ng-container *ngFor="let tag of getSentimentTags(review)">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                            [style.color]="tag.color" [style.background-color]="tag.bg">
+                        {{ tag.label }}
+                      </span>
+                    </ng-container>
                   </div>
                   <div class="review-actions-compact">
+                    <!-- Helpfulness voting — visible to logged-in non-authors -->
+                    <div class="review-vote-actions" *ngIf="currentUser && currentUser.id !== review.userId" (click)="$event.stopPropagation()">
+                      <button
+                        class="vote-btn helpful-btn"
+                        [class.voted]="review.userVote === 'HELPFUL'"
+                        (click)="voteReview(review, 'HELPFUL', $event)"
+                        title="Helpful"
+                      >
+                        <i class="uil uil-thumbs-up"></i>
+                        <span *ngIf="review.helpfulCount">{{ review.helpfulCount }}</span>
+                      </button>
+                      <button
+                        class="vote-btn not-helpful-btn"
+                        [class.voted]="review.userVote === 'NOT_HELPFUL'"
+                        (click)="voteReview(review, 'NOT_HELPFUL', $event)"
+                        title="Not helpful"
+                      >
+                        <i class="uil uil-thumbs-down"></i>
+                        <span *ngIf="review.notHelpfulCount">{{ review.notHelpfulCount }}</span>
+                      </button>
+                    </div>
                     <div class="review-click-hint">
                       <i class="uil uil-eye"></i>
                       <span>Click to view details</span>
                     </div>
                     <div class="review-owner-actions" *ngIf="isReviewOwner(review)">
-                      <button 
-                        class="review-action-btn edit-btn" 
+                      <button
+                        class="review-action-btn edit-btn"
                         (click)="openEditReview(review, $event)"
                         title="Edit review"
                       >
                         <i class="uil uil-edit"></i>
                       </button>
-                      <button 
-                        class="review-action-btn delete-btn" 
+                      <button
+                        class="review-action-btn delete-btn"
                         (click)="openDeleteConfirm(review, $event)"
                         title="Delete review"
                       >
                         <i class="uil uil-trash-alt"></i>
+                      </button>
+                    </div>
+                    <!-- Flag / Dispute actions for non-authors -->
+                    <div *ngIf="isAuthenticated() && !isReviewOwner(review)" style="display:flex;gap:4px;" (click)="$event.stopPropagation()">
+                      <button (click)="openFlagModal(review, $event)" title="Report review" style="background:none;border:none;cursor:pointer;color:#f59e0b;padding:4px;">
+                        <i class="uil uil-flag"></i>
+                      </button>
+                      <button (click)="openDisputeModal(review, $event)" title="Dispute review" style="background:none;border:none;cursor:pointer;color:#6366f1;padding:4px;">
+                        <i class="uil uil-shield-question"></i>
                       </button>
                     </div>
                   </div>
@@ -798,6 +880,32 @@
           <i class="uil uil-check-circle"></i>
           <span>Verified Review</span>
         </div>
+        <div class="review-detail-item" *ngIf="(selectedReview.helpfulCount ?? 0) > 0 || (selectedReview.notHelpfulCount ?? 0) > 0">
+          <i class="uil uil-thumbs-up"></i>
+          <span>{{ selectedReview.helpfulCount ?? 0 }} helpful <i class="uil uil-thumbs-down text-xs"></i> {{ selectedReview.notHelpfulCount ?? 0 }} not helpful</span>
+        </div>
+      </div>
+
+      <!-- Helpfulness voting in modal -->
+      <div class="review-vote-actions modal-vote" *ngIf="currentUser && selectedReview && currentUser.id !== selectedReview.userId" (click)="$event.stopPropagation()">
+        <button
+          class="vote-btn helpful-btn"
+          [class.voted]="selectedReview.userVote === 'HELPFUL'"
+          (click)="voteReview(selectedReview, 'HELPFUL', $event)"
+          title="Helpful"
+        >
+          <i class="uil uil-thumbs-up"></i>
+          <span>Helpful{{ (selectedReview.helpfulCount ?? 0) > 0 ? ' (' + selectedReview.helpfulCount + ')' : '' }}</span>
+        </button>
+        <button
+          class="vote-btn not-helpful-btn"
+          [class.voted]="selectedReview.userVote === 'NOT_HELPFUL'"
+          (click)="voteReview(selectedReview, 'NOT_HELPFUL', $event)"
+          title="Not helpful"
+        >
+          <i class="uil uil-thumbs-down"></i>
+          <span>Not helpful{{ (selectedReview.notHelpfulCount ?? 0) > 0 ? ' (' + selectedReview.notHelpfulCount + ')' : '' }}</span>
+        </button>
       </div>
 
       <!-- Review Replies (only for business owners) -->
@@ -924,3 +1032,50 @@
   </div>
 </div>
 
+<!-- Flag Review Modal -->
+<div class="review-modal-overlay" *ngIf="showFlagModal" (click)="closeFlagModal()">
+  <div class="review-modal-content delete-confirm-modal" (click)="$event.stopPropagation()" style="max-width:480px;">
+    <button class="review-modal-close" (click)="closeFlagModal()"><i class="uil uil-times"></i></button>
+    <div class="delete-confirm-content">
+      <div class="delete-confirm-icon" style="color:#f59e0b;"><i class="uil uil-flag"></i></div>
+      <h2 class="delete-confirm-title">Report Review</h2>
+      <p class="delete-confirm-message">Please provide a reason for reporting this review.</p>
+      <textarea [(ngModel)]="flagReason" placeholder="e.g. Spam, fake review, inappropriate content..." rows="3" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;margin:8px 0;"></textarea>
+      <div class="delete-confirm-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeFlagModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="submitFlag()" [disabled]="!flagReason.trim() || isSubmittingFlag" style="background:#f59e0b;border-color:#f59e0b;">
+          <span *ngIf="!isSubmittingFlag">Submit Report</span>
+          <span *ngIf="isSubmittingFlag">Submitting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dispute Review Modal -->
+<div class="review-modal-overlay" *ngIf="showDisputeModal" (click)="closeDisputeModal()">
+  <div class="review-modal-content delete-confirm-modal" (click)="$event.stopPropagation()" style="max-width:480px;">
+    <button class="review-modal-close" (click)="closeDisputeModal()"><i class="uil uil-times"></i></button>
+    <div class="delete-confirm-content">
+      <div class="delete-confirm-icon" style="color:#6366f1;"><i class="uil uil-shield-question"></i></div>
+      <h2 class="delete-confirm-title">Dispute Review</h2>
+      <p class="delete-confirm-message">Explain why you believe this review is inaccurate or unfair.</p>
+      <textarea [(ngModel)]="disputeReason" placeholder="e.g. This review contains false information about our service..." rows="3" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;margin:8px 0;"></textarea>
+      <div class="delete-confirm-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeDisputeModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" (click)="submitDispute()" [disabled]="!disputeReason.trim() || isSubmittingDispute" style="background:#6366f1;border-color:#6366f1;">
+          <span *ngIf="!isSubmittingDispute">Submit Dispute</span>
+          <span *ngIf="isSubmittingDispute">Submitting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Image Lightbox (Feature 14) -->
+<app-image-lightbox
+  [images]="lightboxImages"
+  [currentIndex]="lightboxIndex"
+  [isOpen]="lightboxOpen"
+  (close)="closeLightbox()">
+</app-image-lightbox>

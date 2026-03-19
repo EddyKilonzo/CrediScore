@@ -1,0 +1,225 @@
+.leaderboard-container {
+  max-width: 860px;
+  margin: 80px auto 40px;
+  padding: 0 16px;
+}
+
+.leaderboard-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.leaderboard-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.leaderboard-title i { color: #f59e0b; font-size: 2rem; }
+
+.leaderboard-subtitle {
+  color: #64748b;
+  margin-top: 8px;
+  font-size: 1rem;
+}
+
+.loading-state, .error-state {
+  text-align: center;
+  padding: 48px;
+  color: #64748b;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2C5270;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.retry-btn {
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: #2C5270;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Podium */
+.podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.podium-crown { font-size: 1.5rem; }
+
+.podium-avatar {
+  position: relative;
+}
+
+.avatar-img, .avatar-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  background: #2C5270;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.avatar-placeholder.gold { background: #f59e0b; }
+
+.podium-rank { font-size: 1.4rem; }
+
+.podium-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+  text-align: center;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.podium-rep {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.podium-bar {
+  width: 100px;
+  border-radius: 8px 8px 0 0;
+}
+
+.first-bar { height: 80px; background: linear-gradient(to top, #f59e0b, #fde68a); }
+.second-bar { height: 55px; background: linear-gradient(to top, #9ca3af, #e5e7eb); }
+.third-bar { height: 40px; background: linear-gradient(to top, #b45309, #fcd34d); }
+
+.first { transform: translateY(-20px); }
+
+/* Table */
+.leaderboard-table {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 120px;
+  padding: 12px 20px;
+  background: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 120px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: center;
+  transition: background 0.15s;
+}
+
+.table-row:last-child { border-bottom: none; }
+.table-row:hover { background: #f8fafc; }
+.table-row.top-three { background: #fffbeb; }
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 40px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2C5270;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.user-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+
+.user-name {
+  font-weight: 500;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.col-reviews, .col-rep {
+  font-size: 0.9rem;
+  color: #64748b;
+  text-align: right;
+}
+
+.rep-badge {
+  background: #2C5270;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: #64748b;
+}
+
+.empty-state i { font-size: 3rem; color: #e2e8f0; display: block; margin-bottom: 12px; }

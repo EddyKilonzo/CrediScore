@@ -1,7 +1,7 @@
 /* Manage Users Styles */
 .manage-users {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
   padding: 0;
   margin-top: 5rem;
 }
@@ -252,7 +252,7 @@
 
 /* Enhanced dropdown styling for better visual appeal */
 .filter-select:active {
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 /* Custom styling for different filter types */

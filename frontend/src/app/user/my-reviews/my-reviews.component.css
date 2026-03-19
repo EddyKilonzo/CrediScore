@@ -2,16 +2,16 @@
 :host {
   display: block;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 .my-reviews-container {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 .my-reviews-main {
-  background: #f8fafc;
+  background: transparent;
   min-height: 100vh;
   padding: 2rem 0;
   margin: 0;
@@ -59,14 +59,7 @@
 }
 
 .welcome-title::before {
-  content: '⭐';
-  position: absolute;
-  left: -2rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1.5rem;
-  opacity: 0.7;
-  animation: float 3s ease-in-out infinite;
+  content: none;
 }
 
 .welcome-title::after {
@@ -245,7 +238,7 @@
   display: flex;
   gap: 2rem;
   align-items: flex-start;
-  margin-top: 2rem;
+  margin-top: 0;
 }
 
 /* Filters Sidebar */

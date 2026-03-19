@@ -207,6 +207,13 @@ export class UpdateBusinessDto {
   @IsOptional()
   @IsString()
   businessCategoryId?: string;
+
+  @ApiProperty({
+    description: 'Business hours by day (e.g. { monday: { open: "09:00", close: "17:00" } })',
+    required: false,
+  })
+  @IsOptional()
+  businessHours?: Record<string, any>;
 }
 
 export class UploadDocumentDto {

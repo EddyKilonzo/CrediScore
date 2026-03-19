@@ -35,6 +35,8 @@ interface DocumentType {
   uploaded: boolean;
   verified: boolean;
   scanning: boolean;
+  failed: boolean;           // AI processed but found invalid / rejected
+  pendingReview: boolean;    // Requires manual admin review
   recordId?: string;
   url?: string;
   scanResult?: {
@@ -183,7 +185,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       required: false,
       uploaded: false,
       verified: false,
-      scanning: false
+      scanning: false,
+      failed: false,
+      pendingReview: false,
     },
     {
       id: 'tax_certificate',
@@ -192,7 +196,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       required: false,
       uploaded: false,
       verified: false,
-      scanning: false
+      scanning: false,
+      failed: false,
+      pendingReview: false,
     }
   ];
 
@@ -222,6 +228,27 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   showLocationPicker = false;
   socialLinks = { ...DEFAULT_SOCIAL_LINKS };
   isSavingSocialLinks = false;
+
+  // Response Templates (Feature 10)
+  responseTemplates: Array<{ id: string; name: string; content: string; isDefault: boolean }> = [];
+  isLoadingTemplates = false;
+  showTemplateForm = false;
+  templateForm = { name: '', content: '', isDefault: false };
+  editingTemplateId: string | null = null;
+  isSavingTemplate = false;
+
+  // Business Hours (Feature 12)
+  businessHours: Record<string, { open: string; close: string; closed: boolean }> = {
+    monday:    { open: '09:00', close: '17:00', closed: false },
+    tuesday:   { open: '09:00', close: '17:00', closed: false },
+    wednesday: { open: '09:00', close: '17:00', closed: false },
+    thursday:  { open: '09:00', close: '17:00', closed: false },
+    friday:    { open: '09:00', close: '17:00', closed: false },
+    saturday:  { open: '09:00', close: '13:00', closed: false },
+    sunday:    { open: '09:00', close: '13:00', closed: true },
+  };
+  readonly weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  isSavingHours = false;
 
   // Business Profile
   businessProfile = {
@@ -353,7 +380,21 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.loadSocialLinks();
     this.loadBusinessProfile();
     this.loadPaymentMethods();
+    this.loadBusinessHours();
+    this.loadResponseTemplates();
     this.updateSocialsAndLocationCompletion();
+  }
+
+  private loadBusinessHours() {
+    const b = this.currentBusiness as any;
+    if (b?.businessHours && typeof b.businessHours === 'object') {
+      // Merge with defaults to handle partial data
+      this.weekdays.forEach(day => {
+        if (b.businessHours[day]) {
+          this.businessHours[day] = { ...this.businessHours[day], ...b.businessHours[day] };
+        }
+      });
+    }
   }
 
   private refreshBusinessDetails(showLoading: boolean = false) {
@@ -565,30 +606,28 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       if (realDoc) {
         const aiAnalysis = realDoc.aiAnalysis || {};
         const aiVerified = this.isDocumentAiVerified(realDoc);
-        const isScanning =
-          !aiVerified &&
-          (!aiAnalysis || Object.keys(aiAnalysis).length === 0);
+        const isFailed = this.isDocumentFailed(realDoc);
+        const isPendingReview = this.isDocumentPendingReview(realDoc);
+        const isScanning = !aiVerified && !isFailed && !isPendingReview &&
+          Object.keys(aiAnalysis).length === 0;
 
         doc.uploaded = true;
         doc.verified = aiVerified;
+        doc.failed = isFailed;
+        doc.pendingReview = isPendingReview;
         doc.scanning = isScanning;
         doc.url = realDoc.url;
         doc.recordId = realDoc.id;
 
-        if (aiAnalysis && Object.keys(aiAnalysis).length > 0) {
+        if (Object.keys(aiAnalysis).length > 0) {
           doc.scanResult = {
-            ocrConfidence:
-              realDoc.ocrConfidence ??
-              aiAnalysis.ocrConfidence ??
-              aiAnalysis.confidence ??
-              0,
-            aiVerified: aiVerified || aiAnalysis.aiVerified || false,
+            ocrConfidence: realDoc.ocrConfidence ?? aiAnalysis.confidence ?? 0,
+            aiVerified,
             authenticityScore: aiAnalysis.authenticityScore || 0,
             confidence: aiAnalysis.confidence || 0,
             documentType: aiAnalysis.documentType || realDoc.type || 'Unknown',
             isValid: aiVerified,
-            extractedData:
-              realDoc.extractedData || aiAnalysis.extractedData || {},
+            extractedData: realDoc.extractedData || aiAnalysis.extractedData || {},
             validationErrors: aiAnalysis.validationErrors || [],
             warnings: aiAnalysis.warnings || [],
             fraudIndicators: aiAnalysis.fraudIndicators || [],
@@ -601,6 +640,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       } else {
         doc.uploaded = false;
         doc.verified = false;
+        doc.failed = false;
+        doc.pendingReview = false;
         doc.scanning = false;
         doc.url = undefined;
         doc.recordId = undefined;
@@ -750,13 +791,29 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   private isDocumentAiVerified(document: any): boolean {
     if (!document) return false;
+    // Only trust the DB-level flags, not analysis.isValid (which can be unreliable)
+    return !!(document.aiVerified || document.verified);
+  }
+
+  private isDocumentFailed(document: any): boolean {
+    if (!document) return false;
+    if (document.aiVerified || document.verified) return false;
     const analysis = document.aiAnalysis || {};
+    // Failed = AI ran AND score is too low AND NOT pending manual review
     return !!(
-      document.aiVerified ||
-      document.verified ||
-      analysis.isValid ||
-      analysis.aiVerified
+      Object.keys(analysis).length > 0 &&
+      !analysis.requiresManualReview &&
+      analysis.authenticityScore !== undefined &&
+      analysis.authenticityScore < 40 &&
+      !analysis.isValid
     );
+  }
+
+  private isDocumentPendingReview(document: any): boolean {
+    if (!document) return false;
+    if (document.aiVerified || document.verified) return false;
+    const analysis = document.aiAnalysis || {};
+    return !!(analysis.requiresManualReview);
   }
 
   getOnboardingProgress(): number {
@@ -1208,32 +1265,34 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.isScanning = false;
     this.scanningProgress = 0;
 
+    const score = status.aiAnalysis?.authenticityScore || 0;
+    const requiresManualReview = status.aiAnalysis?.requiresManualReview || false;
+
     if (aiIsValid) {
-      this.toastService.show(`Document verified! AI found all required information.`, 'success');
+      document.failed = false;
+      document.pendingReview = false;
+      this.toastService.show(`Document verified! AI confirmed authenticity.`, 'success');
+    } else if (requiresManualReview || score === 0) {
+      document.failed = false;
+      document.pendingReview = true;
+      this.toastService.show(
+        `Document uploaded — requires manual admin review. We'll notify you once reviewed.`,
+        'info'
+      );
+    } else if (score < 40) {
+      document.failed = true;
+      document.pendingReview = false;
+      this.toastService.show(
+        `Document failed verification (${score}% confidence). Please upload a clearer, higher-resolution image.`,
+        'error'
+      );
     } else {
-      const score = status.aiAnalysis?.authenticityScore || 0;
-      const hasWarnings = status.aiAnalysis?.warnings?.length > 0;
-      const requiresManualReview = status.aiAnalysis?.requiresManualReview || false;
-      
-      if (requiresManualReview || score < 40) {
-        // Low confidence or manual review required
-        if (hasWarnings && status.aiAnalysis.warnings[0]) {
-          // Show the first warning which usually contains the most relevant info
-          this.toastService.show(status.aiAnalysis.warnings[0], 'info');
-        } else {
-          this.toastService.show(
-            `Document uploaded successfully but requires manual verification. An administrator will review it shortly.`,
-            'info'
-          );
-        }
-      } else if (score >= 60) {
-        this.toastService.show(`Document processed (${score}% score). Requires admin review for final approval.`, 'warning');
-      } else {
-        this.toastService.show(
-          `Document uploaded (${score}% confidence). Consider uploading a clearer image for better results, or proceed with manual review.`,
-          'warning'
-        );
-      }
+      document.failed = false;
+      document.pendingReview = true;
+      this.toastService.show(
+        `Document processed (${score}% score) — awaiting admin review for final approval.`,
+        'warning'
+      );
     }
 
     this.refreshBusinessDetails();
@@ -1242,6 +1301,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   private handleUploadError(document: DocumentType, message: string) {
     document.uploaded = false;
     document.scanning = false;
+    document.failed = false;
+    document.pendingReview = false;
     this.isScanning = false;
     this.scanningProgress = 0;
     this.toastService.show(`${document.name}: ${message}`, 'error');
@@ -1259,6 +1320,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   getDocumentStatusColor(document: DocumentType): string {
     if (document.scanning) return 'text-blue-600 bg-blue-100';
     if (document.verified) return 'text-green-600 bg-green-100';
+    if (document.failed) return 'text-red-600 bg-red-100';
+    if (document.pendingReview) return 'text-amber-600 bg-amber-100';
     if (document.uploaded) return 'text-yellow-600 bg-yellow-100';
     return 'text-gray-600 bg-gray-100';
   }
@@ -1266,8 +1329,19 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   getDocumentStatusText(document: DocumentType): string {
     if (document.scanning) return 'Scanning...';
     if (document.verified) return 'Verified';
-    if (document.uploaded) return 'Under Review';
+    if (document.failed) return 'Failed Verification';
+    if (document.pendingReview) return 'Pending Review';
+    if (document.uploaded) return 'Processing';
     return 'Not Uploaded';
+  }
+
+  getDocumentStatusIcon(document: DocumentType): string {
+    if (document.scanning) return 'fas fa-spinner fa-spin';
+    if (document.verified) return 'fas fa-check-circle';
+    if (document.failed) return 'fas fa-times-circle';
+    if (document.pendingReview) return 'fas fa-clock';
+    if (document.uploaded) return 'fas fa-spinner fa-spin';
+    return 'fas fa-upload';
   }
 
   hasAiVerifiedDocument(): boolean {
@@ -1463,6 +1537,105 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     } else {
       this.toastService.show('No social media links to preview', 'info');
     }
+  }
+
+  // Response Templates Methods (Feature 10)
+  loadResponseTemplates() {
+    if (!this.currentBusiness?.id) return;
+    this.isLoadingTemplates = true;
+    const url = `http://localhost:3000/api/business/${this.currentBusiness.id}/response-templates`;
+    // Using inject would be cleaner; we use businessService's http via a workaround
+    // Since businessService has no method, we'll use fetch-like approach via window.fetch
+    fetch(url, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` }
+    }).then(r => r.json()).then(data => {
+      this.responseTemplates = data.templates || data || [];
+      this.isLoadingTemplates = false;
+    }).catch(() => { this.isLoadingTemplates = false; });
+  }
+
+  openTemplateForm(template?: { id: string; name: string; content: string; isDefault: boolean }) {
+    if (template) {
+      this.editingTemplateId = template.id;
+      this.templateForm = { name: template.name, content: template.content, isDefault: template.isDefault };
+    } else {
+      this.editingTemplateId = null;
+      this.templateForm = { name: '', content: '', isDefault: false };
+    }
+    this.showTemplateForm = true;
+  }
+
+  closeTemplateForm() {
+    this.showTemplateForm = false;
+    this.editingTemplateId = null;
+    this.templateForm = { name: '', content: '', isDefault: false };
+  }
+
+  saveTemplate() {
+    if (!this.currentBusiness?.id || !this.templateForm.name.trim() || !this.templateForm.content.trim()) return;
+    this.isSavingTemplate = true;
+    const token = localStorage.getItem('accessToken') || '';
+    const isEdit = !!this.editingTemplateId;
+    const url = isEdit
+      ? `http://localhost:3000/api/business/response-templates/${this.editingTemplateId}`
+      : `http://localhost:3000/api/business/${this.currentBusiness.id}/response-templates`;
+
+    fetch(url, {
+      method: isEdit ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(this.templateForm)
+    }).then(r => {
+      if (!r.ok) throw new Error('Save failed');
+      return r.json();
+    }).then(() => {
+      this.isSavingTemplate = false;
+      this.closeTemplateForm();
+      this.loadResponseTemplates();
+      this.toastService.show('Template saved successfully', 'success');
+    }).catch(() => {
+      this.isSavingTemplate = false;
+      this.toastService.show('Failed to save template', 'error');
+    });
+  }
+
+  deleteTemplate(templateId: string) {
+    if (!confirm('Delete this response template?')) return;
+    const token = localStorage.getItem('accessToken') || '';
+    fetch(`http://localhost:3000/api/business/response-templates/${templateId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).then(r => {
+      if (!r.ok) throw new Error('Delete failed');
+      this.responseTemplates = this.responseTemplates.filter(t => t.id !== templateId);
+      this.toastService.show('Template deleted', 'success');
+    }).catch(() => {
+      this.toastService.show('Failed to delete template', 'error');
+    });
+  }
+
+  // Business Hours Methods (Feature 12)
+  updateBusinessHours() {
+    if (!this.currentBusiness?.id) {
+      this.toastService.show('No business found', 'error');
+      return;
+    }
+    this.isSavingHours = true;
+    this.businessService.updateBusiness({ id: this.currentBusiness.id, businessHours: this.businessHours } as any)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.isSavingHours = false;
+          this.toastService.show('Business hours updated successfully', 'success');
+        },
+        error: () => {
+          this.isSavingHours = false;
+          this.toastService.show('Failed to update business hours', 'error');
+        }
+      });
+  }
+
+  capitalizeDay(day: string): string {
+    return day.charAt(0).toUpperCase() + day.slice(1);
   }
 
   // Business Profile Methods

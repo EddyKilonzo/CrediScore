@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
 import { OCRService } from '../shared/ocr/ocr.service';
 import { CloudinaryService } from '../shared/cloudinary/cloudinary.service';
+import { NotificationsService } from '../shared/notifications/notifications.service';
 import {
   CreateBusinessDto,
   UpdateBusinessDto,
@@ -133,6 +134,7 @@ export class BusinessService {
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly ocrService: OCRService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // Business CRUD Operations
@@ -285,6 +287,12 @@ export class BusinessService {
                   },
                 },
                 orderBy: { createdAt: 'asc' },
+              },
+              votes: {
+                select: { userId: true, vote: true },
+              },
+              _count: {
+                select: { votes: true },
               },
             },
             orderBy: { createdAt: 'desc' },
@@ -941,14 +949,14 @@ export class BusinessService {
               documentType: 'UNKNOWN',
               extractedData: {},
               confidence: 0,
-              isValid: true, // Mark as valid to allow submission
+              isValid: false, // Cannot determine validity — requires manual review
               validationErrors: [],
               warnings: [
                 'Automatic document processing encountered technical difficulties.',
                 'This document has been uploaded successfully and requires manual verification.',
                 'An administrator will review your document shortly.',
               ],
-              authenticityScore: 25,
+              authenticityScore: 0,
               fraudIndicators: [],
               securityFeatures: [],
               requiresManualReview: true,
@@ -1512,13 +1520,13 @@ export class BusinessService {
             where: { isActive: true },
           },
           documents: {
-            where: { verified: true },
+            where: { OR: [{ verified: true }, { aiVerified: true }] },
           },
           payments: {
             where: { verified: true },
           },
           fraudReports: {
-            where: { status: 'RESOLVED' },
+            where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
           },
         },
       });
@@ -1549,16 +1557,20 @@ export class BusinessService {
         let weightedRatingSum = 0;
         let totalWeight = 0;
 
-        // Verified reviews get 2x weight
+        // Verified reviews: base weight 2x, scaled up to 3x by credibility (0–100)
         verifiedReviews.forEach((review) => {
-          weightedRatingSum += review.rating * 2;
-          totalWeight += 2;
+          const credibility = typeof review.credibility === 'number' ? review.credibility : 50;
+          const weight = 2 + (credibility / 100); // 2.0–3.0
+          weightedRatingSum += review.rating * weight;
+          totalWeight += weight;
         });
 
-        // Unverified reviews get 1x weight
+        // Unverified reviews: base weight 1x, scaled by credibility
         unverifiedReviews.forEach((review) => {
-          weightedRatingSum += review.rating;
-          totalWeight += 1;
+          const credibility = typeof review.credibility === 'number' ? review.credibility : 50;
+          const weight = 0.5 + (credibility / 200); // 0.5–1.0
+          weightedRatingSum += review.rating * weight;
+          totalWeight += weight;
         });
 
         const avgRating = totalWeight > 0 ? weightedRatingSum / totalWeight : 0;
@@ -1600,7 +1612,7 @@ export class BusinessService {
         score: paymentScore,
       };
 
-      // Penalty for fraud reports
+      // Penalty for active fraud reports (PENDING + UNDER_REVIEW — unresolved concerns)
       const fraudPenalty = Math.min(business.fraudReports.length * 5, 25); // Max 25 point penalty
       score -= fraudPenalty;
       factors.fraudReports = {
@@ -1949,7 +1961,7 @@ export class BusinessService {
           },
           _sum: { amount: true },
         }),
-        this.getTrustScore(businessId),
+        this.calculateTrustScore(businessId), // Always recalculate for fresh analytics
       ]);
 
       const totalReviews = reviews.length;
@@ -2068,7 +2080,7 @@ export class BusinessService {
           }-star review`,
           description: review.comment || 'No review comment provided.',
           timestamp: review.createdAt,
-          status: review.replies.length > 0 ? 'responded' : 'pending',
+          status: review.replies.length > 0 ? 'responded' : 'new',
           priority:
             review.rating <= 2 ? 'high' : review.rating === 3 ? 'medium' : 'low',
           rating: review.rating,
@@ -2806,5 +2818,360 @@ export class BusinessService {
       }
       throw new InternalServerErrorException('Failed to fetch review replies');
     }
+  }
+
+  // ─── Owner Public Profile ────────────────────────────────────────────────
+
+  async getOwnerPublicProfile(userId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          bio: true,
+          avatar: true,
+          reputation: true,
+          createdAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const businesses = await this.prisma.business.findMany({
+        where: { ownerId: userId, isActive: true, isVerified: true },
+        include: {
+          trustScore: true,
+          businessCategory: true,
+          _count: { select: { reviews: { where: { isActive: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return { user, businesses };
+    } catch (error) {
+      this.logger.error('Error fetching owner public profile:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch owner profile');
+    }
+  }
+
+  // ─── Business Claims ─────────────────────────────────────────────────────
+
+  async submitClaim(
+    userId: string,
+    businessId: string,
+    message?: string,
+  ) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      const claim = await this.prisma.businessClaim.create({
+        data: { businessId, userId, message },
+      });
+
+      this.logger.log(`Business claim submitted: ${claim.id} by user: ${userId}`);
+      return claim;
+    } catch (error) {
+      this.logger.error('Error submitting business claim:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to submit claim');
+    }
+  }
+
+  async getAdminClaims(
+    page: number = 1,
+    limit: number = 10,
+    status?: string,
+  ) {
+    try {
+      const skip = (page - 1) * limit;
+      const where: { status?: any } = {};
+      if (status) {
+        where.status = status;
+      }
+
+      const [claims, total] = await Promise.all([
+        this.prisma.businessClaim.findMany({
+          where,
+          skip,
+          take: limit,
+          include: {
+            business: { select: { id: true, name: true, isVerified: true } },
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.businessClaim.count({ where }),
+      ]);
+
+      return {
+        claims,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching claims:', error);
+      throw new InternalServerErrorException('Failed to fetch claims');
+    }
+  }
+
+  async reviewClaim(
+    claimId: string,
+    approve: boolean,
+    adminNotes?: string,
+  ): Promise<{ message: string }> {
+    try {
+      const claim = await this.prisma.businessClaim.findUnique({
+        where: { id: claimId },
+        include: { business: true },
+      });
+
+      if (!claim) {
+        throw new NotFoundException('Claim not found');
+      }
+
+      const newStatus = approve ? 'APPROVED' : 'REJECTED';
+
+      await this.prisma.businessClaim.update({
+        where: { id: claimId },
+        data: { status: newStatus, adminNotes },
+      });
+
+      if (approve) {
+        await this.prisma.business.update({
+          where: { id: claim.businessId },
+          data: { ownerId: claim.userId },
+        });
+
+        await this.notificationsService.create(
+          claim.userId,
+          'CLAIM_APPROVED',
+          'Business claim approved',
+          `Your claim for ${claim.business.name} has been approved.`,
+          claim.businessId,
+        );
+      } else {
+        await this.notificationsService.create(
+          claim.userId,
+          'CLAIM_REJECTED',
+          'Business claim rejected',
+          `Your claim for ${claim.business.name} has been rejected.`,
+          claim.businessId,
+        );
+      }
+
+      this.logger.log(`Claim ${claimId} ${newStatus}`);
+      return { message: `Claim ${approve ? 'approved' : 'rejected'} successfully` };
+    } catch (error) {
+      this.logger.error('Error reviewing claim:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to review claim');
+    }
+  }
+
+  // ─── Response Templates ──────────────────────────────────────────────────
+
+  async getResponseTemplates(userId: string, businessId: string) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      return this.prisma.responseTemplate.findMany({
+        where: { businessId },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+      });
+    } catch (error) {
+      this.logger.error('Error fetching response templates:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to fetch response templates');
+    }
+  }
+
+  async createResponseTemplate(
+    userId: string,
+    businessId: string,
+    data: { name: string; content: string; isDefault?: boolean },
+  ) {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+      if (business.ownerId !== userId) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      const count = await this.prisma.responseTemplate.count({
+        where: { businessId },
+      });
+      if (count >= 20) {
+        throw new BadRequestException('Maximum of 20 response templates allowed per business');
+      }
+
+      // If setting as default, clear existing default first
+      if (data.isDefault) {
+        await this.prisma.responseTemplate.updateMany({
+          where: { businessId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+
+      const template = await this.prisma.responseTemplate.create({
+        data: {
+          businessId,
+          name: data.name,
+          content: data.content,
+          isDefault: data.isDefault ?? false,
+        },
+      });
+
+      this.logger.log(`Response template created: ${template.id} for business: ${businessId}`);
+      return template;
+    } catch (error) {
+      this.logger.error('Error creating response template:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to create response template');
+    }
+  }
+
+  async updateResponseTemplate(
+    userId: string,
+    templateId: string,
+    data: { name?: string; content?: string; isDefault?: boolean },
+  ) {
+    try {
+      const template = await this.prisma.responseTemplate.findUnique({
+        where: { id: templateId },
+        include: { business: true },
+      });
+      if (!template) {
+        throw new NotFoundException('Response template not found');
+      }
+      if (template.business.ownerId !== userId) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      // If setting as default, clear existing default first
+      if (data.isDefault) {
+        await this.prisma.responseTemplate.updateMany({
+          where: { businessId: template.businessId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
+
+      const updated = await this.prisma.responseTemplate.update({
+        where: { id: templateId },
+        data,
+      });
+
+      this.logger.log(`Response template updated: ${templateId}`);
+      return updated;
+    } catch (error) {
+      this.logger.error('Error updating response template:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update response template');
+    }
+  }
+
+  async deleteResponseTemplate(userId: string, templateId: string) {
+    try {
+      const template = await this.prisma.responseTemplate.findUnique({
+        where: { id: templateId },
+        include: { business: true },
+      });
+      if (!template) {
+        throw new NotFoundException('Response template not found');
+      }
+      if (template.business.ownerId !== userId) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      await this.prisma.responseTemplate.delete({ where: { id: templateId } });
+
+      this.logger.log(`Response template deleted: ${templateId}`);
+      return { message: 'Response template deleted successfully' };
+    } catch (error) {
+      this.logger.error('Error deleting response template:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete response template');
+    }
+  }
+
+  // ─── CSV Export ──────────────────────────────────────────────────────────
+
+  async exportBusinessAnalyticsCSV(userId: string, businessId: string): Promise<string> {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    if (business.ownerId !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const reviews = await this.prisma.review.findMany({
+      where: { businessId },
+      include: { user: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const header = 'Date,Reviewer,Rating,Credibility,Verified,Comment\n';
+    const rows = reviews
+      .map(
+        (r) =>
+          `"${r.createdAt.toISOString()}","${r.user.name.replace(/"/g, '""')}",${r.rating},${r.credibility},${r.isVerified},"${(r.comment || '').replace(/"/g, '""')}"`,
+      )
+      .join('\n');
+    return header + rows;
   }
 }

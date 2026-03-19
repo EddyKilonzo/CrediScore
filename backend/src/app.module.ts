@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -13,6 +13,10 @@ import { UserModule } from './user/user.module';
 import { BusinessModule } from './business/business.module';
 import { AiModule } from './shared/ai/ai.module';
 import { MetricsModule } from './shared/metrics/metrics.module';
+import { CorrelationIdModule } from './shared/correlation-id/correlation-id.module';
+import { CorrelationIdMiddleware } from './shared/correlation-id/correlation-id.middleware';
+import { NotificationsModule } from './shared/notifications/notifications.module';
+import { MpesaModule } from './shared/mpesa/mpesa.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 
@@ -24,10 +28,11 @@ import { RolesGuard } from './auth/guards/roles.guard';
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute
+        ttl: 60000,
+        limit: 100,
       },
     ]),
+    CorrelationIdModule,
     PrismaModule,
     AuthModule,
     MailerModule,
@@ -37,6 +42,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
     BusinessModule,
     AiModule,
     MetricsModule,
+    NotificationsModule,
+    MpesaModule,
   ],
   controllers: [AppController],
   providers: [
@@ -51,4 +58,8 @@ import { RolesGuard } from './auth/guards/roles.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationIdMiddleware).forRoutes('*');
+  }
+}

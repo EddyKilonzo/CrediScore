@@ -50,17 +50,21 @@
     <div class="panel-header">
       <h2 class="section-title slide-in-left">Pending Reviews</h2>
       <div class="header-actions slide-in-right">
+        <!-- Bulk actions (visible when items selected) -->
+        @if (selectedIds.size > 0) {
+          <span class="text-sm text-gray-600 font-medium">{{ selectedIds.size }} selected</span>
+          <button class="btn-primary hover-lift" (click)="bulkApprove()" [disabled]="isBulkProcessing">
+            <i class="fas fa-check"></i>
+            Approve Selected
+          </button>
+          <button class="btn-danger hover-lift" (click)="bulkReject()" [disabled]="isBulkProcessing">
+            <i class="fas fa-times"></i>
+            Reject Selected
+          </button>
+        }
         <button class="btn-primary hover-lift" (click)="refreshReviews()">
           <i class="fas fa-sync-alt"></i>
           Refresh
-        </button>
-        <button class="btn-secondary hover-lift">
-          <i class="fas fa-filter"></i>
-          Filter
-        </button>
-        <button class="btn-secondary hover-lift">
-          <i class="fas fa-download"></i>
-          Export
         </button>
       </div>
     </div>
@@ -72,10 +76,20 @@
         <p>All reviews have been moderated. Check back later for new submissions.</p>
       </div>
     } @else {
+      <!-- Select all bar -->
+      <div class="flex items-center gap-3 px-2 py-2 mb-2">
+        <input type="checkbox" [checked]="allSelected" (change)="selectAll()"
+               style="width:16px;height:16px;accent-color:#2C5270;cursor:pointer;" title="Select all">
+        <span class="text-sm text-gray-500">Select all ({{ reviews.length }})</span>
+      </div>
       <div class="reviews-grid">
         @for (review of reviews; track review.id) {
-          <div class="review-card animated-card hover-lift" [style.animation-delay]="($index * 0.1) + 's'">
+          <div class="review-card animated-card hover-lift" [style.animation-delay]="($index * 0.1) + 's'"
+               [class.ring-2]="selectedIds.has(review.id)" [class.ring-blue-400]="selectedIds.has(review.id)">
             <div class="review-header">
+              <!-- Checkbox -->
+              <input type="checkbox" [checked]="selectedIds.has(review.id)" (change)="toggleSelect(review.id)"
+                     style="width:16px;height:16px;accent-color:#2C5270;cursor:pointer;flex-shrink:0;" class="mr-2 mt-1">
               <div class="reviewer-info">
                 <div class="reviewer-avatar">
                   {{ review.reviewer.charAt(0) }}

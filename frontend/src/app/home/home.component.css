@@ -117,12 +117,12 @@
   border-radius: 0.5rem;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(44, 82, 112, 0.3);
+  box-shadow: var(--shadow-primary);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(44, 82, 112, 0.4);
+  box-shadow: var(--shadow-primary);
 }
 
 .btn-secondary {
@@ -147,7 +147,7 @@
 
 .card-hover:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-primary);
 }
 
 /* Features Grid */
@@ -199,7 +199,7 @@
   background: white;
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-primary);
   transition: transform 0.3s ease;
 }
 
@@ -329,7 +329,7 @@ section,
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(44, 82, 112, 0.3);
+  box-shadow: var(--shadow-primary);
 }
 
 .back-to-top.show {
@@ -340,7 +340,7 @@ section,
 
 .back-to-top:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(44, 82, 112, 0.4);
+  box-shadow: var(--shadow-primary);
 }
 
 .back-to-top svg {

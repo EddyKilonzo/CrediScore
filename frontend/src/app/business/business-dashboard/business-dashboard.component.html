@@ -1,5 +1,5 @@
 <!-- Business Dashboard -->
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen">
   
   <!-- Main Content -->
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -115,54 +115,119 @@
                 <p class="text-sm text-gray-600">{{ getTimeframeLabel() }}</p>
               </div>
               <div class="p-6">
-                <div class="h-80 flex items-end justify-between space-x-2">
-                  <div *ngFor="let data of reviewTrendData" class="flex flex-col items-center">
-                    <div class="rounded-t w-10 mb-2 transition-all duration-300 hover:opacity-80"
-                         [style]="'background-color: #3E6A8A; height: ' + data.height + 'px;' "></div>
-                    <span class="text-xs text-gray-600">{{ data.day }}</span>
-                    <span class="text-xs font-medium text-gray-900">{{ data.reviews }}</span>
+                <div class="chart-wrapper">
+                  <div class="chart-bars-area">
+                    <div *ngFor="let data of reviewTrendData" class="chart-col">
+                      <span class="chart-val">{{ data.reviews > 0 ? data.reviews : '' }}</span>
+                      <div class="chart-bar"
+                           [style.height.px]="getBarHeight(data.reviews)"
+                           [attr.data-val]="data.reviews"
+                           [title]="data.reviews + ' reviews on ' + data.day"></div>
+                    </div>
                   </div>
-                </div>
-                <div class="mt-4 text-center">
-                  <p class="text-sm text-gray-600">Total Reviews: {{ getTotalReviews() }}</p>
+                  <div class="chart-days-row">
+                    <span *ngFor="let data of reviewTrendData" class="chart-day">{{ data.day }}</span>
+                  </div>
+                  <div class="chart-footer">
+                    <span class="chart-footer-label">{{ getTimeframeLabel() }}</span>
+                    <span class="chart-footer-total">{{ getTotalReviews() }} reviews</span>
+                  </div>
                 </div>
               </div>
             </div>
 
+            <!-- Credit Score Breakdown -->
             <div class="dashboard-card fade-in-card">
               <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Business Insights</h2>
-                <p class="text-sm text-gray-600">Key metrics</p>
+                <h2 class="text-lg font-semibold text-gray-900">Credit Score</h2>
+                <p class="text-sm text-gray-600">Score breakdown: {{ dashboardStats.trustScore }}/100</p>
               </div>
-              <div class="p-6">
-                <div class="space-y-4">
-                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                      <i class="fas fa-star text-sm mr-3" style="color: #3E6A8A;"></i>
-                      <span class="text-sm font-medium text-gray-900">Avg Rating</span>
-                    </div>
-                    <span class="text-sm font-bold" style="color: #3E6A8A;">{{ dashboardStats.averageRating }}/5</span>
+              <div class="p-6 space-y-3">
+                <!-- Verification Base -->
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <i class="fas fa-check-circle text-xs" style="color:#3E6A8A;"></i>
+                    <span class="text-xs text-gray-700">Verified status</span>
                   </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                      <i class="fas fa-clock text-sm mr-3" style="color: #3E6A8A;"></i>
-                      <span class="text-sm font-medium text-gray-900">Response Time</span>
+                  <span class="text-xs font-bold" style="color:#3E6A8A;">
+                    +{{ dashboardStats.trustScoreFactors?.verified ?? 0 }}/20
+                  </span>
+                </div>
+                <!-- Reviews -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center space-x-2">
+                      <i class="fas fa-star text-xs" style="color:#3E6A8A;"></i>
+                      <span class="text-xs text-gray-700">Reviews
+                        <span class="text-gray-400">({{ dashboardStats.trustScoreFactors?.reviews?.totalReviews ?? dashboardStats.totalReviews }} total, {{ dashboardStats.trustScoreFactors?.reviews?.verifiedReviews ?? 0 }} verified)</span>
+                      </span>
                     </div>
-                    <span class="text-sm font-bold" style="color: #3E6A8A;">2.4h</span>
+                    <span class="text-xs font-bold" style="color:#3E6A8A;">
+                      +{{ dashboardStats.trustScoreFactors?.reviews?.totalScore ?? 0 | number:'1.0-0' }}/50
+                    </span>
                   </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                      <i class="fas fa-trending-up text-sm mr-3" style="color: #3E6A8A;"></i>
-                      <span class="text-sm font-medium text-gray-900">Growth Rate</span>
-                    </div>
-                    <span class="text-sm font-bold" style="color: #3E6A8A;">+{{ dashboardStats.monthlyGrowth }}%</span>
+                  <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="h-1.5 rounded-full" style="background:#3E6A8A;"
+                         [style.width.%]="((dashboardStats.trustScoreFactors?.reviews?.totalScore ?? 0) / 50) * 100"></div>
                   </div>
-                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                      <i class="fas fa-shield-alt text-sm mr-3" style="color: #3E6A8A;"></i>
-                      <span class="text-sm font-medium text-gray-900">Trust Score</span>
+                </div>
+                <!-- Documents -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center space-x-2">
+                      <i class="fas fa-file-check text-xs" style="color:#3E6A8A;"></i>
+                      <span class="text-xs text-gray-700">Documents
+                        <span class="text-gray-400">({{ dashboardStats.trustScoreFactors?.documents?.count ?? 0 }} verified)</span>
+                      </span>
                     </div>
-                    <span class="text-sm font-bold" style="color: #3E6A8A;">{{ dashboardStats.trustScore }}</span>
+                    <span class="text-xs font-bold" style="color:#3E6A8A;">
+                      +{{ dashboardStats.trustScoreFactors?.documents?.score ?? 0 }}/20
+                    </span>
+                  </div>
+                  <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="h-1.5 rounded-full" style="background:#3E6A8A;"
+                         [style.width.%]="((dashboardStats.trustScoreFactors?.documents?.score ?? 0) / 20) * 100"></div>
+                  </div>
+                </div>
+                <!-- Payments -->
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center space-x-2">
+                      <i class="fas fa-credit-card text-xs" style="color:#3E6A8A;"></i>
+                      <span class="text-xs text-gray-700">Payment methods
+                        <span class="text-gray-400">({{ dashboardStats.trustScoreFactors?.payments?.count ?? 0 }})</span>
+                      </span>
+                    </div>
+                    <span class="text-xs font-bold" style="color:#3E6A8A;">
+                      +{{ dashboardStats.trustScoreFactors?.payments?.score ?? 0 }}/15
+                    </span>
+                  </div>
+                  <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="h-1.5 rounded-full" style="background:#3E6A8A;"
+                         [style.width.%]="((dashboardStats.trustScoreFactors?.payments?.score ?? 0) / 15) * 100"></div>
+                  </div>
+                </div>
+                <!-- Fraud penalty -->
+                <div *ngIf="(dashboardStats.trustScoreFactors?.fraudReports?.count ?? 0) > 0"
+                     class="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+                  <div class="flex items-center space-x-2">
+                    <i class="fas fa-exclamation-triangle text-xs text-red-500"></i>
+                    <span class="text-xs text-red-700">Active fraud reports ({{ dashboardStats.trustScoreFactors?.fraudReports?.count }})</span>
+                  </div>
+                  <span class="text-xs font-bold text-red-600">
+                    -{{ dashboardStats.trustScoreFactors?.fraudReports?.penalty ?? 0 }}/25
+                  </span>
+                </div>
+                <!-- Total bar -->
+                <div class="pt-2 border-t border-gray-100">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-semibold text-gray-900">Total Score</span>
+                    <span class="text-sm font-bold" style="color:#3E6A8A;">{{ dashboardStats.trustScore }}/100</span>
+                  </div>
+                  <div class="w-full bg-gray-100 rounded-full h-2">
+                    <div class="h-2 rounded-full transition-all duration-500"
+                         style="background: linear-gradient(90deg,#3E6A8A,#5C8BA5);"
+                         [style.width.%]="dashboardStats.trustScore"></div>
                   </div>
                 </div>
               </div>

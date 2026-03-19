@@ -22,6 +22,13 @@ interface BusinessDashboardStats {
   revenueGrowth: number;
   customerSatisfaction: number;
   businessGrade: string;
+  trustScoreFactors?: {
+    verified?: number;
+    reviews?: { averageRating: number; totalReviews: number; verifiedReviews: number; baseScore: number; verificationBonus: number; totalScore: number; };
+    documents?: { count: number; score: number; };
+    payments?: { count: number; score: number; };
+    fraudReports?: { count: number; penalty: number; };
+  };
 }
 
 interface RecentActivity {
@@ -282,10 +289,12 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
       this.dashboardStats.businessGrade = trustScoreValue > 0
         ? (analytics.trustScore.grade || this.businessService.getBusinessGrade(analytics.trustScore))
         : 'N/A';
+      this.dashboardStats.trustScoreFactors = analytics.trustScore.factors ?? undefined;
       this.cachedReputationLevel = '';
     } else {
       this.dashboardStats.trustScore = 0;
       this.dashboardStats.businessGrade = 'N/A';
+      this.dashboardStats.trustScoreFactors = undefined;
     }
 
     if (analytics.reviewTrends && analytics.reviewTrends.length > 0) {
@@ -321,6 +330,14 @@ export class BusinessDashboardComponent implements OnInit, OnDestroy {
       case 'year': return 'This Year';
       default: return 'This Week';
     }
+  }
+
+  getMaxReviews(): number {
+    return Math.max(...this.reviewTrendData.map(d => d.reviews), 1);
+  }
+
+  getBarHeight(reviews: number): number {
+    return reviews > 0 ? Math.max(6, Math.round((reviews / this.getMaxReviews()) * 160)) : 4;
   }
 
   getTotalReviews(): number {

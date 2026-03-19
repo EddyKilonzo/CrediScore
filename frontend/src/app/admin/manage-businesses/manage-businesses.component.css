@@ -1,7 +1,7 @@
 /* Manage Businesses Styles - Matching Users Page */
 .manage-businesses {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
   padding: 0;
   margin-top: 5rem;
   scroll-behavior: smooth;
@@ -422,7 +422,7 @@ html, body {
 .filter-select option {
   font-weight: 500;
   color: #1f2937;
-  background-color: #f8fafc;
+  background-color: transparent;
 }
 
 .filter-select option:checked,

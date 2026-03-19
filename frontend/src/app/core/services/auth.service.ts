@@ -98,12 +98,17 @@ export class AuthService {
     }
   }
 
-  login(credentials: LoginRequest): Observable<AuthResponse> {
+  login(credentials: LoginRequest): Observable<AuthResponse | { requires2FA: true; userId: string }> {
     this.isLoading.set(true);
-    
+
     return this.http.post<any>(`${this.API_URL}/auth/login`, credentials)
       .pipe(
         map(response => {
+          // 2FA pending — return minimal state for redirect
+          if (response.requires2FA) {
+            this.isLoading.set(false);
+            return { requires2FA: true as const, userId: response.id };
+          }
           // Transform backend LoginResponseDto to frontend AuthResponse format
           const authResponse: AuthResponse = {
             user: {
@@ -127,7 +132,9 @@ export class AuthService {
           return authResponse;
         }),
         tap(response => {
-          this.setAuthDataInternal(response);
+          if (!('requires2FA' in response)) {
+            this.setAuthDataInternal(response as AuthResponse);
+          }
           this.isLoading.set(false);
         })
       );
@@ -353,5 +360,38 @@ export class AuthService {
     return this.http.post<{ message: string }>(`${this.API_URL}/auth/resend-verification`, {
       email: email
     });
+  }
+
+  forgotPassword(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.API_URL}/auth/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.API_URL}/auth/reset-password`, { token, newPassword });
+  }
+
+  verify2FA(userId: string, token: string): Observable<AuthResponse> {
+    return this.http.post<any>(`${this.API_URL}/auth/2fa/verify`, { userId, token }).pipe(
+      map(response => ({
+        user: {
+          id: response.id,
+          email: response.email,
+          name: response.name,
+          role: response.role as 'admin' | 'ADMIN' | 'business' | 'user' | 'BUSINESS_OWNER' | 'CUSTOMER',
+          isVerified: response.emailVerified || false,
+          isActive: response.isActive !== undefined ? response.isActive : true,
+          avatar: response.avatar,
+          phone: response.phone,
+          reputation: response.reputation || 0,
+          lastLoginAt: response.lastLoginAt,
+          createdAt: response.createdAt,
+          updatedAt: response.updatedAt,
+          _count: response._count || { reviews: 0, businesses: 0, fraudReports: 0 }
+        },
+        token: response.accessToken,
+        accessToken: response.accessToken
+      })),
+      tap(response => this.setAuthDataInternal(response))
+    );
   }
 }

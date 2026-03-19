@@ -1,8 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { BusinessService, Business } from '../core/services/business.service';
 
 interface Review {
@@ -26,6 +28,7 @@ interface BusinessWithRating extends Omit<Business, 'trustScore'> {
   reviews?: Review[];
   latitude?: number;
   longitude?: number;
+  responseRate?: number;
 }
 
 @Component({
@@ -35,7 +38,7 @@ interface BusinessWithRating extends Omit<Business, 'trustScore'> {
   templateUrl: './search.component.html',
   styleUrl: './search.component.css'
 })
-export class SearchComponent implements OnInit {
+export class SearchComponent implements OnInit, OnDestroy {
   private businessService = inject(BusinessService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -48,26 +51,71 @@ export class SearchComponent implements OnInit {
   isLoading: boolean = false;
   error: string | null = null;
 
+  // Auto-complete
+  private searchSubject = new Subject<string>();
+  private searchSub?: Subscription;
+  autocompleteResults: BusinessWithRating[] = [];
+  showAutocomplete = false;
+
   // Filter states
   selectedStars: number | null = null;
   selectedGrade: string | null = null;
+  selectedCategory: string | null = null;
+  verifiedOnly: boolean = false;
+  sortBy: 'trust' | 'rating' | 'reviews' | 'name' = 'trust';
   showFilters: boolean = true; // Show filters by default on desktop
   viewMode: 'list' | 'map' = 'list'; // View mode toggle
 
   // Available filter options
   starOptions = [5, 4, 3, 2, 1];
   gradeOptions = ['A+', 'A', 'B', 'C', 'D', 'F'];
+  availableCategories: string[] = [];
 
   ngOnInit() {
     // Load all businesses first
     this.loadAllBusinesses();
-    
+
     // Get search query from route params
     this.route.queryParams.subscribe(params => {
       this.searchQuery = params['q'] || '';
       // Apply search filter on loaded businesses
       this.applySearchAndFilters();
     });
+
+    // Auto-complete with debounce
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(250),
+      distinctUntilChanged()
+    ).subscribe(query => {
+      if (query.trim().length >= 2) {
+        const q = query.toLowerCase();
+        this.autocompleteResults = this.allBusinesses
+          .filter(b => b.name.toLowerCase().includes(q) || b.category?.toLowerCase().includes(q))
+          .slice(0, 6);
+        this.showAutocomplete = this.autocompleteResults.length > 0;
+      } else {
+        this.autocompleteResults = [];
+        this.showAutocomplete = false;
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.searchSub?.unsubscribe();
+  }
+
+  onSearchInput() {
+    this.searchSubject.next(this.searchQuery);
+    this.applySearchAndFilters();
+  }
+
+  selectAutocomplete(business: BusinessWithRating) {
+    this.showAutocomplete = false;
+    this.router.navigate(['/business', business.id]);
+  }
+
+  hideAutocomplete() {
+    setTimeout(() => { this.showAutocomplete = false; }, 200);
   }
 
   performSearch() {
@@ -79,46 +127,17 @@ export class SearchComponent implements OnInit {
     this.isLoading = true;
     this.error = null;
 
-    // Try to get all businesses - use search with wildcard or empty string
-    // In production, you'd have a dedicated public endpoint like /api/business/public
     this.businessService.searchBusinesses('').subscribe({
       next: (businesses) => {
-        if (businesses && businesses.length > 0) {
-          this.allBusinesses = this.enrichBusinesses(businesses);
-        } else {
-          // If empty, try with wildcard or fetch from another endpoint
-          this.businessService.searchBusinesses('*').subscribe({
-            next: (altBusinesses) => {
-              this.allBusinesses = this.enrichBusinesses(altBusinesses || []);
-              this.applySearchAndFilters();
-              this.isLoading = false;
-            },
-            error: (err) => {
-              console.error('Load businesses error:', err);
-              this.error = 'No businesses found. Please try again later.';
-              this.isLoading = false;
-            }
-          });
-          return;
-        }
+        this.allBusinesses = this.enrichBusinesses(businesses || []);
+        this.extractCategories();
         this.applySearchAndFilters();
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Load businesses error:', err);
-        // Try alternative: search with wildcard
-        this.businessService.searchBusinesses('*').subscribe({
-          next: (businesses) => {
-            this.allBusinesses = this.enrichBusinesses(businesses || []);
-            this.applySearchAndFilters();
-            this.isLoading = false;
-          },
-          error: (altErr) => {
-            console.error('Alternative load error:', altErr);
-            this.error = 'Failed to load businesses. Please try again.';
-            this.isLoading = false;
-          }
-        });
+      error: () => {
+        this.allBusinesses = [];
+        this.filteredBusinesses = [];
+        this.isLoading = false;
       }
     });
   }
@@ -129,22 +148,23 @@ export class SearchComponent implements OnInit {
       let averageRating = 0;
       let totalReviews = 0;
 
-      const businessWithRating = business as unknown as BusinessWithRating;
-      
-      // Check if reviews are included in the response
-      if (businessWithRating.reviews && Array.isArray(businessWithRating.reviews) && businessWithRating.reviews.length > 0) {
+      const businessWithRating = business as unknown as BusinessWithRating & { _count?: { reviews?: number } };
+
+      // Prefer API-returned averageRating (pre-calculated by backend aggregation)
+      if (typeof businessWithRating.averageRating === 'number' && businessWithRating.averageRating > 0) {
+        averageRating = Math.round(businessWithRating.averageRating * 10) / 10;
+      } else if (businessWithRating.reviews && Array.isArray(businessWithRating.reviews) && businessWithRating.reviews.length > 0) {
         const activeReviews = businessWithRating.reviews.filter((r: Review) => r.isActive);
-        totalReviews = activeReviews.length;
-        if (totalReviews > 0) {
+        if (activeReviews.length > 0) {
           const sum = activeReviews.reduce((acc: number, review: Review) => acc + review.rating, 0);
-          averageRating = Math.round((sum / totalReviews) * 10) / 10; // Round to 1 decimal
+          averageRating = Math.round((sum / activeReviews.length) * 10) / 10;
         }
-      } else {
-        // If reviews not included, fetch them or use default values
-        // For now, we'll use default values and the component can fetch details on demand
-        averageRating = 0;
-        totalReviews = 0;
       }
+
+      // Prefer _count.reviews from Prisma, then reviews array length
+      totalReviews = businessWithRating._count?.reviews
+        ?? businessWithRating.reviews?.filter((r: Review) => r.isActive).length
+        ?? 0;
 
       // Handle trustScore - it might be a number in core service or an object
       let trustScore: TrustScore | number | undefined;
@@ -154,13 +174,7 @@ export class SearchComponent implements OnInit {
       } else if (businessWithRating.trustScore) {
         trustScore = businessWithRating.trustScore;
       } else {
-        // If no trust score, calculate from business data or use default
-        // For demo purposes, we'll generate a mock score based on verification status
-        if (business.isVerified) {
-          trustScore = Math.floor(Math.random() * 20) + 80; // 80-100 for verified
-        } else {
-          trustScore = Math.floor(Math.random() * 30) + 50; // 50-80 for unverified
-        }
+        trustScore = undefined;
       }
 
       // Create new object with all properties
@@ -226,7 +240,54 @@ export class SearchComponent implements OnInit {
       });
     }
 
+    // Apply category filter
+    if (this.selectedCategory) {
+      filtered = filtered.filter(b => b.category?.toLowerCase() === this.selectedCategory?.toLowerCase());
+    }
+
+    // Apply verified-only filter
+    if (this.verifiedOnly) {
+      filtered = filtered.filter(b => b.isVerified);
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (this.sortBy) {
+        case 'trust':
+          return this.getBusinessScore(b) - this.getBusinessScore(a);
+        case 'rating':
+          return (b.averageRating || 0) - (a.averageRating || 0);
+        case 'reviews':
+          return (b.totalReviews || 0) - (a.totalReviews || 0);
+        case 'name':
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+
     this.filteredBusinesses = filtered;
+  }
+
+  extractCategories() {
+    const cats = new Set<string>();
+    this.allBusinesses.forEach(b => { if (b.category) cats.add(b.category); });
+    this.availableCategories = Array.from(cats).sort();
+  }
+
+  onCategoryFilterChange(category: string | null) {
+    this.selectedCategory = this.selectedCategory === category ? null : category;
+    this.applySearchAndFilters();
+  }
+
+  onVerifiedToggle() {
+    this.verifiedOnly = !this.verifiedOnly;
+    this.applySearchAndFilters();
+  }
+
+  onSortChange(sort: 'trust' | 'rating' | 'reviews' | 'name') {
+    this.sortBy = sort;
+    this.applySearchAndFilters();
   }
 
   applyFilters() {
@@ -256,6 +317,9 @@ export class SearchComponent implements OnInit {
   clearFilters() {
     this.selectedStars = null;
     this.selectedGrade = null;
+    this.selectedCategory = null;
+    this.verifiedOnly = false;
+    this.sortBy = 'trust';
     this.applySearchAndFilters();
   }
 

@@ -481,18 +481,20 @@ export class MyReviewsComponent implements OnInit {
     if (!this.uploadingReceiptForReview || !this.selectedReceiptFile) return;
 
     this.isUploadingReceipt = true;
-    // Note: This would need a service method to upload the receipt
-    // For now, just showing the modal structure
-    // You would typically call something like:
-    // this.reviewService.uploadReceipt(this.uploadingReceiptForReview.id, this.selectedReceiptFile)
-    console.log('Upload receipt for review:', this.uploadingReceiptForReview.id);
-    console.log('File:', this.selectedReceiptFile);
-
-    // Simulating upload
-    setTimeout(() => {
-      alert('Receipt upload functionality would be implemented here');
-      this.closeReceiptUploadModal();
-    }, 1000);
+    this.reviewService.uploadReceipt(this.uploadingReceiptForReview.id, this.selectedReceiptFile).subscribe({
+      next: (res) => {
+        const review = this.reviews.find(r => r.id === this.uploadingReceiptForReview?.id);
+        if (review) {
+          review.receiptUrl = res.receiptUrl;
+        }
+        this.isUploadingReceipt = false;
+        this.closeReceiptUploadModal();
+      },
+      error: (err) => {
+        console.error('Receipt upload failed:', err);
+        this.isUploadingReceipt = false;
+      }
+    });
   }
 
   getStatusLabel(review: Review): string {

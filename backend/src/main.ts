@@ -1,3 +1,6 @@
+import { config as loadEnv } from 'dotenv';
+loadEnv(); // Load .env before Nest boot so DISABLE_QUEUES etc. are set when modules load
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';

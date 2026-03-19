@@ -25,37 +25,52 @@
 /* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
-/* Global background layer with color */
+:root {
+  /* Primary reusable box shadow across the app */
+  --shadow-primary: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px,
+    rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+}
+
+/* ============================================
+   BRAND TEXTURE BACKGROUND SYSTEM
+   Brand palette: #2C5270 (navy) · #3E6A8A (primary) · #5C8BA5 (accent) · #E8EEF3 (light)
+
+   Strategy: texture lives directly on body background-image so it shows through
+   any transparent descendant (CSS background propagation, not z-index layering).
+   ============================================ */
+
+/*
+  Body canvas = base color + diagonal crosshatch tile + soft radial vignettes
+  All three are background-image layers; background-color is the fallback base.
+
+  SVG tile (48×48): two sets of diagonal hairlines at 45° and 135°
+  drawn in brand-primary (#3E6A8A) at very low opacity for a subtle linen feel.
+*/
 body {
-  background-color: #f0f2f5; /* Light gray-blue background */
+  background-color: #edf1f5;
+  background-image:
+    /* vignette: top-left navy glow */
+    radial-gradient(ellipse 90% 60% at 0% 0%,   rgba(44, 82,112,0.09) 0%, transparent 65%),
+    /* vignette: bottom-right navy glow */
+    radial-gradient(ellipse 80% 55% at 100% 100%, rgba(44, 82,112,0.09) 0%, transparent 60%),
+    /* crosshatch tile */
+    url("data:image/svg+xml,%3Csvg width='48' height='48' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%233E6A8A' stroke-width='0.7' stroke-opacity='0.13'%3E%3Cpath d='M0 48L48 0'/%3E%3Cpath d='M-12 12L12-12'/%3E%3Cpath d='M36 60L60 36'/%3E%3Cpath d='M48 0L0 48' stroke-opacity='0.07'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat, repeat, repeat;
+  background-size: cover, cover, 48px 48px;
+  background-attachment: fixed, fixed, fixed;
   position: relative;
   min-height: 100vh;
 }
 
-/* Background texture layer - enhanced for visibility */
-body::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('/images/bg.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.5;
-  /* CSS filters to enhance the subtle texture */
-  filter: contrast(1.4) brightness(0.95);
-  mix-blend-mode: overlay; /* Changed to overlay for better texture visibility */
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Ensure the html element also has proper height */
 html {
   min-height: 100vh;
-  background-color: #f0f2f5;
+  background-color: #edf1f5;
+}
+
+/* Remove old photo-overlay pseudo-elements */
+body::before,
+body::after {
+  display: none;
 }
 
 /* Make Angular app components transparent to show body background */
@@ -74,6 +89,62 @@ router-outlet {
 /* Ensure all main sections are transparent by default */
 app-root > * {
   background: transparent;
+}
+
+/*
+  Page component hosts — override scoped :host backgrounds so the body texture canvas
+  shows through. Cards, modals, and inner widgets keep their own opaque whites.
+  These selectors target the Angular custom element tags directly (highest specificity
+  in a global sheet with !important).
+*/
+app-dashboard,
+app-business-dashboard,
+app-profile,
+app-my-business,
+app-search,
+app-analytics,
+app-admin-dashboard,
+app-flagged-users,
+app-fraud-reports,
+app-manage-businesses,
+app-manage-users,
+app-moderate-reviews,
+app-reports,
+app-system-maintenance,
+app-verify-documents,
+app-home,
+app-business-view,
+app-category-browse,
+app-leaderboard,
+app-my-reviews,
+app-bookmarks,
+app-disputes,
+app-login,
+app-register,
+app-email-verification,
+app-forgot-password,
+app-reset-password,
+app-two-factor-verify,
+app-auth-callback {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Page-level layout wrappers inside those components */
+.dashboard-main,
+.profile-dashboard,
+.business-main,
+.my-business-main,
+.analytics-container,
+.search-page,
+.admin-dashboard,
+.admin-main,
+.dashboard-container,
+.profile-container,
+.business-container,
+.admin-container {
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 /* ============================================
@@ -250,12 +321,17 @@ nav {
    RESPONSIVE DESIGN SYSTEM
    ============================================ */
 
-/* Prevent horizontal scrollbars globally */
+/* Prevent horizontal scrollbars globally — use clip, not hidden, so sticky positioning still works */
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
   position: relative;
+}
+
+/* Prevent double scrollbar: body must not create its own scroll context */
+body {
+  overflow-y: visible;
 }
 
 /* Prevent all elements from causing overflow */
@@ -269,7 +345,7 @@ html, body {
   display: block;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Ensure all containers prevent overflow */
@@ -433,6 +509,140 @@ p, span, div {
   .dialog {
     max-width: 90vw;
   }
+}
+
+/* ============================================
+   DARK MODE THEME SYSTEM
+   Activated by: document.documentElement.setAttribute('data-theme', 'dark')
+   ============================================ */
+
+html[data-theme="dark"] {
+  --bg-base: #0f1923;
+  --bg-surface: #1a2733;
+  --bg-card: #1e2f3d;
+  --bg-card-hover: #243647;
+  --text-primary: #e2eaf2;
+  --text-secondary: #9bb3c8;
+  --text-muted: #6b8aaa;
+  --border-color: #2d4255;
+  --shadow-dark: rgba(0, 0, 0, 0.4) 0px 4px 24px;
+}
+
+html[data-theme="dark"] body {
+  background-color: #0f1923;
+  background-image:
+    radial-gradient(ellipse 90% 60% at 0% 0%, rgba(44,82,112,0.15) 0%, transparent 65%),
+    radial-gradient(ellipse 80% 55% at 100% 100%, rgba(44,82,112,0.12) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='48' height='48' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%233E6A8A' stroke-width='0.7' stroke-opacity='0.08'%3E%3Cpath d='M0 48L48 0'/%3E%3Cpath d='M-12 12L12-12'/%3E%3Cpath d='M36 60L60 36'/%3E%3C/g%3E%3C/svg%3E");
+  color: #e2eaf2;
+}
+
+html[data-theme="dark"] html {
+  background-color: #0f1923;
+}
+
+/* Dark mode card overrides */
+html[data-theme="dark"] .bg-white {
+  background-color: #1e2f3d !important;
+  color: #e2eaf2 !important;
+}
+
+html[data-theme="dark"] .bg-gray-50 {
+  background-color: #1a2733 !important;
+}
+
+html[data-theme="dark"] .bg-gray-100 {
+  background-color: #1e2f3d !important;
+}
+
+html[data-theme="dark"] .text-gray-900 {
+  color: #e2eaf2 !important;
+}
+
+html[data-theme="dark"] .text-gray-800 {
+  color: #d4e2ee !important;
+}
+
+html[data-theme="dark"] .text-gray-700 {
+  color: #c0d4e4 !important;
+}
+
+html[data-theme="dark"] .text-gray-600 {
+  color: #9bb3c8 !important;
+}
+
+html[data-theme="dark"] .text-gray-500 {
+  color: #7a9ab4 !important;
+}
+
+html[data-theme="dark"] .border-gray-200 {
+  border-color: #2d4255 !important;
+}
+
+html[data-theme="dark"] .border-gray-300 {
+  border-color: #3a5470 !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: #1a2733 !important;
+  color: #e2eaf2 !important;
+  border-color: #2d4255 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #6b8aaa !important;
+}
+
+/* Dark mode nav */
+html[data-theme="dark"] nav.bg-white,
+html[data-theme="dark"] .navbar,
+html[data-theme="dark"] header.bg-white {
+  background-color: #1a2733 !important;
+  border-color: #2d4255 !important;
+}
+
+/* Dark mode sidebar */
+html[data-theme="dark"] aside,
+html[data-theme="dark"] .sidebar {
+  background-color: #1a2733 !important;
+}
+
+/* Dark mode table */
+html[data-theme="dark"] table thead {
+  background-color: #1a2733 !important;
+}
+
+html[data-theme="dark"] table tr:hover {
+  background-color: #243647 !important;
+}
+
+html[data-theme="dark"] table td,
+html[data-theme="dark"] table th {
+  border-color: #2d4255 !important;
+  color: #e2eaf2 !important;
+}
+
+/* Dark mode toggle button */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid transparent;
+}
+
+.theme-toggle-btn:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+
+html[data-theme="dark"] .theme-toggle-btn:hover {
+  background-color: rgba(255,255,255,0.08);
 }
 
 @media (min-width: 1024px) {

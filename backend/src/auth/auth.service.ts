@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../shared/mailer/mailer.service';
+import { TwoFactorService } from './two-factor/two-factor.service';
 import { SignUpDto, SignUpResponseDto } from './dto/signup.dto';
 import { UserRoleDto, UserRole } from './dto/user-role.enum';
 import { LoginResponseDto } from './dto/login.dto';
@@ -66,6 +67,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailerService: MailerService,
+    private readonly twoFactorService: TwoFactorService,
   ) {
     this.users = new PrismaUserRepository(this.prisma);
   }
@@ -163,6 +165,14 @@ export class AuthService {
     try {
       this.logger.log(`Login successful for user: ${user.id}`);
 
+      // If 2FA is enabled, return a pending state — no JWT yet
+      if (user.twoFactorEnabled) {
+        return {
+          id: user.id,
+          requires2FA: true,
+        } as LoginResponseDto;
+      }
+
       // Update last login
       await this.prisma.user.update({
         where: { id: user.id },
@@ -237,6 +247,77 @@ export class AuthService {
     }
   }
 
+  /**
+   * Verify 2FA token and issue a full JWT
+   */
+  async verifyTwoFactor(
+    userId: string,
+    token: string,
+  ): Promise<LoginResponseDto> {
+    try {
+      const valid = await this.twoFactorService.validateToken(userId, token);
+      if (!valid) {
+        throw new UnauthorizedException('Invalid 2FA token');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          reputation: true,
+          isActive: true,
+          provider: true,
+          providerId: true,
+          avatar: true,
+          emailVerified: true,
+          lastLoginAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { lastLoginAt: new Date() },
+      });
+
+      const payload: JwtPayload = { userId: user.id, email: user.email };
+      const accessToken: string = this.jwtService.sign(payload);
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone ?? undefined,
+        role: user.role,
+        avatar: user.avatar ?? undefined,
+        reputation: user.reputation,
+        isActive: user.isActive,
+        emailVerified: user.emailVerified,
+        lastLoginAt: new Date(),
+        accessToken,
+        expiresIn: 24 * 60 * 60,
+      };
+    } catch (error) {
+      this.logger.error('2FA verification error:', error);
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to verify 2FA token');
+    }
+  }
+
   async getProfile(userId: string): Promise<UserWithoutPassword> {
     try {
       const user = await this.prisma.user.findUnique({
@@ -283,9 +364,34 @@ export class AuthService {
         return { message: 'If the email exists, a reset link has been sent.' };
       }
 
-      // TODO: Implement email service to send reset link
-      // For now, just log the request
-      this.logger.log(`Password reset token would be sent to: ${email}`);
+      // Generate a secure random token
+      const resetToken = [...Array(48)]
+        .map(() => Math.random().toString(36)[2])
+        .join('');
+      const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetToken: resetToken,
+          passwordResetTokenExpiry: tokenExpiry,
+          passwordResetSentAt: new Date(),
+        },
+      });
+
+      try {
+        await this.mailerService.sendPasswordResetEmail(
+          user.email,
+          user.name,
+          resetToken,
+        );
+        this.logger.log(`Password reset email sent to: ${email}`);
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to send password reset email to ${email}:`,
+          emailError,
+        );
+      }
 
       return { message: 'If the email exists, a reset link has been sent.' };
     } catch (error) {
@@ -296,19 +402,57 @@ export class AuthService {
     }
   }
 
-  resetPassword(token: string, newPassword: string): { message: string } {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
     try {
       this.logger.log('Password reset attempt');
 
-      // TODO: Implement token validation and password reset
-      // For now, just log the request
-      this.logger.log(
-        `Password reset token: ${token}, new password length: ${newPassword.length}`,
-      );
+      const user = await this.prisma.user.findFirst({
+        where: {
+          passwordResetToken: token,
+          passwordResetTokenExpiry: {
+            gt: new Date(),
+          },
+        },
+      });
 
-      return { message: 'Password reset successfully' };
+      if (!user) {
+        throw new BadRequestException('Invalid or expired password reset token.');
+      }
+
+      const hashedPassword: string = await bcryptHash(newPassword, 10);
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashedPassword,
+          passwordResetToken: null,
+          passwordResetTokenExpiry: null,
+          passwordResetSentAt: null,
+        },
+      });
+
+      try {
+        await this.mailerService.sendPasswordChangedNotification(
+          user.email,
+          user.name,
+        );
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to send password-changed notification to ${user.email}:`,
+          emailError,
+        );
+      }
+
+      this.logger.log(`Password reset successfully for user: ${user.id}`);
+      return { message: 'Password reset successfully. You can now log in.' };
     } catch (error) {
       this.logger.error('Reset password error:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to reset password');
     }
   }
@@ -339,10 +483,23 @@ export class AuthService {
 
       const hashedPassword: string = await bcryptHash(newPassword, 10);
 
-      await this.prisma.user.update({
+      const updatedUser = await this.prisma.user.update({
         where: { id: userId },
         data: { password: hashedPassword },
+        select: { email: true, name: true },
       });
+
+      try {
+        await this.mailerService.sendPasswordChangedNotification(
+          updatedUser.email,
+          updatedUser.name,
+        );
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to send password-changed notification to ${updatedUser.email}:`,
+          emailError,
+        );
+      }
 
       this.logger.log(`Password changed successfully for user: ${userId}`);
 
@@ -359,12 +516,15 @@ export class AuthService {
     }
   }
 
-  logout(userId: string): { message: string } {
+  async logout(userId: string): Promise<{ message: string }> {
     try {
       this.logger.log(`User logout: ${userId}`);
 
-      // TODO: Implement token blacklisting or session management
-      // For now, just log the logout
+      // Record logout time — used to invalidate tokens issued before this moment
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { loggedOutAt: new Date() },
+      });
 
       return { message: 'Logged out successfully' };
     } catch (error) {

@@ -545,6 +545,14 @@ export class AdminService {
       );
   }
 
+  warnUser(userId: string, reason: string, adminNotes?: string): Observable<{ message: string }> {
+    this.clearError();
+    return this.http.post<{ message: string }>(`${this.API_URL}/admin/flagged-users/${userId}/warn`, { reason, adminNotes })
+      .pipe(
+        catchError(error => this.handleError(error))
+      );
+  }
+
   // Documents Management
   getPendingDocuments(page: number = 1, limit: number = 10): Observable<PaginatedResponse<any>> {
     this.clearError();

@@ -9,9 +9,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { FraudDetectionModule } from '../shared/fraud-detection/fraud-detection.module';
 import { OCRModule } from '../shared/ocr/ocr.module';
 import { CloudinaryModule } from '../shared/cloudinary/cloudinary.module';
+import { NotificationsModule } from '../shared/notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, FraudDetectionModule, OCRModule, CloudinaryModule],
+  imports: [PrismaModule, FraudDetectionModule, OCRModule, CloudinaryModule, NotificationsModule],
   controllers: [
     BusinessController,
     BusinessCategoryController,

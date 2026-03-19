@@ -1,0 +1,54 @@
+<div class="bookmarks-container">
+  <div class="bookmarks-header">
+    <h1><i class="uil uil-bookmark"></i> Saved Businesses</h1>
+    <p>Businesses you've saved for later</p>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your bookmarks...</p>
+  </div>
+
+  <div *ngIf="error && !isLoading" class="error-state">
+    <i class="uil uil-exclamation-circle"></i>
+    <p>{{ error }}</p>
+    <button (click)="loadBookmarks()">Try Again</button>
+  </div>
+
+  <div *ngIf="!isLoading && !error">
+    <div *ngIf="bookmarks.length === 0" class="empty-state">
+      <i class="uil uil-bookmark"></i>
+      <h3>No saved businesses yet</h3>
+      <p>When you bookmark a business, it will appear here.</p>
+      <a routerLink="/search" class="browse-btn">Browse Businesses</a>
+    </div>
+
+    <div class="bookmarks-grid" *ngIf="bookmarks.length > 0">
+      <div *ngFor="let bm of bookmarks" class="bookmark-card">
+        <div class="card-logo">
+          <img *ngIf="bm.business.logo" [src]="bm.business.logo" [alt]="bm.business.name" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!bm.business.logo" class="logo-placeholder">{{ getInitials(bm.business.name) }}</div>
+          <span *ngIf="bm.business.isVerified" class="verified-dot" title="Verified"></span>
+        </div>
+        <div class="card-body">
+          <div class="card-title-row">
+            <h3>{{ bm.business.name }}</h3>
+            <span *ngIf="bm.business.trustScore" class="grade-badge" [style.background-color]="getGradeColor(bm.business.trustScore.grade) + '20'" [style.color]="getGradeColor(bm.business.trustScore.grade)">
+              {{ bm.business.trustScore.grade }}
+            </span>
+          </div>
+          <p class="card-category" *ngIf="bm.business.category"><i class="uil uil-tag"></i> {{ bm.business.category }}</p>
+          <p class="card-location" *ngIf="bm.business.location"><i class="uil uil-map-marker"></i> {{ bm.business.location }}</p>
+          <p class="card-desc" *ngIf="bm.business.description">{{ bm.business.description | slice:0:100 }}{{ bm.business.description.length > 100 ? '...' : '' }}</p>
+        </div>
+        <div class="card-actions">
+          <a [routerLink]="['/business', bm.business.id]" class="view-btn">View Business</a>
+          <button (click)="removeBookmark(bm.business.id)" [disabled]="removingId === bm.business.id" class="remove-btn">
+            <i class="uil uil-bookmark-slash"></i>
+            <span>{{ removingId === bm.business.id ? 'Removing...' : 'Remove' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

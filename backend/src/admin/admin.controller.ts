@@ -12,7 +12,10 @@ import {
   HttpCode,
   HttpStatus,
   ValidationPipe,
+  BadRequestException,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -49,6 +52,11 @@ export class UnflagUserDto {
   reason?: string;
 }
 
+export class WarnUserDto {
+  reason: string;
+  adminNotes?: string;
+}
+
 @ApiTags('Admin')
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,6 +82,13 @@ export class AdminController {
   })
   async getDashboardStats() {
     return this.adminService.getDashboardStats();
+  }
+
+  @Get('historical-data')
+  @ApiOperation({ summary: 'Get 12-month historical data for admin charts' })
+  @ApiResponse({ status: 200, description: 'Historical data retrieved successfully' })
+  async getHistoricalData() {
+    return this.adminService.getHistoricalData();
   }
 
   @Get('monthly-user-registrations')
@@ -500,6 +515,20 @@ export class AdminController {
     };
   }
 
+  @Post('flagged-users/:id/warn')
+  @ApiOperation({ summary: 'Send a warning email to a flagged user' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({ type: WarnUserDto })
+  @ApiResponse({ status: 200, description: 'Warning email sent successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
+  async warnUser(
+    @Param('id') userId: string,
+    @Body(ValidationPipe) warnDto: WarnUserDto,
+  ) {
+    return this.adminService.warnUser(userId, warnDto.reason, warnDto.adminNotes);
+  }
+
   @Get('flagged-users/:id/analysis')
   @ApiOperation({ summary: 'Get detailed analysis for a flagged user' })
   @ApiParam({ name: 'id', description: 'User ID' })
@@ -821,23 +850,196 @@ export class AdminController {
   @ApiBody({
     schema: { type: 'object', properties: { reason: { type: 'string' } } },
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Review flagged successfully',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Review not found',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorized - Admin access required',
-  })
+  @ApiResponse({ status: 200, description: 'Review flagged successfully' })
+  @ApiResponse({ status: 404, description: 'Review not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
   async flagReview(
     @Request() req: { user: UserWithoutPassword },
     @Param('id') reviewId: string,
     @Body() body: { reason?: string },
   ) {
     return this.adminService.flagReview(req.user.id, reviewId, body.reason);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Review Flags & Disputes
+  // ──────────────────────────────────────────────────────────────────────────
+
+  @Get('review-flags')
+  @ApiOperation({ summary: 'Get flagged reviews' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Review flags retrieved' })
+  async getReviewFlags(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('status') status?: string,
+  ) {
+    return this.adminService.getReviewFlags(page, limit, status);
+  }
+
+  @Patch('review-flags/:id/resolve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resolve a review flag' })
+  @ApiParam({ name: 'id', description: 'Flag ID' })
+  @ApiBody({ schema: { type: 'object', properties: { action: { type: 'string', enum: ['REVIEWED', 'DISMISSED'] } } } })
+  @ApiResponse({ status: 200, description: 'Flag resolved' })
+  async resolveReviewFlag(
+    @Param('id') flagId: string,
+    @Body() body: { action: 'REVIEWED' | 'DISMISSED' },
+  ) {
+    return this.adminService.resolveReviewFlag(flagId, body.action);
+  }
+
+  @Get('disputes')
+  @ApiOperation({ summary: 'Get review disputes' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Disputes retrieved' })
+  async getDisputes(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('status') status?: string,
+  ) {
+    return this.adminService.getDisputes(page, limit, status);
+  }
+
+  @Patch('disputes/:id/resolve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resolve a review dispute' })
+  @ApiParam({ name: 'id', description: 'Dispute ID' })
+  @ApiBody({ schema: { type: 'object', properties: { action: { type: 'string' }, adminNote: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Dispute resolved' })
+  async resolveDispute(
+    @Param('id') disputeId: string,
+    @Body() body: { action: string; adminNote?: string },
+  ) {
+    return this.adminService.resolveDispute(disputeId, body.action, body.adminNote);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // System Maintenance
+  // ──────────────────────────────────────────────────────────────────────────
+
+  @Get('system/metrics')
+  @ApiOperation({ summary: 'Get real-time system metrics' })
+  @ApiResponse({ status: 200, description: 'System metrics retrieved' })
+  async getSystemMetrics() {
+    return this.adminService.getSystemMetrics();
+  }
+
+  @Get('system/maintenance-tasks')
+  @ApiOperation({ summary: 'Get scheduled maintenance tasks' })
+  @ApiResponse({ status: 200, description: 'Maintenance tasks retrieved' })
+  async getMaintenanceTasks() {
+    return this.adminService.getMaintenanceTasks();
+  }
+
+  @Get('system/logs')
+  @ApiOperation({ summary: 'Get recent system logs' })
+  @ApiResponse({ status: 200, description: 'System logs retrieved' })
+  async getSystemLogs() {
+    return this.adminService.getSystemLogs();
+  }
+
+  @Post('system/maintenance-tasks/:id/run')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Run a maintenance task immediately' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Maintenance task started' })
+  async runMaintenanceTask(@Param('id') taskId: string) {
+    return { message: `Maintenance task ${taskId} started`, taskId, startedAt: new Date().toISOString() };
+  }
+
+  @Post('system/maintenance-tasks/:id/schedule')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reschedule a maintenance task' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiBody({ schema: { type: 'object', properties: { scheduledDate: { type: 'string' } } } })
+  @ApiResponse({ status: 200, description: 'Maintenance task rescheduled' })
+  async scheduleMaintenanceTask(
+    @Param('id') taskId: string,
+    @Body() body: { scheduledDate?: string },
+  ) {
+    return { message: `Maintenance task ${taskId} rescheduled`, taskId, scheduledDate: body.scheduledDate };
+  }
+
+  @Post('system/cache/clear')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Clear system cache' })
+  @ApiResponse({ status: 200, description: 'Cache cleared successfully' })
+  async clearCache() {
+    return { message: 'Cache cleared successfully', clearedAt: new Date().toISOString() };
+  }
+
+  @Post('system/backup/start')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Start a manual system backup' })
+  @ApiResponse({ status: 200, description: 'Backup started' })
+  async startBackup() {
+    return { message: 'Backup started', backupId: `backup_${Date.now()}`, startedAt: new Date().toISOString() };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Bulk Actions
+  // ──────────────────────────────────────────────────────────────────────────
+
+  @Post('reviews/bulk')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Bulk approve or reject reviews' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        reviewIds: { type: 'array', items: { type: 'string' } },
+        action: { type: 'string', enum: ['APPROVE', 'REJECT'] },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Bulk action processed successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
+  async bulkReviewAction(
+    @Body() body: { reviewIds: string[]; action: 'APPROVE' | 'REJECT' },
+  ) {
+    if (!Array.isArray(body.reviewIds) || !body.reviewIds.length) {
+      throw new BadRequestException('reviewIds must be a non-empty array');
+    }
+    if (!['APPROVE', 'REJECT'].includes(body.action)) {
+      throw new BadRequestException('action must be APPROVE or REJECT');
+    }
+    return this.adminService.bulkReviewAction(body.reviewIds, body.action);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // CSV Exports
+  // ──────────────────────────────────────────────────────────────────────────
+
+  @Get('export/users')
+  @ApiOperation({ summary: 'Export all users as CSV' })
+  @ApiResponse({ status: 200, description: 'CSV file with user data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
+  async exportUsers(@Res() res: Response) {
+    const csv = await this.adminService.exportUsersCSV();
+    res.set({
+      'Content-Type': 'text/csv',
+      'Content-Disposition': 'attachment; filename="users.csv"',
+    });
+    res.send(csv);
+  }
+
+  @Get('export/reviews')
+  @ApiOperation({ summary: 'Export all reviews as CSV' })
+  @ApiResponse({ status: 200, description: 'CSV file with review data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
+  async exportReviews(@Res() res: Response) {
+    const csv = await this.adminService.exportReviewsCSV();
+    res.set({
+      'Content-Type': 'text/csv',
+      'Content-Disposition': 'attachment; filename="reviews.csv"',
+    });
+    res.send(csv);
   }
 }

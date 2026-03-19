@@ -70,7 +70,112 @@ export class FraudDetectionService {
   }
 
   /**
-   * Detect fraud in review and receipt data
+   * NestJS-native fraud detection — no Python service dependency.
+   * Runs text analysis, behavioral scoring, and receipt correlation.
+   */
+  async detectFraudNative(
+    reviewText: string,
+    userReputation: number,
+    receiptData?: unknown,
+    businessDetails?: unknown,
+  ): Promise<FraudDetectionResponse> {
+    const fraudReasons: string[] = [];
+    let riskScore = 0;
+
+    // ── 1. Text analysis ─────────────────────────────────────────────────
+    const text = (reviewText || '').trim();
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+    // Too short / gibberish
+    if (wordCount < 3) {
+      fraudReasons.push('Review text too short or empty');
+      riskScore += 20;
+    }
+
+    // All-caps (shouting / bot)
+    if (text.length > 10 && text === text.toUpperCase()) {
+      fraudReasons.push('Review text is all caps');
+      riskScore += 15;
+    }
+
+    // Repetitive characters (e.g. "gooood", "baaad")
+    if (/(.)\1{4,}/i.test(text)) {
+      fraudReasons.push('Repetitive character sequences detected');
+      riskScore += 10;
+    }
+
+    // Spam / marketing patterns
+    const spamPatterns = [
+      /\b(buy now|click here|free money|earn \$|make money fast|100% guarantee|limited offer|act now)\b/i,
+      /\b(casino|lottery|winner|prize|jackpot)\b/i,
+      /https?:\/\/\S+/g, // URLs in reviews
+    ];
+    for (const pattern of spamPatterns) {
+      if (pattern.test(text)) {
+        fraudReasons.push('Spam or promotional content detected');
+        riskScore += 25;
+        break;
+      }
+    }
+
+    // Copy-paste indicators: very long exact phrases repeated
+    const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 20);
+    const uniqueSentences = new Set(sentences.map((s) => s.toLowerCase().trim()));
+    if (sentences.length > 2 && uniqueSentences.size < sentences.length) {
+      fraudReasons.push('Duplicate sentences detected in review');
+      riskScore += 20;
+    }
+
+    // ── 2. User reputation scoring ───────────────────────────────────────
+    if (userReputation < 0) {
+      fraudReasons.push('Negative user reputation');
+      riskScore += 20;
+    } else if (userReputation < 10) {
+      riskScore += 10;
+    }
+
+    // ── 3. Receipt correlation ───────────────────────────────────────────
+    const receipt = receiptData as ReceiptData | undefined;
+    const business = businessDetails as BusinessDetails | undefined;
+
+    if (receipt && business) {
+      // Receipt confidence too low
+      if (receipt.confidence < 0.3) {
+        fraudReasons.push('Receipt OCR confidence too low');
+        riskScore += 15;
+      }
+
+      // Business name mismatch
+      if (
+        receipt.businessName &&
+        business.name &&
+        !this.fuzzyMatch(receipt.businessName, business.name)
+      ) {
+        fraudReasons.push('Receipt business name does not match reviewed business');
+        riskScore += 30;
+      }
+
+      // Suspicious amount (negative or implausibly large)
+      if (receipt.amount !== undefined && (receipt.amount < 0 || receipt.amount > 1_000_000)) {
+        fraudReasons.push('Receipt amount is suspicious');
+        riskScore += 20;
+      }
+    }
+
+    const finalScore = Math.min(riskScore, 100);
+    const isFraudulent = finalScore >= 50;
+
+    return {
+      isFraudulent,
+      confidence: Math.min(finalScore / 100 + 0.1, 1.0),
+      fraudReasons,
+      riskScore: finalScore,
+    };
+  }
+
+  /**
+   * Detect fraud in review and receipt data — tries Python service first,
+   * falls back to native detection.
    */
   async detectFraud(
     request: FraudDetectionRequest,
@@ -80,25 +185,19 @@ export class FraudDetectionService {
         `${this.fraudDetectionUrl}/detect-fraud`,
         request,
         {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          timeout: 10000, // 10 second timeout
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000,
         },
       );
-
-      const data = response.data as FraudDetectionResponse;
-      return data;
-    } catch (error) {
-      this.logger.error('Fraud detection service error:', error);
-
-      // Return a safe default response if service is unavailable
-      return {
-        isFraudulent: false,
-        confidence: 0.0,
-        fraudReasons: ['Fraud detection service unavailable'],
-        riskScore: 0,
-      };
+      return response.data as FraudDetectionResponse;
+    } catch {
+      // Python service unavailable — use native detection
+      return this.detectFraudNative(
+        request.review_text,
+        request.user_reputation,
+        request.receipt_data,
+        request.business_details,
+      );
     }
   }
 
@@ -119,7 +218,7 @@ export class FraudDetectionService {
   }
 
   /**
-   * Analyze review for fraud with simplified data
+   * Analyze review for fraud — uses native detection directly.
    */
   async analyzeReview(
     reviewText: string,
@@ -127,16 +226,25 @@ export class FraudDetectionService {
     receiptData?: unknown,
     businessDetails?: unknown,
   ): Promise<FraudDetectionResponse> {
-    const request: FraudDetectionRequest = {
-      review_text: reviewText,
-      receipt_data: (receiptData as ReceiptData) || { confidence: 0.0 },
-      business_details: (businessDetails as BusinessDetails) || {
-        name: 'Unknown Business',
-      },
-      user_reputation: userReputation,
-    };
+    return this.detectFraudNative(
+      reviewText,
+      userReputation,
+      receiptData,
+      businessDetails,
+    );
+  }
 
-    return this.detectFraud(request);
+  /**
+   * Fuzzy match two strings — case-insensitive, ignores punctuation.
+   */
+  private fuzzyMatch(a: string, b: string): boolean {
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    const na = normalize(a);
+    const nb = normalize(b);
+    if (na === nb) return true;
+    // Check if either contains the other
+    return na.includes(nb) || nb.includes(na);
   }
 
   /**
@@ -406,49 +514,43 @@ export class FraudDetectionService {
    */
   async getFlaggedUsers(page: number = 1, limit: number = 10) {
     try {
-      // const skip = (page - 1) * limit;
+      const skip = (page - 1) * limit;
 
-      // TODO: Uncomment after Prisma client regeneration with new fields
-      // const [users, total] = await Promise.all([
-      //   this.prisma.user.findMany({
-      //     where: {
-      //       isFlagged: true,
-      //     },
-      //     skip,
-      //     take: limit,
-      //     select: {
-      //       id: true,
-      //       name: true,
-      //       email: true,
-      //       flagReason: true,
-      //       flagCount: true,
-      //       lastFlaggedAt: true,
-      //       reviewPattern: true,
-      //       reputation: true,
-      //       createdAt: true,
-      //       _count: {
-      //         select: {
-      //           reviews: true,
-      //         },
-      //       },
-      //     },
-      //     orderBy: {
-      //       lastFlaggedAt: 'desc',
-      //     },
-      //   }),
-      //   this.prisma.user.count({
-      //     where: {
-      //       isFlagged: true,
-      //     },
-      //   }),
-      // ]);
-
-      // Temporary: Return empty result until Prisma client is regenerated
-      const users: any[] = [];
-      const total = 0;
-
-      // Simulate async operation
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      const [users, total] = await Promise.all([
+        this.prisma.user.findMany({
+          where: {
+            isFlagged: true,
+          },
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            flagReason: true,
+            flagCount: true,
+            lastFlaggedAt: true,
+            reviewPattern: true,
+            unverifiedReviewCount: true,
+            reputation: true,
+            createdAt: true,
+            _count: {
+              select: {
+                reviews: true,
+                fraudReports: true,
+              },
+            },
+          },
+          orderBy: {
+            lastFlaggedAt: 'desc',
+          },
+        }),
+        this.prisma.user.count({
+          where: {
+            isFlagged: true,
+          },
+        }),
+      ]);
 
       return {
         users,
@@ -468,18 +570,15 @@ export class FraudDetectionService {
    */
   async unflagUser(userId: string, adminId: string): Promise<void> {
     try {
-      // TODO: Uncomment after Prisma client regeneration with new fields
-      // await this.prisma.user.update({
-      //   where: { id: userId },
-      //   data: {
-      //     isFlagged: false,
-      //     flagReason: null,
-      //     lastFlaggedAt: null,
-      //   },
-      // });
-
-      // Simulate async operation
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      this.logger.log(`Admin ${adminId} unflagging user: ${userId}`);
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          isFlagged: false,
+          flagReason: null,
+          lastFlaggedAt: null,
+        },
+      });
     } catch (error) {
       this.logger.error('Error unflagging user:', error);
       throw error;
@@ -549,7 +648,7 @@ export class FraudDetectionService {
   }
 
   /**
-   * Check and penalize users with excessive unverified reviews
+   * Check and penalize users with excessive unverified reviews (progressive penalties)
    */
   async checkAndPenalizeSpamUsers(userId: string): Promise<void> {
     try {
@@ -557,14 +656,28 @@ export class FraudDetectionService {
         where: { id: userId },
         select: {
           reputation: true,
+          unverifiedReviewCount: true,
+          flagCount: true,
         },
       });
 
       if (!user) return;
 
-      // TODO: Implement progressive penalties after Prisma client regeneration
-      // For now, apply a general penalty for spam behavior
-      await this.reduceCredibilityForSpam(userId, 'MEDIUM');
+      const unverified = user.unverifiedReviewCount ?? 0;
+      const flags = user.flagCount ?? 0;
+
+      // Progressive penalty scale based on cumulative unverified reviews and flag count
+      let severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
+
+      if (unverified >= 20 || flags >= 5) {
+        severity = 'CRITICAL';
+      } else if (unverified >= 10 || flags >= 3) {
+        severity = 'HIGH';
+      } else if (unverified >= 5 || flags >= 1) {
+        severity = 'MEDIUM';
+      }
+
+      await this.reduceCredibilityForSpam(userId, severity);
     } catch (error) {
       this.logger.error('Error checking and penalizing spam users:', error);
     }

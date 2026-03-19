@@ -108,6 +108,13 @@ export class LoginResponseDto {
     example: 604800,
   })
   expiresIn: number;
+
+  @ApiProperty({
+    description: 'Whether 2FA verification is required to complete login',
+    example: false,
+    required: false,
+  })
+  requires2FA?: boolean;
 }
 
 export class RefreshTokenDto {

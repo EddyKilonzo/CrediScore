@@ -2,8 +2,19 @@ import { Component, HostListener, OnInit, OnDestroy, AfterViewInit, ElementRef, 
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
+
+interface TrendingBusiness {
+  id: string;
+  name: string;
+  logo?: string;
+  category?: string;
+  isVerified: boolean;
+  weeklyReviewCount: number;
+  trustScore?: { grade: string; score: number };
+}
 
 interface Statistic {
   iconClass: string;
@@ -30,6 +41,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
   private router = inject(Router);
+  private http = inject(HttpClient);
 
   // Authentication state
   currentUser = this.authService.currentUser;
@@ -42,6 +54,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   faqOpen: boolean[] = [false, false, false, false, false, false];
   private hasAnimated = false;
   showBackToTop = false;
+
+  // Trending businesses
+  trendingBusinesses: TrendingBusiness[] = [];
+  trendingLoading = true;
   
   // Testimonial slider properties
   currentTestimonialIndex = 0;
@@ -112,9 +128,36 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     console.log('Home component initialized');
     // Initialize display counts
     this.statistics.forEach(stat => stat.displayCount = 0);
-    
+
     // Start testimonial slider
     this.startTestimonialSlider();
+
+    // Load trending businesses
+    this.loadTrendingBusinesses();
+  }
+
+  loadTrendingBusinesses() {
+    this.http.get<any[]>('http://localhost:3000/api/user/trending?limit=6').subscribe({
+      next: (businesses) => {
+        this.trendingBusinesses = businesses || [];
+        this.trendingLoading = false;
+      },
+      error: () => {
+        this.trendingLoading = false;
+      }
+    });
+  }
+
+  getTrendingGradeColor(grade: string): string {
+    if (!grade) return '#6b7280';
+    if (grade.startsWith('A')) return '#059669';
+    if (grade.startsWith('B')) return '#2563eb';
+    if (grade.startsWith('C')) return '#d97706';
+    return '#dc2626';
+  }
+
+  getTrendingInitials(name: string): string {
+    return (name || '').split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
   }
   
   ngOnDestroy() {

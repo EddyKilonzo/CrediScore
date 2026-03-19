@@ -1,5 +1,5 @@
 <!-- Login Page -->
-<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4 pt-20 sm:pt-24">
+<div class="min-h-screen flex items-center justify-center p-4 pt-20 sm:pt-24">
   
   <!-- Login Container -->
   <div class="w-full max-w-5xl mx-auto">
@@ -113,6 +113,13 @@
         {{ getFieldError('password') }}
       </div>
     </div>
+
+              <!-- Forgot Password Link -->
+              <div class="text-right">
+                <a routerLink="/auth/forgot-password" class="text-xs font-medium hover:underline" style="color: #2C5270;">
+                  Forgot password?
+                </a>
+              </div>
 
               <!-- Error Message -->
               <div *ngIf="error()" class="text-xs text-red-600 bg-red-50 p-2 rounded-lg">

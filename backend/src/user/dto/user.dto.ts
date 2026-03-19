@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, IsEnum, Matches, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -154,6 +154,12 @@ export class CreateReviewDto {
   @IsOptional()
   @IsDateString()
   reviewDate?: string;
+
+  @ApiProperty({ description: 'M-Pesa transaction code (10 chars, uppercase alphanumeric)', required: false })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z0-9]{10}$/i, { message: 'M-Pesa code must be 10 alphanumeric characters' })
+  mpesaCode?: string;
 }
 
 export class UpdateReviewDto {
@@ -197,4 +203,49 @@ export class UpdateReviewReplyDto {
   @ApiProperty({ description: 'Reply content' })
   @IsString()
   content: string;
+}
+
+export class VoteReviewDto {
+  @ApiProperty({ description: 'Vote type', enum: ['HELPFUL', 'NOT_HELPFUL'] })
+  @IsEnum(['HELPFUL', 'NOT_HELPFUL'])
+  vote: 'HELPFUL' | 'NOT_HELPFUL';
+}
+
+export class FlagReviewDto {
+  @ApiProperty({ description: 'Reason for flagging the review' })
+  @IsString()
+  reason: string;
+}
+
+export class DisputeReviewDto {
+  @ApiProperty({ description: 'Reason for disputing the review' })
+  @IsString()
+  reason: string;
+}
+
+export class UpdateNotificationPrefsDto {
+  @ApiProperty({ description: 'Notify on review reply', required: false })
+  @IsOptional()
+  @IsBoolean()
+  reviewReply?: boolean;
+
+  @ApiProperty({ description: 'Notify on review vote', required: false })
+  @IsOptional()
+  @IsBoolean()
+  reviewVote?: boolean;
+
+  @ApiProperty({ description: 'Notify when business is verified', required: false })
+  @IsOptional()
+  @IsBoolean()
+  businessVerified?: boolean;
+
+  @ApiProperty({ description: 'Notify on dispute update', required: false })
+  @IsOptional()
+  @IsBoolean()
+  disputeUpdate?: boolean;
+
+  @ApiProperty({ description: 'Marketing notifications', required: false })
+  @IsOptional()
+  @IsBoolean()
+  marketing?: boolean;
 }

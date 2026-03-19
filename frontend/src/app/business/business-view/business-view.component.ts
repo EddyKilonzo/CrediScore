@@ -8,6 +8,7 @@ import { BusinessService, Business, BusinessStatus } from '../../core/services/b
 import { AuthService } from '../../core/services/auth.service';
 import { ReviewService } from '../../core/services/review.service';
 import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
+import { ImageLightboxComponent } from '../../shared/components/image-lightbox/image-lightbox.component';
 import { signal } from '@angular/core';
 
 interface ReviewReply {
@@ -45,6 +46,10 @@ interface Review {
     name: string;
     avatar?: string;
   };
+  helpfulCount?: number;
+  notHelpfulCount?: number;
+  userVote?: 'HELPFUL' | 'NOT_HELPFUL' | null;
+  votes?: Array<{ userId: string; vote: string }>;
 }
 
 interface TrustScore {
@@ -72,7 +77,7 @@ interface UploadedImage {
 @Component({
   selector: 'app-business-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, ReviewReplyComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, ReviewReplyComponent, ImageLightboxComponent],
   templateUrl: './business-view.component.html',
   styleUrls: ['./business-view.component.css']
 })
@@ -127,20 +132,34 @@ export class BusinessViewComponent implements OnInit {
     }
   }
 
+  get currentUser() {
+    return this.authService.currentUser();
+  }
+
   loadBusiness(id: string) {
     this.loading = true;
     this.error = null;
-    
+
     this.businessService.getBusinessById(id).subscribe({
       next: (business) => {
         this.business = business as BusinessWithDetails;
-        
+
         // Process reviews if available
         if (this.business.reviews && Array.isArray(this.business.reviews)) {
-          this.reviews = this.business.reviews.filter((r: any) => r.isActive);
+          const currentUserId = this.authService.currentUser()?.id;
+          this.reviews = this.business.reviews
+            .filter((r: any) => r.isActive)
+            .map((r: any) => ({
+              ...r,
+              helpfulCount: r.votes?.filter((v: any) => v.vote === 'HELPFUL').length ?? 0,
+              notHelpfulCount: r.votes?.filter((v: any) => v.vote === 'NOT_HELPFUL').length ?? 0,
+              userVote: currentUserId
+                ? (r.votes?.find((v: any) => v.userId === currentUserId)?.vote ?? null)
+                : null,
+            }));
           this.calculateRatingStats();
         }
-        
+
         this.loading = false;
       },
       error: (err) => {
@@ -243,6 +262,12 @@ export class BusinessViewComponent implements OnInit {
   isBusinessVerified(): boolean {
     if (!this.business) return false;
     return this.business.isVerified || this.business.status === 'VERIFIED';
+  }
+
+  getResponseRate(): number {
+    if (!this.reviews || this.reviews.length === 0) return 0;
+    const replied = this.reviews.filter(r => r.replies && r.replies.length > 0).length;
+    return Math.round((replied / this.reviews.length) * 100);
   }
 
   goBack() {
@@ -348,9 +373,74 @@ export class BusinessViewComponent implements OnInit {
     this.selectedRating = 0;
     this.hoveredRating = 0;
     this.uploadedImages = [];
+    this.mpesaCode = '';
     this.reviewForm.reset();
     this.reviewSubmitted = false;
     this.isSubmitting = false;
+  }
+
+  toggleBookmark() {
+    if (!this.business || this.isTogglingBookmark) return;
+    this.isTogglingBookmark = true;
+    this.reviewService.toggleBookmark(this.business.id).subscribe({
+      next: (res) => {
+        this.isBookmarked = res.bookmarked;
+        this.isTogglingBookmark = false;
+      },
+      error: () => { this.isTogglingBookmark = false; }
+    });
+  }
+
+  openFlagModal(review: Review, event: Event) {
+    event.stopPropagation();
+    this.flaggingReview = review;
+    this.flagReason = '';
+    this.showFlagModal = true;
+  }
+
+  closeFlagModal() {
+    this.showFlagModal = false;
+    this.flaggingReview = null;
+    this.flagReason = '';
+    this.isSubmittingFlag = false;
+  }
+
+  submitFlag() {
+    if (!this.flaggingReview || !this.flagReason.trim() || this.isSubmittingFlag) return;
+    this.isSubmittingFlag = true;
+    this.reviewService.flagReview(this.flaggingReview.id, this.flagReason.trim()).subscribe({
+      next: () => { this.closeFlagModal(); },
+      error: (err) => {
+        alert(err.error?.message || 'Failed to flag review');
+        this.isSubmittingFlag = false;
+      }
+    });
+  }
+
+  openDisputeModal(review: Review, event: Event) {
+    event.stopPropagation();
+    this.disputingReview = review;
+    this.disputeReason = '';
+    this.showDisputeModal = true;
+  }
+
+  closeDisputeModal() {
+    this.showDisputeModal = false;
+    this.disputingReview = null;
+    this.disputeReason = '';
+    this.isSubmittingDispute = false;
+  }
+
+  submitDispute() {
+    if (!this.disputingReview || !this.disputeReason.trim() || this.isSubmittingDispute) return;
+    this.isSubmittingDispute = true;
+    this.reviewService.disputeReview(this.disputingReview.id, this.disputeReason.trim()).subscribe({
+      next: () => { this.closeDisputeModal(); },
+      error: (err) => {
+        alert(err.error?.message || 'Failed to submit dispute');
+        this.isSubmittingDispute = false;
+      }
+    });
   }
 
   async submitReview() {
@@ -376,6 +466,10 @@ export class BusinessViewComponent implements OnInit {
 
       if (receiptUrl) {
         reviewData.receiptUrl = receiptUrl;
+      }
+
+      if (this.mpesaCode && this.mpesaCode.trim()) {
+        reviewData.mpesaCode = this.mpesaCode.trim().toUpperCase();
       }
 
       // Submit review
@@ -443,24 +537,19 @@ export class BusinessViewComponent implements OnInit {
   getMapUrl(): string | null {
     if (!this.business) return null;
 
-    // If we have latitude and longitude, use them for precise location
+    let query = '';
+
     if (this.business.latitude && this.business.longitude) {
-      // Use Google Maps embed with coordinates, zoom level, and marker
-      // Format: https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d... or use the simpler format
-      // Using the simpler embed format with better parameters
-      const lat = this.business.latitude;
-      const lng = this.business.longitude;
-      const businessName = encodeURIComponent(this.business.name || '');
-      return `https://www.google.com/maps?q=${lat},${lng}&hl=en&z=15&output=embed`;
+      query = `${this.business.latitude},${this.business.longitude}`;
+    } else if (this.business.location) {
+      query = encodeURIComponent(this.business.location);
+    } else if (this.business.name) {
+      query = encodeURIComponent(this.business.name);
+    } else {
+      return null;
     }
 
-    // Otherwise, use the address/location string
-    if (this.business.location || this.business.address) {
-      const location = encodeURIComponent(this.business.location || this.business.address || '');
-      return `https://www.google.com/maps?q=${location}&hl=en&z=15&output=embed`;
-    }
-
-    return null;
+    return `https://maps.google.com/maps?q=${query}&hl=en&z=15&output=embed`;
   }
 
   sanitizeMapUrl(url: string): SafeResourceUrl {
@@ -475,15 +564,77 @@ export class BusinessViewComponent implements OnInit {
       return `https://www.google.com/maps/search/?api=1&query=${this.business.latitude},${this.business.longitude}`;
     }
 
-    // Otherwise use address
-    const location = encodeURIComponent(this.business.location || this.business.address || this.business.name || '');
+    // Otherwise use location or business name
+    const location = encodeURIComponent(this.business.location || this.business.name || '');
     return `https://www.google.com/maps/search/?api=1&query=${location}`;
   }
 
-  openImageModal(imageUrl: string): void {
-    // Open image in new window/tab for full view
-    window.open(imageUrl, '_blank', 'noopener,noreferrer');
+  // Lightbox
+  lightboxImages: string[] = [];
+  lightboxIndex = 0;
+  lightboxOpen = false;
+
+  openImageModal(imageUrl: string, allImages?: string[], index?: number): void {
+    this.lightboxImages = allImages && allImages.length > 0 ? allImages : [imageUrl];
+    this.lightboxIndex = index ?? 0;
+    this.lightboxOpen = true;
   }
+
+  closeLightbox() {
+    this.lightboxOpen = false;
+  }
+
+  // Reputation badge helper
+  getReputationBadge(reputation: number): { label: string; color: string; bg: string; icon: string } {
+    if (reputation >= 500) return { label: 'Platinum', color: '#6366f1', bg: '#eef2ff', icon: 'uil-diamond' };
+    if (reputation >= 200) return { label: 'Gold', color: '#d97706', bg: '#fffbeb', icon: 'uil-star' };
+    if (reputation >= 50) return { label: 'Silver', color: '#6b7280', bg: '#f9fafb', icon: 'uil-award' };
+    if (reputation >= 10) return { label: 'Bronze', color: '#b45309', bg: '#fef3c7', icon: 'uil-medal' };
+    return { label: 'New', color: '#9ca3af', bg: '#f3f4f6', icon: 'uil-user' };
+  }
+
+  // Sentiment tags from validationResult
+  getSentimentTags(review: Review): Array<{ label: string; color: string; bg: string }> {
+    const tags: Array<{ label: string; color: string; bg: string }> = [];
+    const vr = review.validationResult;
+    const credibility = review.credibility ?? 0;
+
+    if (review.isVerified) {
+      tags.push({ label: 'Verified', color: '#059669', bg: '#ecfdf5' });
+    }
+    if (vr?.isAuthentic === true || credibility >= 80) {
+      tags.push({ label: 'High Credibility', color: '#2563eb', bg: '#eff6ff' });
+    }
+    if (vr?.hasReceiptEvidence || review.receiptUrl) {
+      tags.push({ label: 'Receipt Attached', color: '#7c3aed', bg: '#f5f3ff' });
+    }
+    if (review.amount && review.amount > 0) {
+      tags.push({ label: 'Purchase Verified', color: '#0891b2', bg: '#ecfeff' });
+    }
+    if (vr?.flags?.length > 0 || credibility < 30) {
+      tags.push({ label: 'Needs Review', color: '#d97706', bg: '#fffbeb' });
+    }
+    return tags;
+  }
+
+  // M-Pesa
+  mpesaCode: string = '';
+
+  // Bookmark
+  isBookmarked: boolean = false;
+  isTogglingBookmark: boolean = false;
+
+  // Flag modal
+  showFlagModal: boolean = false;
+  flaggingReview: Review | null = null;
+  flagReason: string = '';
+  isSubmittingFlag: boolean = false;
+
+  // Dispute modal
+  showDisputeModal: boolean = false;
+  disputingReview: Review | null = null;
+  disputeReason: string = '';
+  isSubmittingDispute: boolean = false;
 
   // Review Modal Methods
   selectedReview: Review | null = null;
@@ -511,6 +662,10 @@ export class BusinessViewComponent implements OnInit {
     this.showReviewModal = false;
     // Restore body scroll
     document.body.style.overflow = '';
+  }
+
+  getReviewMediaUrls(review: Review): string[] {
+    return this.getReviewMedia(review).map(m => m.url);
   }
 
   getReviewMedia(review: Review): Array<{ url: string; type: 'image' | 'receipt' }> {
@@ -734,6 +889,26 @@ export class BusinessViewComponent implements OnInit {
       this.error = 'Failed to delete review. Please try again.';
       this.isDeleting = false;
     }
+  }
+
+  voteReview(review: Review, voteType: 'HELPFUL' | 'NOT_HELPFUL', event: Event): void {
+    event.stopPropagation();
+    this.reviewService.voteReview(review.id, voteType).subscribe({
+      next: (result) => {
+        review.helpfulCount = result.helpfulCount;
+        review.notHelpfulCount = result.notHelpfulCount;
+        review.userVote = result.userVote as 'HELPFUL' | 'NOT_HELPFUL' | null;
+        // Sync selectedReview if it's the same
+        if (this.selectedReview?.id === review.id) {
+          this.selectedReview.helpfulCount = result.helpfulCount;
+          this.selectedReview.notHelpfulCount = result.notHelpfulCount;
+          this.selectedReview.userVote = result.userVote as 'HELPFUL' | 'NOT_HELPFUL' | null;
+        }
+      },
+      error: (err) => {
+        console.error('Error voting on review:', err);
+      }
+    });
   }
 
   // Review Reply Methods

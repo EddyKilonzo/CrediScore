@@ -1,7 +1,7 @@
 /* Profile Dashboard */
 .profile-dashboard {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
   padding: 2rem;
   margin-top: 5rem;
 }
@@ -321,7 +321,7 @@
   background: linear-gradient(135deg, rgba(232, 238, 243, 0.8) 0%, rgba(248, 250, 252, 1) 100%);
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   text-align: center;
   border: 1px solid rgba(62, 106, 138, 0.15);
   position: relative;
@@ -460,7 +460,7 @@
   background: linear-gradient(135deg, rgba(232, 238, 243, 0.5) 0%, rgba(248, 250, 252, 0.8) 100%);
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   border: 1px solid rgba(62, 106, 138, 0.1);
   position: relative;
 }
@@ -541,7 +541,7 @@
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
 }
 
 .panel-header {

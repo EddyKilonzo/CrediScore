@@ -23,6 +23,7 @@ export interface User {
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  twoFactorEnabled?: boolean;
 }
 
 export type UserWithoutPassword = Omit<User, 'password'>;

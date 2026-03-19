@@ -1,0 +1,46 @@
+<div *ngIf="isOpen"
+     class="lightbox-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+     (click)="onBackdropClick($event)">
+  <!-- Close button -->
+  <button (click)="closeLightbox()"
+          class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10">
+    <i class="uil uil-times text-xl"></i>
+  </button>
+
+  <!-- Image counter -->
+  <div *ngIf="images.length > 1" class="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm z-10">
+    {{ currentIndex + 1 }} / {{ images.length }}
+  </div>
+
+  <!-- Prev button -->
+  <button *ngIf="images.length > 1" (click)="prev()"
+          class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10">
+    <i class="uil uil-arrow-left text-2xl"></i>
+  </button>
+
+  <!-- Main image -->
+  <div class="max-w-5xl max-h-[85vh] mx-16 flex items-center justify-center">
+    <img [src]="currentImage" alt="Review image"
+         class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+         (click)="$event.stopPropagation()">
+  </div>
+
+  <!-- Next button -->
+  <button *ngIf="images.length > 1" (click)="next()"
+          class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10">
+    <i class="uil uil-arrow-right text-2xl"></i>
+  </button>
+
+  <!-- Thumbnail strip -->
+  <div *ngIf="images.length > 1"
+       class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+    <button *ngFor="let img of images; let i = index"
+            (click)="goTo(i); $event.stopPropagation()"
+            class="w-14 h-10 rounded overflow-hidden border-2 transition-all"
+            [class.border-white]="i === currentIndex"
+            [class.border-transparent]="i !== currentIndex"
+            [class.opacity-50]="i !== currentIndex">
+      <img [src]="img" class="w-full h-full object-cover">
+    </button>
+  </div>
+</div>

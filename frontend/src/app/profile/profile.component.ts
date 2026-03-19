@@ -2,6 +2,7 @@ import { Component, signal, OnInit, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
 import { CloudinaryService } from '../core/services/cloudinary.service';
@@ -15,6 +16,19 @@ interface Tab {
   active: boolean;
 }
 
+interface BusinessDocument {
+  id: string;
+  type: string;
+  name: string;
+  url: string;
+  verified: boolean;
+  aiVerified: boolean;
+  ocrConfidence: number | null;
+  uploadedAt: string;
+  verifiedAt: string | null;
+  status: 'verified' | 'failed' | 'pending_review' | 'processing';
+}
+
 interface Business {
   id: string;
   name: string;
@@ -26,6 +40,8 @@ interface Business {
   totalDocuments: number;
   totalPayments: number;
   createdAt: string;
+  documents?: BusinessDocument[];
+  documentSummary?: { total: number; verified: number; pendingReview: number; failed: number };
 }
 
 interface Activity {
@@ -72,6 +88,18 @@ export class ProfileComponent implements OnInit {
   reviewReminders = signal(true);
   publicProfile = signal(true);
   selectedLanguage = signal('en');
+
+  // Notification preferences (Feature 9)
+  notifPrefs = signal({
+    reviewReply: true,
+    reviewVote: true,
+    businessVerified: true,
+    disputeUpdate: true,
+    marketing: false
+  });
+  isSavingNotifPrefs = signal(false);
+
+  private http = inject(HttpClient);
 
   // Available tabs
   allTabs: Tab[] = [
@@ -600,6 +628,26 @@ export class ProfileComponent implements OnInit {
     this.selectedLanguage.set(language);
     localStorage.setItem('language', language);
     this.toastService.success(`Language changed to ${language}`);
+  }
+
+  toggleNotifPref(key: keyof ReturnType<typeof this.notifPrefs>) {
+    const current = this.notifPrefs();
+    this.notifPrefs.set({ ...current, [key]: !current[key] });
+  }
+
+  saveNotifPrefs() {
+    if (this.isSavingNotifPrefs()) return;
+    this.isSavingNotifPrefs.set(true);
+    this.http.patch('http://localhost:3000/api/user/notification-prefs', this.notifPrefs()).subscribe({
+      next: () => {
+        this.toastService.success('Notification preferences saved');
+        this.isSavingNotifPrefs.set(false);
+      },
+      error: () => {
+        this.toastService.error('Failed to save preferences');
+        this.isSavingNotifPrefs.set(false);
+      }
+    });
   }
 
   // Admin-specific methods

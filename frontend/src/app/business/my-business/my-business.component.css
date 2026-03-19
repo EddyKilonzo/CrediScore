@@ -4,7 +4,7 @@
 :host {
   display: block;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
   margin-top: 5rem;
 }
 
@@ -13,7 +13,7 @@
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-fill-mode: both;
@@ -148,7 +148,7 @@
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-fill-mode: both;
@@ -186,7 +186,7 @@
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: fadeInUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-fill-mode: both;
@@ -1144,7 +1144,7 @@
   background: white;
   padding: 1.5rem 2rem;
   border-radius: 1rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   border: 1px solid rgba(45, 90, 135, 0.1);
   margin-top: 2rem;
   animation: fadeInUp 0.6s ease-out;

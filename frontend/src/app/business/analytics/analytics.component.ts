@@ -245,4 +245,16 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         if (score >= 20) return 'text-orange-600';
         return 'text-gray-600';
     }
+
+    getMaxTrendCount(): number {
+        return Math.max(...this.reviewTrends.map(t => t.count), 1);
+    }
+
+    getTrendBarHeight(count: number): number {
+        return count > 0 ? Math.max(6, Math.round((count / this.getMaxTrendCount()) * 140)) : 4;
+    }
+
+    getTotalTrendReviews(): number {
+        return this.reviewTrends.reduce((s, t) => s + t.count, 0);
+    }
 }

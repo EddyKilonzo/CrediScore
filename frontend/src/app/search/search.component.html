@@ -7,40 +7,6 @@
         <p class="welcome-subtitle">Find verified businesses and check their trust scores</p>
       </div>
 
-      <!-- Search Bar and Filter Toggle -->
-      <div class="search-filters-container">
-        <!-- Search Bar -->
-        <div class="search-bar-container">
-          <div class="search-input-wrapper">
-            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          <input
-            type="text"
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="applySearchAndFilters()"
-            placeholder="Search by business name, registration number, or till number..."
-            class="search-input"
-            (keyup.enter)="onSearch()"
-          />
-            <button (click)="onSearch()" class="search-button">
-              Search
-            </button>
-          </div>
-        </div>
-
-        <!-- Filter Toggle (Mobile) -->
-        <div class="filter-toggle-container">
-          <button (click)="toggleFilters()" class="filter-toggle-btn">
-            <svg class="filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            <span>Filters</span>
-            <span *ngIf="selectedStars || selectedGrade" class="filter-badge">{{ (selectedStars ? 1 : 0) + (selectedGrade ? 1 : 0) }}</span>
-          </button>
-        </div>
-      </div>
-
       <!-- Main Content with Sidebar Layout -->
       <div class="main-layout">
         <!-- Filters Sidebar -->
@@ -102,8 +68,59 @@
               </div>
             </div>
 
+            <!-- Category Filter -->
+            <div class="filter-section" *ngIf="availableCategories.length > 0">
+              <h3 class="filter-section-title">
+                <i class="uil uil-tag"></i>
+                Category
+              </h3>
+              <div class="grade-filter-options" style="flex-wrap:wrap;gap:6px;">
+                <button
+                  *ngFor="let cat of availableCategories"
+                  (click)="onCategoryFilterChange(cat)"
+                  class="grade-filter-btn"
+                  [class.active]="selectedCategory === cat"
+                  style="font-size:0.78rem;padding:4px 10px;"
+                >{{ cat }}</button>
+              </div>
+            </div>
+
+            <!-- Verified Only Toggle -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-check-circle"></i>
+                Verified Only
+              </h3>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;color:#374151;">
+                <input type="checkbox" [(ngModel)]="verifiedOnly" (change)="applySearchAndFilters()" style="width:16px;height:16px;accent-color:#2C5270;" />
+                Show verified businesses only
+              </label>
+            </div>
+
+            <!-- Sort By -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-sort-amount-down"></i>
+                Sort By
+              </h3>
+              <div class="grade-filter-options" style="flex-direction:column;gap:4px;">
+                <button (click)="onSortChange('trust')" class="grade-filter-btn" [class.active]="sortBy === 'trust'" style="justify-content:flex-start;gap:6px;width:100%;">
+                  <i class="uil uil-shield-check"></i> Trust Score
+                </button>
+                <button (click)="onSortChange('rating')" class="grade-filter-btn" [class.active]="sortBy === 'rating'" style="justify-content:flex-start;gap:6px;width:100%;">
+                  <i class="uil uil-star"></i> Avg Rating
+                </button>
+                <button (click)="onSortChange('reviews')" class="grade-filter-btn" [class.active]="sortBy === 'reviews'" style="justify-content:flex-start;gap:6px;width:100%;">
+                  <i class="uil uil-comment-dots"></i> Most Reviews
+                </button>
+                <button (click)="onSortChange('name')" class="grade-filter-btn" [class.active]="sortBy === 'name'" style="justify-content:flex-start;gap:6px;width:100%;">
+                  <i class="uil uil-sort-amount-down"></i> Name A-Z
+                </button>
+              </div>
+            </div>
+
             <!-- Clear Filters -->
-            <div class="filter-actions" *ngIf="selectedStars || selectedGrade">
+            <div class="filter-actions" *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly">
               <button (click)="clearFilters()" class="clear-filters-btn">
                 <i class="uil uil-times-circle"></i>
                 Clear All Filters
@@ -114,6 +131,54 @@
 
         <!-- Results Section -->
         <div class="results-section">
+          <!-- Search Bar and Filter Toggle -->
+          <div class="search-filters-container">
+            <div class="search-bar-container relative">
+              <div class="search-input-wrapper">
+                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  [(ngModel)]="searchQuery"
+                  (ngModelChange)="onSearchInput()"
+                  placeholder="Search by business name, category, or location..."
+                  class="search-input"
+                  (keyup.enter)="onSearch()"
+                  (blur)="hideAutocomplete()"
+                  autocomplete="off"
+                />
+                <button (click)="onSearch()" class="search-button">
+                  Search
+                </button>
+              </div>
+              <!-- Autocomplete dropdown -->
+              <div *ngIf="showAutocomplete && autocompleteResults.length > 0"
+                   class="absolute top-full left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 mt-1 overflow-hidden">
+                <a *ngFor="let b of autocompleteResults"
+                   [routerLink]="['/business', b.id]"
+                   class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 transition-colors">
+                  <i class="uil uil-store text-[#2C5270] text-lg flex-shrink-0"></i>
+                  <div class="min-w-0">
+                    <div class="font-medium text-gray-900 truncate">{{ b.name }}</div>
+                    <div class="text-gray-500 text-xs">{{ b.category || 'Business' }}</div>
+                  </div>
+                  <i *ngIf="b.isVerified" class="uil uil-shield-check text-green-500 ml-auto flex-shrink-0"></i>
+                </a>
+              </div>
+            </div>
+            <!-- Filter Toggle (Mobile) -->
+            <div class="filter-toggle-container">
+              <button (click)="toggleFilters()" class="filter-toggle-btn">
+                <svg class="filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span>Filters</span>
+                <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly" class="filter-badge">{{ (selectedStars ? 1 : 0) + (selectedGrade ? 1 : 0) + (selectedCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) }}</span>
+              </button>
+            </div>
+          </div>
+
           <div class="results-container">
       <!-- Loading State -->
       <div *ngIf="isLoading" class="loading-state">
@@ -133,7 +198,7 @@
       <div *ngIf="!isLoading && !error" class="results-header">
         <h2 class="results-count">
           {{ filteredBusinesses.length }} {{ filteredBusinesses.length === 1 ? 'business' : 'businesses' }} found
-          <span *ngIf="selectedStars || selectedGrade" class="filtered-badge">(filtered)</span>
+          <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly" class="filtered-badge">(filtered)</span>
           <span *ngIf="viewMode === 'map'" class="map-count-badge">
             ({{ getBusinessesWithLocation().length }} with location)
           </span>
@@ -325,6 +390,12 @@
             </div>
           </div>
 
+          <!-- Response Rate Badge -->
+          <div *ngIf="business.responseRate && business.responseRate > 0" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:0.75rem;color:#166534;">
+            <i class="uil uil-comment-alt-check" style="font-size:0.85rem;"></i>
+            <span>{{ business.responseRate }}% response rate</span>
+          </div>
+
           <!-- Location -->
           <div class="card-location" *ngIf="business.location">
             <i class="uil uil-map-marker"></i>
@@ -339,13 +410,13 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <h3>No businesses found</h3>
-        <p *ngIf="selectedStars || selectedGrade">
+        <p *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly">
           Try adjusting your filters or search for a different term.
         </p>
-        <p *ngIf="!selectedStars && !selectedGrade">
+        <p *ngIf="!selectedStars && !selectedGrade && !selectedCategory && !verifiedOnly">
           Try searching for a different term.
         </p>
-        <button *ngIf="selectedStars || selectedGrade" (click)="clearFilters()" class="clear-filters-btn">
+        <button *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly" (click)="clearFilters()" class="clear-filters-btn">
           Clear Filters
         </button>
           </div>

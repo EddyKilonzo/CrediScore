@@ -12,21 +12,20 @@ import { MailerService } from './mailer.service';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         transport: {
-          host: configService.get<string>('MAIL_HOST'),
-          port: configService.get<number>('MAIL_PORT'),
-          secure: false, // Use STARTTLS instead of SSL
+          host: configService.get<string>('SMTP_HOST') || configService.get<string>('MAIL_HOST') || 'smtp-relay.brevo.com',
+          port: parseInt(configService.get<string>('SMTP_PORT') || configService.get<string>('MAIL_PORT') || '587', 10),
+          secure: false,
           requireTLS: true,
           auth: {
-            user: configService.get<string>('MAIL_USER'),
-            pass: configService.get<string>('MAIL_PASSWORD'),
+            user: configService.get<string>('SMTP_USER') || configService.get<string>('MAIL_USER') || '',
+            pass: configService.get<string>('SMTP_PASS') || configService.get<string>('MAIL_PASSWORD') || '',
           },
           tls: {
             rejectUnauthorized: false,
-            minVersion: 'TLSv1.2',
           },
         },
         defaults: {
-          from: `"${configService.get<string>('MAIL_FROM_NAME')}" <${configService.get<string>('MAIL_FROM_ADDRESS')}>`,
+          from: configService.get<string>('SMTP_FROM') || `"CrediScore" <${configService.get<string>('SENDER_EMAIL') || 'noreply@crediscore.com'}>`,
         },
         template: {
           dir: join(__dirname, 'templates'),

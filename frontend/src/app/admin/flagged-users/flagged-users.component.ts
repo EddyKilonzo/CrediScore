@@ -229,8 +229,30 @@ export class FlaggedUsersComponent implements OnInit {
   }
 
   async warnUser(user: FlaggedUser): Promise<void> {
-    // TODO: Implement warning logic
-    this.toastService.info('Warning sent to user');
+    const reason = prompt(
+      `Enter the reason for warning ${user.name}:\n(This will be included in the warning email sent to the user)`,
+      user.flagReason || 'Suspicious review activity detected on your account.'
+    );
+
+    if (!reason || !reason.trim()) {
+      return; // User cancelled
+    }
+
+    const adminNotes = prompt(
+      'Enter any additional notes for the user (optional):',
+      ''
+    );
+
+    try {
+      this.isLoading.set(true);
+      await this.adminService.warnUser(user.id, reason.trim(), adminNotes?.trim() || undefined).toPromise();
+      this.toastService.success(`Warning email sent to ${user.name} (${user.email})`);
+    } catch (error) {
+      console.error('Error sending warning to user:', error);
+      this.toastService.error('Failed to send warning email');
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   async clearFlag(userId: string): Promise<void> {

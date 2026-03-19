@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 export interface ReviewBusiness {
   id: string;
@@ -43,8 +44,14 @@ export interface Review {
   receiptUrl: string | null;
   reviewDate: string | null;
   validationResult: any | null;
+  mpesaCode?: string | null;
+  mpesaVerified?: boolean;
   business: ReviewBusiness;
   replies?: ReviewReply[];
+  helpfulCount?: number;
+  notHelpfulCount?: number;
+  userVote?: 'HELPFUL' | 'NOT_HELPFUL' | null;
+  votes?: Array<{ userId: string; vote: string }>;
 }
 
 export interface ReviewsResponse {
@@ -106,6 +113,39 @@ export class ReviewService {
     return this.http.get<ReviewReply[]>(
       `${this.API_URL}/business/reviews/${reviewId}/replies`
     );
+  }
+
+  voteReview(reviewId: string, vote: 'HELPFUL' | 'NOT_HELPFUL'): Observable<{ helpfulCount: number; notHelpfulCount: number; userVote: string | null }> {
+    return this.http.post<any>(`${this.API_URL}/user/reviews/${reviewId}/vote`, { vote });
+  }
+
+  uploadReceipt(reviewId: string, file: File): Observable<{ receiptUrl: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>(`${this.API_URL}/user/reviews/upload-receipt`, formData).pipe(
+      map(res => ({ receiptUrl: res.receiptUrl || res.url }))
+    );
+  }
+
+  flagReview(reviewId: string, reason: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.API_URL}/user/reviews/${reviewId}/flag`, { reason });
+  }
+
+  disputeReview(reviewId: string, reason: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.API_URL}/user/reviews/${reviewId}/dispute`, { reason });
+  }
+
+  getBookmarks(page: number = 1, limit: number = 20): Observable<any> {
+    const params = new HttpParams().set('page', page).set('limit', limit);
+    return this.http.get<any>(`${this.API_URL}/user/bookmarks`, { params });
+  }
+
+  toggleBookmark(businessId: string): Observable<{ bookmarked: boolean; message: string }> {
+    return this.http.post<any>(`${this.API_URL}/user/bookmarks/${businessId}`, {});
+  }
+
+  removeBookmark(businessId: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.API_URL}/user/bookmarks/${businessId}`);
   }
 }
 

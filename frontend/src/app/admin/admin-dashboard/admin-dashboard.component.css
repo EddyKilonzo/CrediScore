@@ -1,7 +1,7 @@
 /* Admin Dashboard Styles - Matching Business/Customer Views */
 .admin-dashboard {
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: transparent;
   padding: 0;
   margin-top: 2rem; /* Add top margin */
 }
@@ -239,7 +239,7 @@
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.6s ease-out;
   border: 1px solid rgba(62, 106, 138, 0.1);
@@ -409,7 +409,7 @@
   background: white;
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: fadeInUp 0.6s ease-out;
   border: 1px solid rgba(62, 106, 138, 0.1);
@@ -501,7 +501,7 @@
   background: white;
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   margin-bottom: 2rem;
   border: 1px solid rgba(62, 106, 138, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -633,7 +633,7 @@
   background: white;
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  box-shadow: var(--shadow-primary);
   border: 1px solid rgba(62, 106, 138, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

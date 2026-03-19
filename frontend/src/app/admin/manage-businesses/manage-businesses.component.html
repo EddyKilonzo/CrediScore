@@ -528,7 +528,7 @@
           </p>
           <div class="business-summary" *ngIf="getSelectedBusiness()">
             <h4>{{ getSelectedBusiness()?.name }}</h4>
-            <p>{{ getSelectedBusiness()?.category }} • {{ getSelectedBusiness()?.location }}</p>
+            <p>{{ getSelectedBusiness()?.category }} <i class="uil uil-circle"></i> {{ getSelectedBusiness()?.location }}</p>
           </div>
           <div class="modal-actions">
             <button (click)="closeVerificationModal()" class="btn btn-secondary">Cancel</button>

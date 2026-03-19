@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx ng:*)",
+      "Bash(npx prisma:*)",
+      "Bash(for f:*)",
+      "Bash(do file=C:UsersAdminDocumentsProjectsCrediScorefrontendsrcappadmin$f$f.component.css head -5 $file)",
+      "Bash(echo \"$f: has it\")",
+      "Bash(echo \"$f: no match in first 5 lines\" done)",
+      "Bash(DATABASE_URL=\"$DIRECT_URL\" npx prisma db push)",
+      "Bash(node -e \"const n = require\\(''@prisma/adapter-neon''\\); console.log\\(Object.keys\\(n\\)\\)\")",
+      "Bash(grep -r \"@Post.*review\\\\|@Get.*review\\\\|@Put.*review\\\\|@Delete.*review\" /c/Users/Admin/Documents/Projects/CrediScore/backend/src --include=*.ts)",
+      "Bash(node -e \":*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

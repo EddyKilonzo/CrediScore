@@ -1,34 +1,36 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id                           String        @id @default(uuid())
+  id                           String          @id @default(uuid())
   name                         String
-  email                        String        @unique
+  email                        String          @unique
   password                     String?
-  phone                        String?       @unique
-  role                         UserRole      @default(CUSTOMER)
-  isActive                     Boolean       @default(true)
-  provider                     AuthProvider  @default(LOCAL)
+  phone                        String?         @unique
+  role                         UserRole        @default(CUSTOMER)
+  isActive                     Boolean         @default(true)
+  provider                     AuthProvider    @default(LOCAL)
   providerId                   String?
   avatar                       String?
-  emailVerified                Boolean       @default(false)
-  reputation                   Int           @default(0)
+  emailVerified                Boolean         @default(false)
+  reputation                   Int             @default(0)
   lastLoginAt                  DateTime?
-  createdAt                    DateTime      @default(now())
-  updatedAt                    DateTime      @updatedAt
-  flagCount                    Int           @default(0)
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
+  flagCount                    Int             @default(0)
   flagReason                   String?
-  isFlagged                    Boolean       @default(false)
+  isFlagged                    Boolean         @default(false)
   lastFlaggedAt                DateTime?
   reviewPattern                Json?
-  unverifiedReviewCount        Int           @default(0)
+  unverifiedReviewCount        Int             @default(0)
   bio                          String?
   emailVerificationSentAt      DateTime?
   emailVerificationToken       String?
@@ -36,10 +38,20 @@ model User {
   passwordResetSentAt          DateTime?
   passwordResetToken           String?
   passwordResetTokenExpiry     DateTime?
+  loggedOutAt                  DateTime?
+  twoFactorSecret              String?
+  twoFactorEnabled             Boolean         @default(false)
+  notificationPrefs            Json?
   businesses                   Business[]
   fraudReports                 FraudReport[]
   reviews                      Review[]
   reviewReplies                ReviewReply[]
+  reviewVotes                  ReviewVote[]
+  notifications                Notification[]
+  bookmarks                    Bookmark[]
+  businessClaims               BusinessClaim[]
+  reviewFlags                  ReviewFlag[]
+  reviewDisputes               ReviewDispute[]
 }
 
 model Business {
@@ -69,6 +81,7 @@ model Business {
   reviewedBy         String?
   status             BusinessStatus    @default(PENDING)
   submittedForReview Boolean           @default(false)
+  businessHours      Json?
   businessCategory   BusinessCategory? @relation(fields: [businessCategoryId], references: [id])
   owner              User?             @relation(fields: [ownerId], references: [id])
   documents          Document[]
@@ -76,6 +89,9 @@ model Business {
   payments           Payment[]
   reviews            Review[]
   trustScore         TrustScore?
+  bookmarks          Bookmark[]
+  claims             BusinessClaim[]
+  responseTemplates  ResponseTemplate[]
 }
 
 model Document {
@@ -101,35 +117,115 @@ model Document {
 }
 
 model Review {
-  id               String       @id @default(uuid())
+  id               String         @id @default(uuid())
   rating           Int
   comment          String?
   userId           String
   businessId       String
-  credibility      Int          @default(0)
-  isVerified       Boolean      @default(false)
-  isActive         Boolean      @default(true)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  credibility      Int            @default(0)
+  isVerified       Boolean        @default(false)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   amount           Float?
   receiptData      Json?
   receiptUrl       String?
+  mediaUrls        String[]       @default([])
   reviewDate       DateTime?
   validationResult Json?
-  business         Business     @relation(fields: [businessId], references: [id])
-  user             User         @relation(fields: [userId], references: [id])
+  mpesaCode        String?
+  mpesaVerified    Boolean        @default(false)
+  business         Business       @relation(fields: [businessId], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
   replies          ReviewReply[]
+  votes            ReviewVote[]
+  flags            ReviewFlag[]
+  dispute          ReviewDispute?
+}
+
+model ReviewVote {
+  id        String    @id @default(uuid())
+  reviewId  String
+  userId    String
+  vote      VoteType
+  createdAt DateTime  @default(now())
+  review    Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([reviewId, userId])
 }
 
 model ReviewReply {
   id        String   @id @default(uuid())
   content   String
   reviewId  String
-  userId    String   // Business owner who replied
+  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   review    Review   @relation(fields: [reviewId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+  refId     String?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+model Bookmark {
+  id         String   @id @default(uuid())
+  userId     String
+  businessId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  business   Business @relation(fields: [businessId], references: [id])
+
+  @@unique([userId, businessId])
+}
+
+model BusinessClaim {
+  id         String      @id @default(uuid())
+  businessId String
+  userId     String
+  message    String?
+  status     ClaimStatus @default(PENDING)
+  adminNotes String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  business   Business    @relation(fields: [businessId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
+}
+
+model ReviewFlag {
+  id        String     @id @default(uuid())
+  reviewId  String
+  userId    String
+  reason    String
+  status    FlagStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+  review    Review     @relation(fields: [reviewId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+
+  @@unique([reviewId, userId])
+}
+
+model ReviewDispute {
+  id        String        @id @default(uuid())
+  reviewId  String        @unique
+  userId    String
+  reason    String
+  status    DisputeStatus @default(PENDING)
+  adminNote String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  review    Review        @relation(fields: [reviewId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
 }
 
 model Payment {
@@ -171,6 +267,17 @@ model BusinessCategory {
   description String?
   createdAt   DateTime   @default(now())
   businesses  Business[]
+}
+
+model ResponseTemplate {
+  id         String   @id @default(uuid())
+  businessId String
+  name       String
+  content    String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 enum DocumentType {
@@ -215,6 +322,41 @@ enum PaymentType {
 }
 
 enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum VoteType {
+  HELPFUL
+  NOT_HELPFUL
+}
+
+enum NotificationType {
+  REVIEW_REPLY
+  REVIEW_VOTE
+  BUSINESS_VERIFIED
+  BUSINESS_REJECTED
+  CLAIM_APPROVED
+  CLAIM_REJECTED
+  REVIEW_FLAGGED
+  DISPUTE_UPDATE
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FlagStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum DisputeStatus {
   PENDING
   UNDER_REVIEW
   RESOLVED

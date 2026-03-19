@@ -20,7 +20,9 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 import { AuthService } from './auth.service';
+import { TwoFactorService } from './two-factor/two-factor.service';
 import { SignUpDto, SignUpResponseDto } from './dto/signup.dto';
 import {
   LoginDto,
@@ -36,6 +38,19 @@ import { AuthGuard } from '@nestjs/passport';
 import { UserWithoutPassword } from './interfaces/user.interface';
 import { Public } from './decorators/public.decorator';
 
+export class TwoFactorTokenDto {
+  @IsString()
+  token: string;
+}
+
+export class TwoFactorVerifyDto {
+  @IsString()
+  userId: string;
+
+  @IsString()
+  token: string;
+}
+
 interface SessionData {
   data: any;
   timestamp: number;
@@ -50,7 +65,10 @@ interface RequestWithSession {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly twoFactorService: TwoFactorService,
+  ) {}
 
   @Public()
   @Post('signup')
@@ -146,9 +164,9 @@ export class AuthController {
     status: 400,
     description: 'Invalid or expired token',
   })
-  resetPassword(@Body(ValidationPipe) resetPasswordDto: ResetPasswordDto): {
-    message: string;
-  } {
+  async resetPassword(
+    @Body(ValidationPipe) resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     return this.authService.resetPassword(
       resetPasswordDto.token,
       resetPasswordDto.newPassword,
@@ -190,7 +208,7 @@ export class AuthController {
     status: 200,
     description: 'User logged out successfully',
   })
-  logout(@Request() req: { user: UserWithoutPassword }): { message: string } {
+  async logout(@Request() req: { user: UserWithoutPassword }): Promise<{ message: string }> {
     return this.authService.logout(req.user.id);
   }
 
@@ -347,5 +365,55 @@ export class AuthController {
   })
   async resendVerificationCode(@Body() dto: ResendVerificationDto) {
     return this.authService.resendVerificationCode(dto);
+  }
+
+  // ─── Two-Factor Authentication ────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/setup')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Setup 2FA — returns QR code data URL and secret' })
+  @ApiResponse({ status: 200, description: '2FA setup data returned' })
+  async setup2FA(@Request() req: { user: UserWithoutPassword }) {
+    return this.twoFactorService.generateSecret(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/enable')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enable 2FA with TOTP token' })
+  @ApiResponse({ status: 200, description: '2FA enabled successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token or setup not initiated' })
+  async enable2FA(
+    @Request() req: { user: UserWithoutPassword },
+    @Body(ValidationPipe) body: TwoFactorTokenDto,
+  ) {
+    return this.twoFactorService.enable2FA(req.user.id, body.token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/disable')
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Disable 2FA with TOTP token' })
+  @ApiResponse({ status: 200, description: '2FA disabled successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token or 2FA not enabled' })
+  async disable2FA(
+    @Request() req: { user: UserWithoutPassword },
+    @Body(ValidationPipe) body: TwoFactorTokenDto,
+  ) {
+    return this.twoFactorService.disable2FA(req.user.id, body.token);
+  }
+
+  @Public()
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify 2FA token and receive full JWT' })
+  @ApiResponse({ status: 200, description: 'Login response with access token' })
+  @ApiResponse({ status: 401, description: 'Invalid 2FA token' })
+  async verify2FA(@Body(ValidationPipe) body: TwoFactorVerifyDto) {
+    return this.authService.verifyTwoFactor(body.userId, body.token);
   }
 }

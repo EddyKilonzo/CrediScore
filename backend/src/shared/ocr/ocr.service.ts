@@ -96,6 +96,9 @@ export interface DocumentAnalysisResult {
   validationErrors: string[];
   warnings: string[];
   authenticityScore: number;
+  // Explicit flag used by frontend logic when OCR completely fails.
+  // Other analysis paths may omit it.
+  ocrFailed?: boolean;
   fraudIndicators: string[];
   securityFeatures: string[];
   verificationChecklist: {
@@ -517,20 +520,26 @@ export class OCRService {
 
       if (ocrCompletelyFailed) {
         this.logger.warn(
-          'OCR extraction completely failed - returning result for manual review',
+          'OCR extraction completely failed - document cannot be auto-processed',
         );
+        // Do NOT mark isValid: true here. OCR failure means we cannot confirm the
+        // document is legitimate. Setting isValid: false + ocrFailed: true forces
+        // the frontend to show "Failed" and require the user to re-upload.
         return {
           documentType: 'UNKNOWN',
           extractedData: {},
-          confidence: ocrResult.confidence,
-          isValid: true, // Mark as valid to allow upload, but with low score
-          validationErrors: [],
-          warnings: [
-            'Document uploaded successfully but automatic text extraction was unsuccessful.',
-            'This document requires manual verification by an administrator.',
-            'Please ensure your document is clear, well-lit, and in a supported format (JPEG, PNG, PDF).',
+          confidence: 0,
+          isValid: false,
+          validationErrors: [
+            'No readable text could be extracted from this document.',
           ],
-          authenticityScore: 30, // Low score to indicate manual review needed
+          warnings: [
+            'Please upload a clearer, high-resolution image (JPEG or PNG recommended).',
+            'Ensure the document is well-lit, not blurry, and fully visible within the frame.',
+            'PDF files must not be scanned at low DPI.',
+          ],
+          authenticityScore: 0, // 0 ensures frontend shows "Failed", not "Pending"
+          ocrFailed: true,       // explicit flag consumed by processDocumentWithAI
           fraudIndicators: [],
           securityFeatures: [],
           verificationChecklist: {
@@ -541,7 +550,7 @@ export class OCRService {
             validExpiryDate: false,
             officialAuthorityPresent: false,
             securityFeaturesDetected: false,
-            noFraudIndicators: true,
+            noFraudIndicators: false,
             validBusinessType: false,
             consistentData: false,
             recentDocument: false,

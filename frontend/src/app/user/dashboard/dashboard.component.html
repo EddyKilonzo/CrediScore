@@ -104,26 +104,31 @@
             </select>
           </div>
           
-          <!-- Simple Bar Chart -->
-          <div class="space-y-4">
-            <div class="flex items-end justify-between h-32">
-              <div 
-                *ngFor="let data of reviewTrendData" 
-                class="flex flex-col items-center space-y-2">
-                <div 
-                  class="w-8 bg-primary rounded-t-sm transition-all duration-300 hover:bg-primary-600"
-                  [style.height.%]="(data.reviews / 12) * 100"
-                  [title]="data.reviews + ' reviews'">
-                </div>
-                <span class="text-xs text-gray-500">{{ data.day }}</span>
+          <!-- Bar Chart -->
+          <div class="chart-wrapper" *ngIf="getTotalReviews() > 0; else noActivityChart">
+            <div class="chart-bars-area">
+              <div *ngFor="let data of reviewTrendData" class="chart-col">
+                <span class="chart-val">{{ data.reviews > 0 ? data.reviews : '' }}</span>
+                <div class="chart-bar"
+                     [style.height.px]="getBarHeight(data.reviews)"
+                     [attr.data-val]="data.reviews"
+                     [title]="data.reviews + ' reviews on ' + data.day"></div>
               </div>
             </div>
-            <div class="text-center">
-              <p class="text-sm text-gray-600">
-                {{ getTimeframeLabel() }}: {{ getTotalReviews() }} total reviews
-              </p>
+            <div class="chart-days-row">
+              <span *ngFor="let data of reviewTrendData" class="chart-day">{{ data.day }}</span>
+            </div>
+            <div class="chart-footer">
+              <span class="chart-footer-label">{{ getTimeframeLabel() }}</span>
+              <span class="chart-footer-total">{{ getTotalReviews() }} reviews</span>
             </div>
           </div>
+          <ng-template #noActivityChart>
+            <div class="chart-empty">
+              <i class="uil uil-chart-bar"></i>
+              <p>No review activity yet</p>
+            </div>
+          </ng-template>
         </div>
 
         <!-- Recent Activities -->
@@ -135,9 +140,14 @@
             </a>
           </div>
           
+          <div *ngIf="recentActivities.length === 0" class="flex flex-col items-center justify-center py-8 text-gray-400">
+            <i class="uil uil-history-alt text-3xl mb-2"></i>
+            <p class="text-sm">No recent activity</p>
+          </div>
+
           <div class="space-y-4">
-            <div 
-              *ngFor="let activity of recentActivities; let i = index" 
+            <div
+              *ngFor="let activity of recentActivities; let i = index"
               class="activity-item flex items-start space-x-3 p-4 rounded-xl transition-all duration-300 ease-out cursor-pointer"
               [style.animation-delay]="(i * 0.1) + 's'"
               style="animation: fadeInUp 0.6s ease-out both;">
@@ -156,7 +166,7 @@
                 <p class="text-sm text-gray-500">{{ activity.description }}</p>
                 <div class="flex items-center space-x-2 mt-1">
                   <span class="text-xs text-gray-500">{{ formatTimeAgo(activity.timestamp) }}</span>
-                  <span *ngIf="activity.businessName" class="text-xs text-gray-500">•</span>
+                  <span *ngIf="activity.businessName" class="text-xs text-gray-400">&#xb7;</span>
                   <span *ngIf="activity.businessName" class="text-xs text-gray-500">{{ activity.businessName }}</span>
                   <span *ngIf="activity.rating" class="text-xs text-yellow-600">
                     <i class="uil uil-star"></i> {{ activity.rating }}
@@ -209,8 +219,8 @@
         </div>
       </div>
 
-      <!-- Right Column -->
-      <div class="space-y-8">
+      <!-- Right Column (sticky sidebar) -->
+      <aside class="space-y-8 lg:sticky lg:top-20 lg:self-start">
         
         <!-- Quick Actions -->
         <div class="dashboard-card content-card smooth-fade-in">
@@ -233,23 +243,54 @@
           </div>
         </div>
 
-        <!-- Business Categories -->
+        <!-- Review Summary -->
         <div class="dashboard-card content-card smooth-fade-in">
-          <h3 class="section-title mb-4">Business Categories</h3>
+          <h3 class="section-title mb-4">Review Summary</h3>
           <div class="space-y-3">
-            <div 
-              *ngFor="let category of businessCategories" 
-              class="business-category-item flex items-center justify-between p-3 rounded-lg transition-colors">
-              <div class="flex items-center space-x-3">
-                <div class="w-3 h-3 rounded-full" [class]="category.color"></div>
-                <span class="font-medium text-black">{{ category.name }}</span>
+            <!-- Total Reviews -->
+            <div class="review-summary-item">
+              <div class="review-summary-icon" style="background:linear-gradient(135deg,#E8EEF3,#C5D6E3);">
+                <i class="uil uil-star" style="color:#3E6A8A;font-size:1.1rem;"></i>
               </div>
-              <span class="text-sm text-gray-500">{{ category.count }}</span>
+              <div class="review-summary-info">
+                <span class="review-summary-label">Total Reviews</span>
+                <span class="review-summary-value">{{ dashboardStats.totalReviews }}</span>
+              </div>
+            </div>
+            <!-- Average Rating -->
+            <div class="review-summary-item">
+              <div class="review-summary-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">
+                <i class="uil uil-award" style="color:#d97706;font-size:1.1rem;"></i>
+              </div>
+              <div class="review-summary-info">
+                <span class="review-summary-label">Avg. Rating</span>
+                <span class="review-summary-value">{{ dashboardStats.averageRating | number:'1.1-1' }} / 5</span>
+              </div>
+            </div>
+            <!-- Monthly Growth -->
+            <div class="review-summary-item">
+              <div class="review-summary-icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);">
+                <i class="uil uil-chart-growth" style="color:#059669;font-size:1.1rem;"></i>
+              </div>
+              <div class="review-summary-info">
+                <span class="review-summary-label">Monthly Growth</span>
+                <span class="review-summary-value" style="color:#059669;">+{{ dashboardStats.monthlyGrowth }}%</span>
+              </div>
+            </div>
+            <!-- Reputation -->
+            <div class="review-summary-item" *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'">
+              <div class="review-summary-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);">
+                <i class="uil uil-shield-check" style="color:#7c3aed;font-size:1.1rem;"></i>
+              </div>
+              <div class="review-summary-info">
+                <span class="review-summary-label">Reputation</span>
+                <span class="review-summary-value" [class]="getReputationColor()">{{ getCustomerReputationLevel() || 'New Member' }}</span>
+              </div>
             </div>
           </div>
         </div>
 
-      </div>
+      </aside>
     </div>
   </div>
 </main>

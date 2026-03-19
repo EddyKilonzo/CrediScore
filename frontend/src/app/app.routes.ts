@@ -35,6 +35,18 @@ export const routes: Routes = [
         loadComponent: () => import('./auth/callback/auth-callback.component').then(m => m.AuthCallbackComponent)
       },
       {
+        path: 'forgot-password',
+        loadComponent: () => import('./auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent)
+      },
+      {
+        path: 'reset-password',
+        loadComponent: () => import('./auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent)
+      },
+      {
+        path: '2fa-verify',
+        loadComponent: () => import('./auth/two-factor-verify/two-factor-verify.component').then(m => m.TwoFactorVerifyComponent)
+      },
+      {
         path: '',
         redirectTo: 'login',
         pathMatch: 'full'
@@ -71,6 +83,19 @@ export const routes: Routes = [
     data: { roles: ['CUSTOMER', 'user'] }
   },
 
+  // Bookmarks Route
+  {
+    path: 'bookmarks',
+    loadComponent: () => import('./user/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
+    canActivate: [AuthGuard]
+  },
+
+  // Leaderboard (public)
+  {
+    path: 'leaderboard',
+    loadComponent: () => import('./leaderboard/leaderboard.component').then(m => m.LeaderboardComponent)
+  },
+
   // Business Routes
   {
     path: 'business',
@@ -105,6 +130,12 @@ export const routes: Routes = [
   {
     path: 'business/:id',
     loadComponent: () => import('./business/business-view/business-view.component').then(m => m.BusinessViewComponent)
+  },
+
+  // Category Browse Route
+  {
+    path: 'category/:name',
+    loadComponent: () => import('./business/category-browse/category-browse.component').then(m => m.CategoryBrowseComponent)
   },
 
   // Admin Routes
@@ -162,6 +193,12 @@ export const routes: Routes = [
       {
         path: 'system',
         loadComponent: () => import('./admin/system-maintenance/system-maintenance.component').then(m => m.SystemMaintenanceComponent),
+        canActivate: [AuthGuard, RoleGuard],
+        data: { roles: ['ADMIN', 'admin'] }
+      },
+      {
+        path: 'disputes',
+        loadComponent: () => import('./admin/disputes/disputes.component').then(m => m.DisputesComponent),
         canActivate: [AuthGuard, RoleGuard],
         data: { roles: ['ADMIN', 'admin'] }
       },

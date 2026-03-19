@@ -456,16 +456,75 @@
                       </span>
                     </div>
                     <div class="business-details">
-                      <p><strong>Category:</strong> {{ business.category }}</p>
+                      <p><strong>Category:</strong> {{ business.category || 'General' }}</p>
                       <p><strong>Trust Score:</strong> {{ business.trustScore }}% ({{ business.trustGrade }})</p>
                       <p><strong>Reviews:</strong> {{ business.totalReviews }}</p>
-                      <p><strong>Documents:</strong> {{ business.totalDocuments }}</p>
                       <p><strong>Payments:</strong> {{ business.totalPayments }}</p>
                       <p><strong>Created:</strong> {{ business.createdAt | date:'MMM d, y' }}</p>
                     </div>
+
+                    <!-- Document Verification Status -->
+                    @if (business.documents && business.documents.length > 0) {
+                      <div class="mt-3 pt-3 border-t border-gray-100">
+                        <p class="text-xs font-semibold text-gray-600 mb-2">
+                          <i class="fas fa-file-alt mr-1"></i>Documents
+                          <span class="ml-1 text-gray-400">({{ business.documentSummary?.total || business.documents.length }} uploaded)</span>
+                        </p>
+                        <div class="space-y-1">
+                          @for (doc of business.documents; track doc.id) {
+                            <div class="flex items-center justify-between py-1 px-2 rounded text-xs"
+                                 [class.bg-green-50]="doc.status === 'verified'"
+                                 [class.bg-red-50]="doc.status === 'failed'"
+                                 [class.bg-amber-50]="doc.status === 'pending_review'"
+                                 [class.bg-gray-50]="doc.status === 'processing'">
+                              <div class="flex items-center space-x-1 flex-1 min-w-0">
+                                <i [class]="doc.status === 'verified' ? 'fas fa-check-circle text-green-500' : doc.status === 'failed' ? 'fas fa-times-circle text-red-500' : doc.status === 'pending_review' ? 'fas fa-clock text-amber-500' : 'fas fa-spinner fa-spin text-gray-400'"></i>
+                                <span class="truncate"
+                                      [class.text-green-800]="doc.status === 'verified'"
+                                      [class.text-red-800]="doc.status === 'failed'"
+                                      [class.text-amber-800]="doc.status === 'pending_review'"
+                                      [class.text-gray-600]="doc.status === 'processing'">
+                                  {{ doc.name || doc.type }}
+                                </span>
+                              </div>
+                              <span class="ml-2 font-medium whitespace-nowrap"
+                                    [class.text-green-700]="doc.status === 'verified'"
+                                    [class.text-red-700]="doc.status === 'failed'"
+                                    [class.text-amber-700]="doc.status === 'pending_review'"
+                                    [class.text-gray-500]="doc.status === 'processing'">
+                                {{ doc.status === 'verified' ? 'Verified' : doc.status === 'failed' ? 'Failed' : doc.status === 'pending_review' ? 'Pending' : 'Processing' }}
+                              </span>
+                            </div>
+                          }
+                        </div>
+                        @if (business.documentSummary) {
+                          <div class="flex space-x-3 mt-2 text-xs text-gray-500">
+                            <span class="text-green-600 font-medium">
+                              <i class="fas fa-check-circle mr-0.5"></i>{{ business.documentSummary.verified }} verified
+                            </span>
+                            @if (business.documentSummary.pendingReview > 0) {
+                              <span class="text-amber-600 font-medium">
+                                <i class="fas fa-clock mr-0.5"></i>{{ business.documentSummary.pendingReview }} pending
+                              </span>
+                            }
+                            @if (business.documentSummary.failed > 0) {
+                              <span class="text-red-600 font-medium">
+                                <i class="fas fa-times-circle mr-0.5"></i>{{ business.documentSummary.failed }} failed
+                              </span>
+                            }
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <div class="mt-3 pt-3 border-t border-gray-100">
+                        <p class="text-xs text-gray-400 italic">
+                          <i class="fas fa-file-upload mr-1"></i>No documents uploaded yet
+                        </p>
+                      </div>
+                    }
+
                     <div class="business-actions">
-                      <button class="btn-secondary">Edit</button>
-                      <button class="btn-primary">View Details</button>
+                      <button class="btn-primary" (click)="navigateToMyBusiness()">Manage</button>
                     </div>
                   </div>
                 }
@@ -788,6 +847,92 @@
                 </select>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Notification Preferences -->
+        <div class="content-panel" style="margin-top:1.5rem;">
+          <div class="panel-header" style="margin-bottom:1.25rem;">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div style="width:2.5rem;height:2.5rem;border-radius:0.5rem;background:linear-gradient(135deg,#E8EEF3,#C5D6E3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="uil uil-bell" style="font-size:1.25rem;color:#3E6A8A;"></i>
+              </div>
+              <div>
+                <h3 class="panel-title" style="margin:0;">Email Notification Preferences</h3>
+                <p style="color:#64748b;font-size:0.875rem;margin:0;">Control which emails you receive from CrediScore.</p>
+              </div>
+            </div>
+          </div>
+          <div class="settings-list">
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4 class="setting-title">Review Replies</h4>
+                <p class="setting-description">When someone replies to your review</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" [checked]="notifPrefs().reviewReply" (change)="toggleNotifPref('reviewReply')">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4 class="setting-title">Review Votes</h4>
+                <p class="setting-description">When someone votes on your review</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" [checked]="notifPrefs().reviewVote" (change)="toggleNotifPref('reviewVote')">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4 class="setting-title">Business Verification</h4>
+                <p class="setting-description">When your business is verified or rejected</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" [checked]="notifPrefs().businessVerified" (change)="toggleNotifPref('businessVerified')">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4 class="setting-title">Dispute Updates</h4>
+                <p class="setting-description">Updates on disputes you have submitted</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" [checked]="notifPrefs().disputeUpdate" (change)="toggleNotifPref('disputeUpdate')">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div class="setting-info">
+                <h4 class="setting-title">Marketing Emails</h4>
+                <p class="setting-description">Product updates, tips, and platform news</p>
+              </div>
+              <div class="setting-control">
+                <label class="toggle-switch">
+                  <input type="checkbox" [checked]="notifPrefs().marketing" (change)="toggleNotifPref('marketing')">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid #f1f5f9;">
+            <button class="save-btn" (click)="saveNotifPrefs()" [disabled]="isSavingNotifPrefs()">
+              @if (isSavingNotifPrefs()) {
+                <div class="btn-loading"><div class="spinner"></div>Saving...</div>
+              } @else {
+                <div class="btn-content"><i class="uil uil-check"></i>Save Preferences</div>
+              }
+            </button>
           </div>
         </div>
         </div>

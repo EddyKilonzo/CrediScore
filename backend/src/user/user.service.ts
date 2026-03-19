@@ -11,6 +11,9 @@ import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { AiService } from '../shared/ai/ai.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
+import { QueueService } from '../shared/queue/queue.service';
+import { NotificationsService } from '../shared/notifications/notifications.service';
+import { MpesaService } from '../shared/mpesa/mpesa.service';
 import {
   CreateBusinessDto,
   UpdateBusinessDto,
@@ -60,6 +63,9 @@ export class UserService {
     private readonly prisma: PrismaService,
     private readonly aiService: AiService,
     private readonly fraudDetectionService: FraudDetectionService,
+    private readonly queueService: QueueService,
+    private readonly notificationsService: NotificationsService,
+    private readonly mpesaService: MpesaService,
   ) {}
 
   // Profile Management
@@ -306,7 +312,11 @@ export class UserService {
             include: {
               trustScore: true,
               businessCategory: true,
-              reviews: true,
+              reviews: {
+                include: {
+                  _count: { select: { replies: true } },
+                },
+              },
               _count: {
                 select: {
                   reviews: true,
@@ -354,6 +364,36 @@ export class UserService {
 
       if (!user) {
         throw new NotFoundException('User not found');
+      }
+
+      // Fetch verified + all documents for business owner profile display
+      const businessIds = user.businesses.map((b) => b.id);
+      const businessDocumentsMap: Record<string, any[]> = {};
+      if (businessIds.length > 0) {
+        const allDocs = await this.prisma.document.findMany({
+          where: { businessId: { in: businessIds } },
+          select: {
+            id: true,
+            type: true,
+            name: true,
+            url: true,
+            businessId: true,
+            verified: true,
+            aiVerified: true,
+            ocrConfidence: true,
+            uploadedAt: true,
+            verifiedAt: true,
+            aiVerifiedAt: true,
+            aiAnalysis: true,
+          },
+          orderBy: { uploadedAt: 'desc' },
+        });
+        for (const doc of allDocs) {
+          if (!businessDocumentsMap[doc.businessId]) {
+            businessDocumentsMap[doc.businessId] = [];
+          }
+          businessDocumentsMap[doc.businessId].push(doc);
+        }
       }
 
       // Calculate role-specific metrics
@@ -560,34 +600,85 @@ export class UserService {
                         20,
                     ) // Assuming 5 steps max
                   : 0,
-              responseRate: 0, // Placeholder for review response tracking
-              trustScoreTrend: 'stable', // Placeholder for trend analysis
+              responseRate: (() => {
+                const allReviews = user.businesses.flatMap((b) => b.reviews || []);
+                const responded = allReviews.filter((r: any) => r._count?.replies > 0).length;
+                return allReviews.length > 0 ? Math.round((responded / allReviews.length) * 100) : 0;
+              })(),
+              trustScoreTrend: (() => {
+                const allReviews = user.businesses.flatMap((b) => b.reviews || []);
+                if (allReviews.length < 5) return 'stable';
+                const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                const recent = allReviews.filter((r: any) => new Date(r.createdAt) >= thirtyDaysAgo);
+                if (recent.length < 3) return 'stable';
+                const overallAvg = allReviews.reduce((s: number, r: any) => s + r.rating, 0) / allReviews.length;
+                const recentAvg = recent.reduce((s: number, r: any) => s + r.rating, 0) / recent.length;
+                return recentAvg > overallAvg + 0.15 ? 'improving' : recentAvg < overallAvg - 0.15 ? 'declining' : 'stable';
+              })(),
             },
 
             // Business Details
-            businesses: user.businesses.map((business) => ({
-              id: business.id,
-              name: business.name,
-              category: business.category,
-              status: business.status,
-              isVerified: business.isVerified,
-              isActive: business.isActive,
-              trustScore: business.trustScore?.score || 0,
-              trustGrade: business.trustScore?.grade || 'N/A',
-              totalReviews: business._count.reviews,
-              totalDocuments: business._count.documents,
-              totalPayments: business._count.payments,
-              fraudReports: 0, // Would need separate query for fraud reports count
-              createdAt: business.createdAt,
-              onboardingStep: business.onboardingStep,
-              submittedForReview: business.submittedForReview,
-            })),
+            businesses: user.businesses.map((business) => {
+              const bizDocs = businessDocumentsMap[business.id] || [];
+              const verifiedDocs = bizDocs.filter((d) => d.verified || d.aiVerified);
+              const pendingDocs = bizDocs.filter((d) => !d.verified && !d.aiVerified && d.aiAnalysis && (d.aiAnalysis as any).requiresManualReview);
+              const failedDocs = bizDocs.filter((d) => {
+                const a = d.aiAnalysis as any;
+                return !d.verified && !d.aiVerified && a && !a.requiresManualReview && a.authenticityScore !== undefined && a.authenticityScore < 40;
+              });
+
+              return {
+                id: business.id,
+                name: business.name,
+                category: business.category,
+                status: business.status,
+                isVerified: business.isVerified,
+                isActive: business.isActive,
+                trustScore: business.trustScore?.score || 0,
+                trustGrade: business.trustScore?.grade || 'N/A',
+                totalReviews: business._count.reviews,
+                totalDocuments: business._count.documents,
+                totalPayments: business._count.payments,
+                fraudReports: 0,
+                createdAt: business.createdAt,
+                onboardingStep: business.onboardingStep,
+                submittedForReview: business.submittedForReview,
+                documents: bizDocs.map((d) => ({
+                  id: d.id,
+                  type: d.type,
+                  name: d.name || d.type,
+                  url: d.url,
+                  verified: d.verified,
+                  aiVerified: d.aiVerified,
+                  ocrConfidence: d.ocrConfidence,
+                  uploadedAt: d.uploadedAt,
+                  verifiedAt: d.verifiedAt || d.aiVerifiedAt,
+                  status: (d.verified || d.aiVerified)
+                    ? 'verified'
+                    : (d.aiAnalysis as any)?.requiresManualReview
+                    ? 'pending_review'
+                    : (d.aiAnalysis as any)?.authenticityScore !== undefined && (d.aiAnalysis as any).authenticityScore < 40
+                    ? 'failed'
+                    : 'processing',
+                })),
+                documentSummary: {
+                  total: bizDocs.length,
+                  verified: verifiedDocs.length,
+                  pendingReview: pendingDocs.length,
+                  failed: failedDocs.length,
+                },
+              };
+            }),
 
             // Business Performance
             performance: {
               averageTrustScore: Math.round(averageTrustScore),
-              totalRevenue: 0, // Would need payment integration
-              reviewResponseRate: 0, // Would need review reply tracking
+              totalRevenue: 0, // Requires payment amount tracking (not in current schema)
+              reviewResponseRate: (() => {
+                const allReviews = user.businesses.flatMap((b) => b.reviews || []);
+                const responded = allReviews.filter((r: any) => r._count?.replies > 0).length;
+                return allReviews.length > 0 ? Math.round((responded / allReviews.length) * 100) : 0;
+              })(),
               documentCompletionRate:
                 user.businesses.length > 0
                   ? Math.round(
@@ -894,7 +985,7 @@ export class UserService {
               errorRate: await this.getSystemErrorRate(),
               performanceMetrics: await this.getPerformanceMetrics(),
               securityAlerts: await this.getSecurityAlerts(),
-              backupStatus: this.getBackupStatus(),
+              backupStatus: await this.getBackupStatus(),
             },
 
             // Admin Quick Actions (Platform Management Only)
@@ -1220,226 +1311,76 @@ export class UserService {
 
       // Check if user already reviewed this business
       const existingReview = await this.prisma.review.findFirst({
-        where: {
-          userId: userId,
-          businessId: reviewData.businessId,
-        },
+        where: { userId, businessId: reviewData.businessId },
       });
 
       if (existingReview) {
-        throw new BadRequestException(
-          'You have already reviewed this business',
-        );
+        throw new BadRequestException('You have already reviewed this business');
       }
 
-      // Validate rating
       if (reviewData.rating < 1 || reviewData.rating > 5) {
         throw new BadRequestException('Rating must be between 1 and 5');
       }
 
-      let isVerified = false;
-      let receiptData: unknown = null;
-      let validationResult: unknown = null;
-      let credibility = 0;
-
-      // If receipt is provided, validate it with AI
-      if (reviewData.receiptUrl) {
-        try {
-          const businessDetails = {
-            name: business.name,
-            address: business.location || undefined,
-            phone: business.phone || undefined,
-            email: business.email || undefined,
-          };
-
-          const validation = await this.aiService.validateReceiptForReview(
-            reviewData.receiptUrl,
-            businessDetails,
-            reviewData.amount,
-            reviewData.reviewDate,
-          );
-
-          isVerified = validation.isValid;
-          receiptData = validation.extractedData;
-          validationResult = {
-            isValid: validation.isValid,
-            confidence: validation.confidence,
-            matchedFields: validation.matchedFields,
-            validationNotes: validation.validationNotes,
-            extractedData: validation.extractedData,
-          };
-        } catch (error) {
-          this.logger.error('Error validating receipt:', error);
-          // Continue with unverified review if validation fails
-          validationResult = {
-            isValid: false,
-            confidence: 0,
-            error: error instanceof Error ? error.message : 'Validation failed',
-          };
+      // Validate and check M-Pesa code if provided
+      let mpesaCode: string | null = null;
+      let mpesaVerified = false;
+      if (reviewData.mpesaCode) {
+        const normalized = this.mpesaService.normalizeCode(reviewData.mpesaCode);
+        if (!this.mpesaService.validateCodeFormat(normalized)) {
+          throw new BadRequestException('Invalid M-Pesa transaction code format. Must be 10 alphanumeric characters.');
         }
+        mpesaCode = normalized;
+        const result = await this.mpesaService.queryTransactionStatus(normalized);
+        mpesaVerified = result.verified;
       }
 
-      // Generate AI credibility score and fraud detection
-      let fraudDetectionResult: unknown = null;
-      try {
-        // First, check for fraud using dedicated fraud detection service
-        const fraudDetection = await this.fraudDetectionService.analyzeReview(
-          reviewData.comment || '',
-          user.reputation,
-          receiptData,
-          {
-            name: business.name,
-            address: business.location || undefined,
-            phone: business.phone || undefined,
-            email: business.email || undefined,
-          },
-        );
-
-        fraudDetectionResult = {
-          isFraudulent: fraudDetection.isFraudulent,
-          confidence: fraudDetection.confidence,
-          fraudReasons: fraudDetection.fraudReasons,
-          riskScore: fraudDetection.riskScore,
-        };
-
-        if (fraudDetection.isFraudulent) {
-          // Mark as unverified if fraud is detected
-          isVerified = false;
-          credibility = Math.max(0, 100 - fraudDetection.riskScore);
-        } else {
-          // Generate normal credibility score
-          credibility = await this.aiService.generateReviewCredibilityScore(
-            reviewData.comment || '',
-            reviewData.rating,
-            isVerified,
-            user.reputation,
-          );
-        }
-      } catch (error) {
-        this.logger.error(
-          'Error in fraud detection or credibility scoring:',
-          error,
-        );
-        // Use basic credibility calculation as fallback
-        credibility = isVerified ? 80 : 50;
-        fraudDetectionResult = {
-          isFraudulent: false,
-          confidence: 0,
-          fraudReasons: ['Analysis failed'],
-          riskScore: 0,
-          error: error instanceof Error ? error.message : 'Analysis failed',
-        };
-      }
-
-      // Store comprehensive validation result including fraud detection
-      if (validationResult && typeof validationResult === 'object') {
-        validationResult = {
-          ...(validationResult as Record<string, unknown>),
-          fraudDetection: fraudDetectionResult,
-          credibility,
-          analyzedAt: new Date().toISOString(),
-        };
-      } else {
-        validationResult = {
-          fraudDetection: fraudDetectionResult,
-          credibility,
-          analyzedAt: new Date().toISOString(),
-        };
-      }
-
+      // Create the review immediately with pending state
       const review = await this.prisma.review.create({
         data: {
           businessId: reviewData.businessId,
           rating: reviewData.rating,
           comment: reviewData.comment,
-          userId: userId,
+          userId,
           receiptUrl: reviewData.receiptUrl || null,
-          receiptData: receiptData as any,
-          validationResult: validationResult as any,
           amount: reviewData.amount || null,
-          reviewDate: reviewData.reviewDate
-            ? new Date(reviewData.reviewDate)
-            : null,
-          isVerified: isVerified,
-          credibility: credibility,
-          isActive: true, // Explicitly set to ensure review is active
+          reviewDate: reviewData.reviewDate ? new Date(reviewData.reviewDate) : null,
+          mpesaCode,
+          mpesaVerified,
+          isVerified: false,
+          credibility: 0,
+          isActive: true,
+          validationResult: { status: 'pending', queuedAt: new Date().toISOString() } as any,
         },
         include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              reputation: true,
-            },
-          },
-          business: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          user: { select: { id: true, name: true, reputation: true } },
+          business: { select: { id: true, name: true } },
         },
       });
 
-      // Update user's unverified review count
-      if (!isVerified) {
-        // TODO: Uncomment after Prisma client regeneration with new fields
-        // await this.prisma.user.update({
-        //   where: { id: userId },
-        //   data: {
-        //     unverifiedReviewCount: {
-        //       increment: 1,
-        //     },
-        //   },
-        // });
+      // Enqueue async processing (OCR, fraud detection, credibility scoring)
+      const queued = await this.queueService.enqueueReviewProcessing({
+        reviewId: review.id,
+        userId,
+        businessId: reviewData.businessId,
+        comment: reviewData.comment || '',
+        rating: reviewData.rating,
+        receiptUrl: reviewData.receiptUrl,
+        amount: reviewData.amount,
+        reviewDate: reviewData.reviewDate,
+        businessName: business.name,
+        businessAddress: business.location || undefined,
+        businessPhone: business.phone || undefined,
+        businessEmail: business.email || undefined,
+        userReputation: user.reputation,
+      });
 
-        // Check and penalize for spam behavior
-        try {
-          await this.fraudDetectionService.checkAndPenalizeSpamUsers(userId);
-        } catch (error) {
-          // Don't fail the review creation if spam check fails
-        }
+      if (!queued) {
+        // Redis unavailable — process synchronously as fallback
+        this.logger.warn(`Queue unavailable, processing review ${review.id} synchronously`);
+        await this.processReviewSynchronously(review.id, userId, reviewData, user, business);
       }
 
-      // Check if user should be flagged for suspicious behavior
-      try {
-        const flaggingResult =
-          await this.fraudDetectionService.checkUserForFlagging(userId);
-
-        if (flaggingResult.shouldFlag) {
-          await this.fraudDetectionService.flagUser(
-            userId,
-            flaggingResult.flagReason,
-            flaggingResult.riskLevel,
-          );
-        }
-      } catch (error) {
-        // Don't fail the review creation if flagging check fails
-      }
-
-      // Recalculate business trust score after review creation (async, non-blocking)
-      (async () => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        try {
-          const reviewCheck = await this.prisma.review.findUnique({
-            where: { id: review.id },
-            select: { id: true },
-          });
-          
-          if (reviewCheck) {
-            await this.recalculateBusinessTrustScoreInternal(review.businessId);
-          }
-        } catch (error) {
-          // Silently retry once
-          setTimeout(async () => {
-            try {
-              await this.recalculateBusinessTrustScoreInternal(review.businessId);
-            } catch (retryError) {
-              // Fail silently - trust score will be recalculated on next business view
-            }
-          }, 1000);
-        }
-      })();
       return review;
     } catch (error) {
       this.logger.error('Error creating review:', error);
@@ -1451,6 +1392,77 @@ export class UserService {
       }
       throw new InternalServerErrorException('Failed to create review');
     }
+  }
+
+  /**
+   * Synchronous fallback for when Redis/BullMQ is unavailable.
+   */
+  private async processReviewSynchronously(
+    reviewId: string,
+    userId: string,
+    reviewData: CreateReviewDto,
+    user: { reputation: number },
+    business: { name: string; location: string | null; phone: string | null; email: string | null },
+  ): Promise<void> {
+    let isVerified = false;
+    let receiptData: unknown = null;
+    let credibility = 0;
+
+    if (reviewData.receiptUrl) {
+      try {
+        const validation = await this.aiService.validateReceiptForReview(
+          reviewData.receiptUrl,
+          { name: business.name, address: business.location || undefined, phone: business.phone || undefined, email: business.email || undefined },
+          reviewData.amount,
+          reviewData.reviewDate,
+        );
+        isVerified = validation.isValid;
+        receiptData = validation.extractedData;
+      } catch (err) {
+        this.logger.error('Sync receipt validation failed:', err);
+      }
+    }
+
+    try {
+      const fraud = await this.fraudDetectionService.detectFraudNative(
+        reviewData.comment || '',
+        user.reputation,
+        receiptData,
+        { name: business.name },
+      );
+      if (fraud.isFraudulent) {
+        isVerified = false;
+        credibility = Math.max(0, 100 - fraud.riskScore);
+      } else {
+        credibility = await this.aiService.generateReviewCredibilityScore(
+          reviewData.comment || '',
+          reviewData.rating,
+          isVerified,
+          user.reputation,
+        );
+      }
+    } catch (err) {
+      credibility = isVerified ? 80 : 50;
+    }
+
+    await this.prisma.review.update({
+      where: { id: reviewId },
+      data: { isVerified, credibility, receiptData: receiptData as any, validationResult: { status: 'completed_sync', analyzedAt: new Date().toISOString() } as any },
+    });
+
+    if (!isVerified) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { unverifiedReviewCount: { increment: 1 } },
+      });
+    }
+
+    try {
+      const flaggingResult = await this.fraudDetectionService.checkUserForFlagging(userId);
+      if (flaggingResult.shouldFlag) {
+        await this.fraudDetectionService.flagUser(userId, flaggingResult.flagReason, flaggingResult.riskLevel);
+      }
+    } catch { /* non-critical */ }
   }
 
   async getUserReviews(userId: string, page: number = 1, limit: number = 10) {
@@ -1470,6 +1482,17 @@ export class UserService {
                 isVerified: true,
                 isActive: true,
               },
+            },
+            votes: {
+              select: { userId: true, vote: true },
+            },
+            replies: {
+              include: {
+                user: {
+                  select: { id: true, name: true, avatar: true, role: true },
+                },
+              },
+              orderBy: { createdAt: 'asc' },
             },
           },
           orderBy: { createdAt: 'desc' },
@@ -1583,6 +1606,61 @@ export class UserService {
       }
       throw new InternalServerErrorException('Failed to delete review');
     }
+  }
+
+  async voteReview(userId: string, reviewId: string, vote: 'HELPFUL' | 'NOT_HELPFUL') {
+    const review = await this.prisma.review.findUnique({ where: { id: reviewId } });
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+    if (review.userId === userId) {
+      throw new ForbiddenException('You cannot vote on your own review');
+    }
+
+    const existing = await this.prisma.reviewVote.findUnique({
+      where: { reviewId_userId: { reviewId, userId } },
+    });
+
+    let newVote: string | null = vote;
+    if (existing) {
+      if (existing.vote === vote) {
+        // Toggle off
+        await this.prisma.reviewVote.delete({ where: { reviewId_userId: { reviewId, userId } } });
+        newVote = null;
+      } else {
+        // Switch vote
+        await this.prisma.reviewVote.update({
+          where: { reviewId_userId: { reviewId, userId } },
+          data: { vote },
+        });
+      }
+    } else {
+      await this.prisma.reviewVote.create({ data: { reviewId, userId, vote } });
+    }
+
+    const [helpfulCount, notHelpfulCount] = await Promise.all([
+      this.prisma.reviewVote.count({ where: { reviewId, vote: 'HELPFUL' } }),
+      this.prisma.reviewVote.count({ where: { reviewId, vote: 'NOT_HELPFUL' } }),
+    ]);
+
+    const total = helpfulCount + notHelpfulCount;
+    const ratio = total > 0 ? helpfulCount / total : 0.5;
+    const existingCredibility = review.credibility ?? 0;
+    const newCredibility = Math.round((existingCredibility * 0.7) + (ratio * 100 * 0.3));
+    await this.prisma.review.update({ where: { id: reviewId }, data: { credibility: newCredibility } });
+
+    // Notify review author when someone votes on their review
+    if (newVote !== null) {
+      await this.notificationsService.create(
+        review.userId,
+        'REVIEW_VOTE',
+        'New vote on your review',
+        `Someone found your review ${newVote === 'HELPFUL' ? 'helpful' : 'not helpful'}.`,
+        reviewId,
+      );
+    }
+
+    return { helpfulCount, notHelpfulCount, userVote: newVote };
   }
 
   // Fraud Report Management
@@ -1792,17 +1870,29 @@ export class UserService {
           trustScore: true,
           businessCategory: true,
           reviews: {
+            where: { isActive: true },
             include: {
               user: {
                 select: {
                   id: true,
                   name: true,
+                  avatar: true,
                   reputation: true,
                 },
               },
+              votes: {
+                select: { userId: true, vote: true },
+              },
+              replies: {
+                include: {
+                  user: {
+                    select: { id: true, name: true, avatar: true, role: true },
+                  },
+                },
+                orderBy: { createdAt: 'asc' },
+              },
             },
             orderBy: { createdAt: 'desc' },
-            take: 10,
           },
           _count: {
             select: {
@@ -1914,6 +2004,18 @@ export class UserService {
       }
 
       this.logger.log(`Review reply created: ${reply?.id} by user: ${userId}`);
+
+      // Notify review author about the new reply
+      if (review.userId !== userId) {
+        await this.notificationsService.create(
+          review.userId,
+          'REVIEW_REPLY',
+          'New reply to your review',
+          'A business owner replied to your review.',
+          reviewId,
+        );
+      }
+
       return reply;
     } catch (error) {
       this.logger.error('Error creating review reply:', error);
@@ -2090,6 +2192,260 @@ export class UserService {
       }
       throw new InternalServerErrorException('Failed to fetch review replies');
     }
+  }
+
+  // ─── Bookmarks ──────────────────────────────────────────────────────────
+
+  async toggleBookmark(
+    userId: string,
+    businessId: string,
+  ): Promise<{ bookmarked: boolean }> {
+    try {
+      const business = await this.prisma.business.findUnique({
+        where: { id: businessId },
+      });
+      if (!business) {
+        throw new NotFoundException('Business not found');
+      }
+
+      const existing = await this.prisma.bookmark.findUnique({
+        where: { userId_businessId: { userId, businessId } },
+      });
+
+      if (existing) {
+        await this.prisma.bookmark.delete({
+          where: { userId_businessId: { userId, businessId } },
+        });
+        return { bookmarked: false };
+      } else {
+        await this.prisma.bookmark.create({ data: { userId, businessId } });
+        return { bookmarked: true };
+      }
+    } catch (error) {
+      this.logger.error('Error toggling bookmark:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to toggle bookmark');
+    }
+  }
+
+  async getBookmarks(userId: string, page: number = 1, limit: number = 10) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const [bookmarks, total] = await Promise.all([
+        this.prisma.bookmark.findMany({
+          where: { userId },
+          skip,
+          take: limit,
+          include: {
+            business: {
+              include: {
+                trustScore: true,
+                businessCategory: true,
+                _count: { select: { reviews: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.bookmark.count({ where: { userId } }),
+      ]);
+
+      return {
+        bookmarks,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching bookmarks:', error);
+      throw new InternalServerErrorException('Failed to fetch bookmarks');
+    }
+  }
+
+  async removeBookmark(userId: string, businessId: string): Promise<{ message: string }> {
+    try {
+      const existing = await this.prisma.bookmark.findUnique({
+        where: { userId_businessId: { userId, businessId } },
+      });
+
+      if (!existing) {
+        throw new NotFoundException('Bookmark not found');
+      }
+
+      await this.prisma.bookmark.delete({
+        where: { userId_businessId: { userId, businessId } },
+      });
+
+      return { message: 'Bookmark removed successfully' };
+    } catch (error) {
+      this.logger.error('Error removing bookmark:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to remove bookmark');
+    }
+  }
+
+  // ─── Review Flagging ────────────────────────────────────────────────────
+
+  async flagReview(
+    userId: string,
+    reviewId: string,
+    reason: string,
+  ): Promise<{ message: string }> {
+    try {
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      if (review.userId === userId) {
+        throw new ForbiddenException('You cannot flag your own review');
+      }
+
+      await this.prisma.reviewFlag.create({
+        data: { reviewId, userId, reason },
+      });
+
+      this.logger.log(`Review flagged: ${reviewId} by user: ${userId}`);
+      return { message: 'Review flagged successfully' };
+    } catch (error) {
+      this.logger.error('Error flagging review:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      // @@unique constraint violation — already flagged
+      throw new BadRequestException('You have already flagged this review');
+    }
+  }
+
+  // ─── Review Disputes ────────────────────────────────────────────────────
+
+  async disputeReview(
+    userId: string,
+    reviewId: string,
+    reason: string,
+  ): Promise<{ message: string }> {
+    try {
+      const review = await this.prisma.review.findUnique({
+        where: { id: reviewId },
+      });
+
+      if (!review) {
+        throw new NotFoundException('Review not found');
+      }
+
+      if (review.userId === userId) {
+        throw new ForbiddenException('You cannot dispute your own review');
+      }
+
+      await this.prisma.reviewDispute.create({
+        data: { reviewId, userId, reason },
+      });
+
+      this.logger.log(`Review disputed: ${reviewId} by user: ${userId}`);
+      return { message: 'Review dispute submitted successfully' };
+    } catch (error) {
+      this.logger.error('Error disputing review:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      // @@unique on reviewId means one dispute per review
+      throw new BadRequestException('A dispute for this review already exists');
+    }
+  }
+
+  // ─── Leaderboard ────────────────────────────────────────────────────────
+
+  async getLeaderboard(limit: number = 20) {
+    try {
+      const users = await this.prisma.user.findMany({
+        where: { isActive: true },
+        orderBy: { reputation: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+          reputation: true,
+          createdAt: true,
+          _count: { select: { reviews: true } },
+        },
+      });
+
+      return users.map((user, index) => ({
+        rank: index + 1,
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+        reputation: user.reputation,
+        reviewCount: user._count.reviews,
+        memberSince: user.createdAt,
+      }));
+    } catch (error) {
+      this.logger.error('Error fetching leaderboard:', error);
+      throw new InternalServerErrorException('Failed to fetch leaderboard');
+    }
+  }
+
+  async getTrendingBusinesses(limit: number = 6): Promise<any[]> {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const trending = await this.prisma.review.groupBy({
+      by: ['businessId'],
+      where: { createdAt: { gte: sevenDaysAgo }, isActive: true },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
+      take: limit,
+    });
+
+    const businessIds = trending.map((t) => t.businessId);
+    const businesses = await this.prisma.business.findMany({
+      where: { id: { in: businessIds }, isActive: true },
+      include: {
+        trustScore: true,
+        _count: { select: { reviews: true } },
+      },
+    });
+
+    return businessIds
+      .map((id) => {
+        const b = businesses.find((b) => b.id === id);
+        const reviewCount =
+          trending.find((t) => t.businessId === id)?._count?.id || 0;
+        if (!b) return null;
+        return { ...b, weeklyReviewCount: reviewCount };
+      })
+      .filter(Boolean);
+  }
+
+  async updateNotificationPrefs(
+    userId: string,
+    prefs: Record<string, boolean>,
+  ): Promise<any> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { notificationPrefs: prefs },
+      select: { id: true, notificationPrefs: true },
+    });
   }
 
   // Public method to manually recalculate business trust score
@@ -2423,9 +2779,11 @@ export class UserService {
 
   private async getSystemUptime(): Promise<string> {
     try {
-      // This would typically come from a monitoring service
-      // For now, return a placeholder
-      return '99.9%';
+      const seconds = Math.floor(process.uptime());
+      if (seconds < 60) return `${seconds}s`;
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+      return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
     } catch (error) {
       this.logger.error('Error getting system uptime:', error);
       return 'Unknown';
@@ -2476,10 +2834,19 @@ export class UserService {
     }
   }
 
-  private getBackupStatus(): string {
+  private async getBackupStatus(): Promise<string> {
     try {
-      // This would typically check actual backup status
-      return 'Last backup: 2 hours ago';
+      const latest = await this.prisma.user.findFirst({
+        orderBy: { updatedAt: 'desc' },
+        select: { updatedAt: true },
+      });
+      if (!latest) return 'No data';
+      const diffMs = Date.now() - latest.updatedAt.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 60) return `Last activity: ${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `Last activity: ${diffHours}h ago`;
+      return `Last activity: ${Math.floor(diffHours / 24)}d ago`;
     } catch (error) {
       this.logger.error('Error getting backup status:', error);
       return 'Unknown';

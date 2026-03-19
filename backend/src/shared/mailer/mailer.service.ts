@@ -63,7 +63,7 @@ export class MailerService {
       'APP_URL',
       'http://localhost:3000',
     );
-    const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+    const resetUrl = `${appUrl}/auth/reset-password?token=${resetToken}`;
 
     try {
       await this.mailerService.sendMail({
@@ -292,6 +292,41 @@ export class MailerService {
         `Failed to send account status change email to ${email}:`,
         error,
       );
+      throw error;
+    }
+  }
+
+  /**
+   * Send a warning email to a flagged user
+   */
+  async sendUserWarningEmail(
+    email: string,
+    name: string,
+    reason: string,
+    adminNotes?: string,
+  ): Promise<void> {
+    const appUrl = this.configService.get<string>(
+      'APP_URL',
+      'http://localhost:3000',
+    );
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Important Notice Regarding Your CrediScore Account',
+        template: 'user-warning',
+        context: {
+          name,
+          email,
+          reason,
+          adminNotes,
+          appUrl,
+          year: new Date().getFullYear(),
+        },
+      });
+      this.logger.log(`Warning email sent to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send warning email to ${email}:`, error);
       throw error;
     }
   }

@@ -18,7 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<UserWithoutPassword> {
+  async validate(payload: JwtPayload & { iat?: number }): Promise<UserWithoutPassword> {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.userId },
       select: {
@@ -33,6 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         emailVerified: true,
         reputation: true,
         lastLoginAt: true,
+        loggedOutAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -42,6 +43,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found or inactive');
     }
 
-    return user as UserWithoutPassword;
+    // Reject tokens issued before the user's last logout
+    if (user.loggedOutAt && payload.iat) {
+      const tokenIssuedAt = payload.iat * 1000; // Convert seconds to ms
+      if (tokenIssuedAt < user.loggedOutAt.getTime()) {
+        throw new UnauthorizedException('Session expired. Please log in again.');
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { loggedOutAt: _, ...userWithoutLoggedOut } = user;
+    return userWithoutLoggedOut as UserWithoutPassword;
   }
 }

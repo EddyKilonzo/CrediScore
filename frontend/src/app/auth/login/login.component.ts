@@ -47,8 +47,12 @@ export class LoginComponent implements OnInit {
       };
 
       this.authService.login(loginData).subscribe({
-        next: (response) => {
+        next: (response: any) => {
           this.isLoading.set(false);
+          if (response.requires2FA) {
+            this.router.navigate(['/auth/2fa-verify'], { queryParams: { userId: response.userId } });
+            return;
+          }
           this.toastService.success(`Welcome back, ${response.user.name.split(' ')[0]}!`);
           // Redirect based on user role
           this.redirectBasedOnRole(response.user.role);

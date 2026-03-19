@@ -17,6 +17,8 @@ import {
   UploadedFile,
   BadRequestException,
   InternalServerErrorException,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -38,7 +40,12 @@ import {
   UpdateProfileDto,
   CreateReviewReplyDto,
   UpdateReviewReplyDto,
+  VoteReviewDto,
+  FlagReviewDto,
+  DisputeReviewDto,
+  UpdateNotificationPrefsDto,
 } from './dto/user.dto';
+import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { CloudinaryService } from '../shared/cloudinary/cloudinary.service';
@@ -424,6 +431,84 @@ export class UserController {
     return this.userService.deleteReview(req.user.id, reviewId);
   }
 
+  @Post('reviews/:id/vote')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Vote on a review as helpful or not helpful' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  async voteReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') reviewId: string,
+    @Body(ValidationPipe) body: VoteReviewDto,
+  ) {
+    return this.userService.voteReview(req.user.id, reviewId, body.vote);
+  }
+
+  @Post('reviews/:id/flag')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Flag a review' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiResponse({ status: 201, description: 'Review flagged successfully' })
+  @ApiResponse({ status: 400, description: 'Already flagged or own review' })
+  async flagReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') reviewId: string,
+    @Body(ValidationPipe) body: FlagReviewDto,
+  ) {
+    return this.userService.flagReview(req.user.id, reviewId, body.reason);
+  }
+
+  @Post('reviews/:id/dispute')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Dispute a review' })
+  @ApiParam({ name: 'id', description: 'Review ID' })
+  @ApiResponse({ status: 201, description: 'Dispute submitted successfully' })
+  @ApiResponse({ status: 400, description: 'Dispute already exists or own review' })
+  async disputeReview(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') reviewId: string,
+    @Body(ValidationPipe) body: DisputeReviewDto,
+  ) {
+    return this.userService.disputeReview(req.user.id, reviewId, body.reason);
+  }
+
+  // Bookmarks
+  @Post('bookmarks/:businessId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Toggle bookmark for a business' })
+  @ApiParam({ name: 'businessId', description: 'Business ID' })
+  @ApiResponse({ status: 200, description: 'Bookmark toggled' })
+  async toggleBookmark(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('businessId') businessId: string,
+  ) {
+    return this.userService.toggleBookmark(req.user.id, businessId);
+  }
+
+  @Get('bookmarks')
+  @ApiOperation({ summary: 'Get paginated bookmarks for current user' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Bookmarks retrieved successfully' })
+  async getBookmarks(
+    @Request() req: { user: UserWithoutPassword },
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.userService.getBookmarks(req.user.id, page, limit);
+  }
+
+  @Delete('bookmarks/:businessId')
+  @ApiOperation({ summary: 'Remove a bookmark' })
+  @ApiParam({ name: 'businessId', description: 'Business ID' })
+  @ApiResponse({ status: 200, description: 'Bookmark removed' })
+  @ApiResponse({ status: 404, description: 'Bookmark not found' })
+  async removeBookmark(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('businessId') businessId: string,
+  ) {
+    return this.userService.removeBookmark(req.user.id, businessId);
+  }
+
   // Fraud Report Management
   @Post('fraud-reports')
   @HttpCode(HttpStatus.CREATED)
@@ -480,6 +565,41 @@ export class UserController {
     @Query('limit') limit?: number,
   ) {
     return this.userService.getUserFraudReports(req.user.id, page, limit);
+  }
+
+  @Patch('notification-prefs')
+  @ApiOperation({ summary: 'Update notification preferences' })
+  @ApiBody({ type: UpdateNotificationPrefsDto })
+  @ApiResponse({ status: 200, description: 'Notification preferences updated' })
+  async updateNotificationPrefs(
+    @Request() req: { user: UserWithoutPassword },
+    @Body(ValidationPipe) body: UpdateNotificationPrefsDto,
+  ) {
+    return this.userService.updateNotificationPrefs(req.user.id, body as any);
+  }
+}
+
+@ApiTags('User Public')
+@Controller('user')
+export class UserPublicController {
+  constructor(private readonly userService: UserService) {}
+
+  @Public()
+  @Get('leaderboard')
+  @ApiOperation({ summary: 'Get top users by reputation (public)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Leaderboard retrieved successfully' })
+  async getLeaderboard(@Query('limit') limit?: number) {
+    return this.userService.getLeaderboard(limit);
+  }
+
+  @Public()
+  @Get('trending')
+  @ApiOperation({ summary: 'Get trending businesses based on recent review activity (public)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Trending businesses retrieved successfully' })
+  async getTrendingBusinesses(@Query('limit') limit?: number) {
+    return this.userService.getTrendingBusinesses(limit ? +limit : 6);
   }
 }
 

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
@@ -41,7 +42,7 @@ interface Review {
 @Component({
   selector: 'app-moderate-reviews',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './moderate-reviews.component.html',
   styleUrl: './moderate-reviews.component.css'
 })
@@ -52,7 +53,12 @@ export class ModerateReviewsComponent implements OnInit {
   error: string | null = null;
   successMessage: string | null = null;
 
+  // Bulk selection
+  selectedIds = new Set<string>();
+  isBulkProcessing = false;
+
   private readonly API_BASE = 'http://localhost:3000/api/admin/reviews';
+  private readonly BULK_API = 'http://localhost:3000/api/admin/reviews/bulk';
 
   constructor(
     private router: Router,
@@ -183,6 +189,60 @@ export class ModerateReviewsComponent implements OnInit {
       this.error = error.message || 'Failed to reject review';
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  toggleSelect(reviewId: string) {
+    if (this.selectedIds.has(reviewId)) {
+      this.selectedIds.delete(reviewId);
+    } else {
+      this.selectedIds.add(reviewId);
+    }
+  }
+
+  selectAll() {
+    if (this.selectedIds.size === this.reviews.length) {
+      this.selectedIds.clear();
+    } else {
+      this.reviews.forEach(r => this.selectedIds.add(r.id));
+    }
+  }
+
+  get allSelected(): boolean {
+    return this.reviews.length > 0 && this.selectedIds.size === this.reviews.length;
+  }
+
+  async bulkApprove() {
+    if (!this.selectedIds.size || this.isBulkProcessing) return;
+    this.isBulkProcessing = true;
+    this.error = null;
+    try {
+      await this.http.post(this.BULK_API, { reviewIds: Array.from(this.selectedIds), action: 'APPROVE' }).toPromise();
+      this.reviews = this.reviews.filter(r => !this.selectedIds.has(r.id));
+      this.selectedIds.clear();
+      this.successMessage = 'Reviews approved successfully';
+      setTimeout(() => { this.successMessage = null; }, 3000);
+    } catch (err: any) {
+      this.error = err?.error?.message || 'Bulk approve failed';
+    } finally {
+      this.isBulkProcessing = false;
+    }
+  }
+
+  async bulkReject() {
+    if (!this.selectedIds.size || this.isBulkProcessing) return;
+    this.isBulkProcessing = true;
+    this.error = null;
+    try {
+      await this.http.post(this.BULK_API, { reviewIds: Array.from(this.selectedIds), action: 'REJECT' }).toPromise();
+      this.reviews = this.reviews.filter(r => !this.selectedIds.has(r.id));
+      this.selectedIds.clear();
+      this.successMessage = 'Reviews rejected successfully';
+      setTimeout(() => { this.successMessage = null; }, 3000);
+    } catch (err: any) {
+      this.error = err?.error?.message || 'Bulk reject failed';
+    } finally {
+      this.isBulkProcessing = false;
     }
   }
 

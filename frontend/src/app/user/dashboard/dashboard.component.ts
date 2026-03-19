@@ -82,23 +82,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Quick actions based on user role
   quickActions: QuickAction[] = [];
 
-  // Chart data
-  reviewTrendData = [
-    { day: 'Mon', reviews: 4 },
-    { day: 'Tue', reviews: 8 },
-    { day: 'Wed', reviews: 6 },
-    { day: 'Thu', reviews: 12 },
-    { day: 'Fri', reviews: 10 },
-    { day: 'Sat', reviews: 7 },
-    { day: 'Sun', reviews: 5 }
-  ];
-
-  businessCategories = [
-    { name: 'Retail', count: 12, color: 'bg-blue-500' },
-    { name: 'Restaurant', count: 8, color: 'bg-green-500' },
-    { name: 'Services', count: 15, color: 'bg-blue-500' },
-    { name: 'Technology', count: 6, color: 'bg-orange-500' }
-  ];
+  // Chart data — computed from real activity after load
+  reviewTrendData: { day: string; reviews: number }[] = [];
 
   ngOnInit() {
     // Check if user is a business owner and redirect to business dashboard
@@ -202,6 +187,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.setDashboardStats(dashboard);
       this.setRecentActivities(dashboard);
       this.setUserBusinesses(dashboard);
+      this.buildReviewTrendData();
 
       this.isLoading = false;
     } catch (error) {
@@ -245,6 +231,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
       isVerified: business.isVerified ?? false,
       lastActivity: business.lastActivity ? new Date(business.lastActivity) : null,
     }));
+  }
+
+  private buildReviewTrendData() {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const counts: Record<string, number> = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
+    for (const activity of this.recentActivities) {
+      if (activity.type === 'review') {
+        const dayName = days[activity.timestamp.getDay()];
+        counts[dayName] = (counts[dayName] ?? 0) + 1;
+      }
+    }
+    // Order Mon–Sun
+    const ordered = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    this.reviewTrendData = ordered.map(day => ({ day, reviews: counts[day] ?? 0 }));
+  }
+
+  getMaxReviews(): number {
+    return Math.max(...this.reviewTrendData.map(d => d.reviews), 1);
+  }
+
+  getBarHeight(reviews: number): number {
+    return reviews > 0 ? Math.max(6, Math.round((reviews / this.getMaxReviews()) * 160)) : 4;
   }
 
   getTimeframeLabel(): string {
@@ -333,27 +341,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getCustomerReputationLevel(): string {
     const user = this.currentUser();
     if (!user || user.role !== 'user') return '';
-    
-    // Mock reputation calculation - in real app, this would come from backend
-    const mockReputation = Math.floor(Math.random() * 100) + 1;
-    
-    if (mockReputation >= 90) return 'Elite Reviewer';
-    if (mockReputation >= 75) return 'Trusted Member';
-    if (mockReputation >= 60) return 'Active User';
-    if (mockReputation >= 40) return 'Regular User';
+    const rep = user.reputation ?? 0;
+    if (rep >= 90) return 'Elite Reviewer';
+    if (rep >= 75) return 'Trusted Member';
+    if (rep >= 60) return 'Active User';
+    if (rep >= 40) return 'Regular User';
     return 'New Member';
   }
 
   getReputationColor(): string {
     const user = this.currentUser();
     if (!user || user.role !== 'user') return '';
-    
-    const mockReputation = Math.floor(Math.random() * 100) + 1;
-    
-    if (mockReputation >= 90) return 'text-blue-600';
-    if (mockReputation >= 75) return 'text-blue-600';
-    if (mockReputation >= 60) return 'text-green-600';
-    if (mockReputation >= 40) return 'text-yellow-600';
+    const rep = user.reputation ?? 0;
+    if (rep >= 90) return 'text-blue-600';
+    if (rep >= 75) return 'text-blue-600';
+    if (rep >= 60) return 'text-green-600';
+    if (rep >= 40) return 'text-yellow-600';
     return 'text-gray-600';
   }
 

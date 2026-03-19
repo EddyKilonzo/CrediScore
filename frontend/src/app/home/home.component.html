@@ -219,6 +219,80 @@
   </div>
 </section>
 
+<!-- Trending Businesses Section -->
+<section class="py-16 bg-gradient-to-b from-white/60 to-transparent">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between mb-10">
+      <div>
+        <h2 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <i class="uil uil-fire text-orange-500"></i> Trending This Week
+        </h2>
+        <p class="text-gray-500 mt-1">Most reviewed businesses in the last 7 days</p>
+      </div>
+      <a routerLink="/search" class="text-[#2C5270] font-medium hover:underline text-sm">View all →</a>
+    </div>
+
+    <!-- Loading skeletons -->
+    <div *ngIf="trendingLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div *ngFor="let i of [1,2,3,4,5,6]" class="bg-white/80 rounded-xl p-5 shadow-sm animate-pulse">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 bg-gray-200 rounded-xl flex-shrink-0"></div>
+          <div class="flex-1">
+            <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
+            <div class="h-3 bg-gray-100 rounded w-1/3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!trendingLoading && trendingBusinesses.length === 0" class="text-center py-10 text-gray-500">
+      <p>No trending businesses yet. Check back soon!</p>
+    </div>
+
+    <!-- Trending grid -->
+    <div *ngIf="!trendingLoading && trendingBusinesses.length > 0"
+         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <a *ngFor="let business of trendingBusinesses; let i = index"
+         [routerLink]="['/business', business.id]"
+         class="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-sm hover:shadow-md border border-gray-100 hover:border-[#2C5270]/20 transition-all duration-200 flex items-center gap-4 group">
+        <!-- Rank badge -->
+        <div class="flex-shrink-0 flex flex-col items-center gap-2">
+          <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                [class.bg-yellow-400]="i === 0" [class.text-yellow-900]="i === 0"
+                [class.bg-gray-300]="i === 1" [class.text-gray-700]="i === 1"
+                [class.bg-orange-300]="i === 2" [class.text-orange-900]="i === 2"
+                [class.bg-gray-100]="i > 2" [class.text-gray-500]="i > 2">
+            {{ i + 1 }}
+          </span>
+          <!-- Logo or initials -->
+          <div class="w-12 h-12 rounded-xl overflow-hidden bg-[#2C5270]/10 flex items-center justify-center text-[#2C5270] font-bold text-sm">
+            <img *ngIf="business.logo" [src]="business.logo" [alt]="business.name" class="w-full h-full object-cover">
+            <span *ngIf="!business.logo">{{ getTrendingInitials(business.name) }}</span>
+          </div>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold text-gray-900 truncate group-hover:text-[#2C5270] transition-colors">{{ business.name }}</h3>
+            <i *ngIf="business.isVerified" class="uil uil-shield-check text-green-500 flex-shrink-0" title="Verified"></i>
+          </div>
+          <p *ngIf="business.category" class="text-gray-500 text-xs mt-0.5">{{ business.category }}</p>
+          <div class="flex items-center gap-3 mt-2">
+            <span *ngIf="business.trustScore" class="text-xs font-bold px-2 py-0.5 rounded"
+                  [style.background-color]="getTrendingGradeColor(business.trustScore.grade) + '20'"
+                  [style.color]="getTrendingGradeColor(business.trustScore.grade)">
+              {{ business.trustScore.grade }}
+            </span>
+            <span class="text-xs text-orange-600 font-medium flex items-center gap-1">
+              <i class="uil uil-fire"></i> {{ business.weeklyReviewCount }} reviews this week
+            </span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- Statistics Section - Trusted by Thousands -->
 <section class="py-20 bg-gradient-to-b from-white/80 to-gray-50/70 backdrop-blur-sm">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1073,7 +1147,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="James Mwangi" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/men/54.jpg" alt="James Mwangi" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1119,7 +1193,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Amina Kamau" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Amina Kamau" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1165,7 +1239,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/men/52.jpg" alt="Peter Omondi" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/men/61.jpg" alt="Peter Omondi" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1211,7 +1285,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/women/65.jpg" alt="Sarah Muthoni" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/women/82.jpg" alt="Sarah Muthoni" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1257,7 +1331,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/men/22.jpg" alt="David Wanjiru" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/men/67.jpg" alt="David Wanjiru" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1303,7 +1377,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/women/28.jpg" alt="Lucy Njeri" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/women/79.jpg" alt="Lucy Njeri" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1349,7 +1423,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="James Mwangi" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/men/54.jpg" alt="James Mwangi" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1390,7 +1464,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Amina Kamau" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="Amina Kamau" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>
@@ -1431,7 +1505,7 @@
                 <div class="flex items-center space-x-3">
                   <div class="relative">
                     <div class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
-                      <img src="https://randomuser.me/api/portraits/men/52.jpg" alt="Peter Omondi" class="w-full h-full object-cover">
+                      <img src="https://randomuser.me/api/portraits/men/61.jpg" alt="Peter Omondi" class="w-full h-full object-cover">
                     </div>
                     <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                       <i class="uil uil-check-circle text-emerald-500 text-base"></i>

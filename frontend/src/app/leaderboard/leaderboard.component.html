@@ -1,0 +1,96 @@
+<div class="leaderboard-container">
+  <div class="leaderboard-header">
+    <h1 class="leaderboard-title">
+      <i class="uil uil-trophy"></i>
+      Top Reviewers
+    </h1>
+    <p class="leaderboard-subtitle">Our most trusted community members ranked by reputation</p>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading leaderboard...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error && !isLoading" class="error-state">
+    <i class="uil uil-exclamation-circle"></i>
+    <p>{{ error }}</p>
+    <button (click)="loadLeaderboard()" class="retry-btn">Try Again</button>
+  </div>
+
+  <!-- Leaderboard Table -->
+  <div *ngIf="!isLoading && !error" class="leaderboard-content">
+
+    <!-- Top 3 podium -->
+    <div class="podium" *ngIf="users.length >= 3">
+      <div class="podium-item second" *ngIf="users[1]">
+        <div class="podium-avatar">
+          <img *ngIf="users[1].avatar" [src]="users[1].avatar" [alt]="users[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!users[1].avatar" class="avatar-placeholder">{{ getUserInitials(users[1].name) }}</div>
+        </div>
+        <div class="podium-rank">🥈</div>
+        <div class="podium-name">{{ users[1].name }}</div>
+        <div class="podium-rep">{{ users[1].reputation }} pts</div>
+        <div class="podium-bar second-bar"></div>
+      </div>
+      <div class="podium-item first" *ngIf="users[0]">
+        <div class="podium-crown">👑</div>
+        <div class="podium-avatar">
+          <img *ngIf="users[0].avatar" [src]="users[0].avatar" [alt]="users[0].name" class="avatar-img" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!users[0].avatar" class="avatar-placeholder gold">{{ getUserInitials(users[0].name) }}</div>
+        </div>
+        <div class="podium-rank">🥇</div>
+        <div class="podium-name">{{ users[0].name }}</div>
+        <div class="podium-rep">{{ users[0].reputation }} pts</div>
+        <div class="podium-bar first-bar"></div>
+      </div>
+      <div class="podium-item third" *ngIf="users[2]">
+        <div class="podium-avatar">
+          <img *ngIf="users[2].avatar" [src]="users[2].avatar" [alt]="users[2].name" class="avatar-img" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!users[2].avatar" class="avatar-placeholder">{{ getUserInitials(users[2].name) }}</div>
+        </div>
+        <div class="podium-rank">🥉</div>
+        <div class="podium-name">{{ users[2].name }}</div>
+        <div class="podium-rep">{{ users[2].reputation }} pts</div>
+        <div class="podium-bar third-bar"></div>
+      </div>
+    </div>
+
+    <!-- Full list -->
+    <div class="leaderboard-table">
+      <div class="table-header">
+        <span class="col-rank">Rank</span>
+        <span class="col-user">User</span>
+        <span class="col-reviews">Reviews</span>
+        <span class="col-rep">Reputation</span>
+      </div>
+      <div *ngFor="let user of users" class="table-row" [class.top-three]="user.rank <= 3">
+        <span class="col-rank">
+          <span class="rank-badge" [style.background-color]="getRankBadgeColor(user.rank) + '20'" [style.color]="getRankBadgeColor(user.rank)">
+            {{ user.rank <= 3 ? getRankIcon(user.rank) : '#' + user.rank }}
+          </span>
+        </span>
+        <span class="col-user">
+          <div class="user-info">
+            <div class="user-avatar-sm">
+              <img *ngIf="user.avatar" [src]="user.avatar" [alt]="user.name" (error)="$event.target.style.display='none'" />
+              <span *ngIf="!user.avatar">{{ getUserInitials(user.name) }}</span>
+            </div>
+            <span class="user-name">{{ user.name }}</span>
+          </div>
+        </span>
+        <span class="col-reviews">{{ user.reviewCount ?? 0 }}</span>
+        <span class="col-rep">
+          <span class="rep-badge">{{ user.reputation }} pts</span>
+        </span>
+      </div>
+    </div>
+
+    <div *ngIf="users.length === 0" class="empty-state">
+      <i class="uil uil-trophy"></i>
+      <p>No reviewers yet. Be the first to write a review!</p>
+    </div>
+  </div>
+</div>
