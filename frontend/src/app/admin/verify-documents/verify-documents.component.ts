@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AdminService } from '../../core/services/admin.service';
+import { environment } from '../../../../environments/environment';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -58,7 +59,7 @@ export class VerifyDocumentsComponent implements OnInit {
   successMessage = signal<string | null>(null);
   showAIInsights = signal(false);
 
-  private readonly API_BASE = 'http://localhost:3000/api/admin/documents';
+  private readonly API_BASE = `${environment.apiUrl}/api/admin/documents`;
 
   ngOnInit(): void {
     // Scroll to top when component loads

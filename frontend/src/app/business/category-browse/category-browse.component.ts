@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface CategoryBusiness {
   id: string;
@@ -36,7 +37,7 @@ export class CategoryBrowseComponent implements OnInit {
   total = 0;
   readonly limit = 12;
 
-  private readonly API = 'http://localhost:3000/api';
+  private readonly API = `${environment.apiUrl}/api`;
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {

@@ -7,6 +7,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { BusinessService, Business, BusinessStatus } from '../../core/services/business.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ReviewService } from '../../core/services/review.service';
+import { environment } from '../../../environments/environment';
 import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
 import { ImageLightboxComponent } from '../../shared/components/image-lightbox/image-lightbox.component';
 import { signal } from '@angular/core';
@@ -108,7 +109,7 @@ export class BusinessViewComponent implements OnInit {
   isSubmitting: boolean = false;
   reviewSubmitted: boolean = false;
   
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private readonly MAX_IMAGES = 5;
 

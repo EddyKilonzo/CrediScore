@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 interface Review {
   id: string;
@@ -57,8 +58,8 @@ export class ModerateReviewsComponent implements OnInit {
   selectedIds = new Set<string>();
   isBulkProcessing = false;
 
-  private readonly API_BASE = 'http://localhost:3000/api/admin/reviews';
-  private readonly BULK_API = 'http://localhost:3000/api/admin/reviews/bulk';
+  private readonly API_BASE = `${environment.apiUrl}/api/admin/reviews`;
+  private readonly BULK_API = `${environment.apiUrl}/api/admin/reviews/bulk`;
 
   constructor(
     private router: Router,

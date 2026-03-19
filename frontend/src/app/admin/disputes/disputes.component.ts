@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 interface ReviewFlag {
   id: string;
@@ -32,7 +33,7 @@ interface ReviewDispute {
 })
 export class DisputesComponent implements OnInit {
   private http = inject(HttpClient);
-  private readonly API_URL = 'http://localhost:3000/api/admin';
+  private readonly API_URL = `${environment.apiUrl}/api/admin`;
 
   activeTab: 'flags' | 'disputes' = 'flags';
 

@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient, HttpParams, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 export interface AdminDashboardStats {
   userStats: {
@@ -211,7 +212,7 @@ export interface VerifyDocumentDto {
   providedIn: 'root'
 })
 export class AdminService {
-  private readonly API_URL = 'http://localhost:3000/api';
+  private readonly API_URL = `${environment.apiUrl}/api`;
   
   // Signals for reactive state
   public isLoading = signal(false);
