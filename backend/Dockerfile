@@ -26,8 +26,8 @@ RUN npm prune --omit=dev
 # ── Production stage ──────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 
-# Install OpenSSL so Prisma can detect the version and load the correct engine binary
-RUN apk add --no-cache openssl
+# Install OpenSSL 1.1 compat so the Prisma linux-musl engine binary can load libssl.so.1.1
+RUN apk add --no-cache openssl openssl1.1-compat
 
 WORKDIR /app
 
