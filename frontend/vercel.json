@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist/frontend/browser",
-  "installCommand": "npm install --legacy-peer-deps",
-  "framework": null
+  "installCommand": "npm install",
+  "framework": "angular"
 }
