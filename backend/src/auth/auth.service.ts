@@ -121,23 +121,16 @@ export class AuthService {
         `User created successfully: ${user.id} with role: ${user.role}`,
       );
 
-      // Send welcome email with verification code
-      try {
-        await this.mailerService.sendWelcomeEmail(
-          user.email,
-          user.name,
-          emailVerificationCode,
-        );
-        this.logger.log(
-          `Welcome email with verification code sent to ${user.email}`,
-        );
-      } catch (emailError) {
-        this.logger.error(
-          `Failed to send welcome email to ${user.email}:`,
-          emailError,
-        );
-        // Don't throw error - user creation was successful
-      }
+      // Send welcome email — fire-and-forget so it never delays the response
+      this.mailerService.sendWelcomeEmail(
+        user.email,
+        user.name,
+        emailVerificationCode,
+      ).then(() => {
+        this.logger.log(`Welcome email sent to ${user.email}`);
+      }).catch((emailError) => {
+        this.logger.error(`Failed to send welcome email to ${user.email}:`, emailError);
+      });
 
       return {
         id: user.id,
@@ -709,23 +702,16 @@ export class AuthService {
         data: updateVerificationData,
       });
 
-      // Send verification email
-      try {
-        await this.mailerService.sendEmailVerification(
-          user.email,
-          user.name,
-          emailVerificationCode,
-        );
+      // Send verification email — fire-and-forget so it never delays the response
+      this.mailerService.sendEmailVerification(
+        user.email,
+        user.name,
+        emailVerificationCode,
+      ).then(() => {
         this.logger.log(`Verification code resent to ${user.email}`);
-      } catch (emailError) {
-        this.logger.error(
-          `Failed to send verification email to ${user.email}:`,
-          emailError,
-        );
-        throw new InternalServerErrorException(
-          'Failed to send verification email.',
-        );
-      }
+      }).catch((emailError) => {
+        this.logger.error(`Failed to send verification email to ${user.email}:`, emailError);
+      });
 
       return {
         message: 'Verification code sent to your email.',

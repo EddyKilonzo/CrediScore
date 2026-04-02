@@ -127,7 +127,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Business data
   currentBusiness: Business | null = null;
-  cachedReputationLevel: string = '';
 
   // Dashboard data
   onboardingSteps: OnboardingStep[] = [
@@ -1382,24 +1381,12 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   getBusinessReputationLevel(): string {
-    const user = this.currentUser();
-    if (!user || user.role !== 'business') return '';
-    
-    // Return cached value if available
-    if (this.cachedReputationLevel) {
-      return this.cachedReputationLevel;
-    }
-    
-    // Generate and cache reputation level only once
-    const mockReputation = Math.floor(Math.random() * 100) + 1;
-    
-    if (mockReputation >= 90) this.cachedReputationLevel = 'Elite Business';
-    else if (mockReputation >= 75) this.cachedReputationLevel = 'Trusted Partner';
-    else if (mockReputation >= 60) this.cachedReputationLevel = 'Verified Business';
-    else if (mockReputation >= 40) this.cachedReputationLevel = 'Active Business';
-    else this.cachedReputationLevel = 'New Business';
-    
-    return this.cachedReputationLevel;
+    const score = this.currentBusiness?.trustScore ?? 0;
+    if (score >= 90) return 'Elite Business';
+    if (score >= 75) return 'Trusted Partner';
+    if (score >= 60) return 'Verified Business';
+    if (score >= 40) return 'Active Business';
+    return 'New Business';
   }
 
   // Location Picker Methods
