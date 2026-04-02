@@ -1240,6 +1240,9 @@ export class AdminService {
         data: updateData,
       });
 
+      // Recalculate trust score — verification status is a scoring factor
+      await this.recalculateBusinessTrustScore(businessId);
+
       this.logger.log(
         `Business status updated: ${businessId} -> ${updateStatusDto.status} by admin: ${adminUserId}`,
       );
@@ -1368,6 +1371,9 @@ export class AdminService {
           verificationNotes: 'Approved by admin',
         },
       });
+
+      // Recalculate trust score now that a document is verified
+      await this.recalculateBusinessTrustScore(document.businessId);
 
       this.logger.log(
         `Document approved: ${documentId} by admin: ${adminUserId}`,
