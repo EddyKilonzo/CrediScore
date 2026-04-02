@@ -10,22 +10,29 @@ import { MailerService } from './mailer.service';
     NestMailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => {
+        const smtpHost = configService.get<string>('SMTP_HOST') || 'smtp-relay.brevo.com';
+        const smtpPort = parseInt(configService.get<string>('SMTP_PORT') || '587', 10);
+        const smtpUser = configService.get<string>('SMTP_USER') || '';
+        const smtpPass = configService.get<string>('SMTP_PASS') || '';
+        const smtpFrom = configService.get<string>('SMTP_FROM') ||
+          `CrediScore <${configService.get<string>('SENDER_EMAIL') || 'noreply@crediscore.com'}>`;
+
+        return {
         transport: {
-          host: configService.get<string>('SMTP_HOST') || configService.get<string>('MAIL_HOST') || 'smtp-relay.brevo.com',
-          port: parseInt(configService.get<string>('SMTP_PORT') || configService.get<string>('MAIL_PORT') || '587', 10),
-          secure: false,
-          requireTLS: true,
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
           auth: {
-            user: configService.get<string>('SMTP_USER') || configService.get<string>('MAIL_USER') || '',
-            pass: configService.get<string>('SMTP_PASS') || configService.get<string>('MAIL_PASSWORD') || '',
+            user: smtpUser,
+            pass: smtpPass,
           },
           tls: {
             rejectUnauthorized: false,
           },
         },
         defaults: {
-          from: configService.get<string>('SMTP_FROM') || `"CrediScore" <${configService.get<string>('SENDER_EMAIL') || 'noreply@crediscore.com'}>`,
+          from: smtpFrom,
         },
         template: {
           dir: join(__dirname, 'templates'),
@@ -34,7 +41,8 @@ import { MailerService } from './mailer.service';
             strict: false,
           },
         },
-      }),
+        };
+      },
     }),
   ],
   providers: [MailerService],
