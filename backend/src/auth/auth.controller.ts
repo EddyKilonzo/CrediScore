@@ -62,6 +62,9 @@ interface RequestWithSession {
   session: Record<string, SessionData>;
 }
 
+// In-memory store for OAuth sessions — no cookie dependency for cross-origin fetch
+const oauthSessionStore = new Map<string, SessionData>();
+
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -246,12 +249,12 @@ export class AuthController {
       // Generate a unique session ID for this OAuth flow
       const sessionId = `oauth_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Store the full login response in session (server-side storage)
-      req.session[sessionId] = {
+      // Store in module-level Map — no cookie required to retrieve
+      oauthSessionStore.set(sessionId, {
         data: loginResponse,
         timestamp: Date.now(),
         expires: Date.now() + 5 * 60 * 1000, // 5 minutes expiration
-      };
+      });
 
       // Redirect to frontend with only the session ID
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
@@ -283,7 +286,7 @@ export class AuthController {
     @Param('sessionId') sessionId: string,
   ) {
     try {
-      const sessionData = req.session[sessionId];
+      const sessionData = oauthSessionStore.get(sessionId);
 
       if (!sessionData) {
         return res.status(404).json({ error: 'Session not found' });
@@ -291,12 +294,12 @@ export class AuthController {
 
       // Check if session has expired
       if (Date.now() > sessionData.expires) {
-        delete req.session[sessionId]; // Clean up expired session
+        oauthSessionStore.delete(sessionId);
         return res.status(404).json({ error: 'Session expired' });
       }
 
-      // Clean up the session after retrieving data
-      delete req.session[sessionId];
+      // Clean up after retrieval (one-time use)
+      oauthSessionStore.delete(sessionId);
 
       return res.json(sessionData.data);
     } catch (error) {
