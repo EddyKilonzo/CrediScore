@@ -1,5 +1,109 @@
 /* Home Component - Optimized Styles */
 
+/* ── Trusted Businesses Marquee ─────────────────────────────── */
+.trusted-marquee-wrapper {
+  overflow: hidden;
+  width: 100%;
+  /* fade edges */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 6%, black 94%, transparent 100%);
+}
+
+.trusted-marquee-track {
+  display: flex;
+  gap: 1rem;
+  width: max-content;
+  animation: marquee-scroll 40s linear infinite;
+  padding: 0.5rem 0;
+}
+
+.trusted-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.trusted-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 0.875rem 1.25rem;
+  min-width: 260px;
+  max-width: 280px;
+  box-shadow: 0 2px 8px rgba(62,106,138,0.08);
+  transition: box-shadow 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.trusted-card:hover {
+  box-shadow: 0 6px 20px rgba(62,106,138,0.18);
+  transform: translateY(-2px);
+}
+
+.trusted-card-logo {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #e8eef3, #c5d6e3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.trusted-card-initials {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #3E6A8A;
+}
+
+.trusted-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Shimmer loading cards */
+.trusted-card-shimmer {
+  min-width: 260px;
+  height: 84px;
+  border-radius: 1rem;
+  background: linear-gradient(90deg, #f0f4f8 25%, #e2eaf2 50%, #f0f4f8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Dark mode */
+html[data-theme="dark"] .trusted-card {
+  background: #1e2f3d !important;
+  border-color: #2d4255 !important;
+}
+
+html[data-theme="dark"] .trusted-card-logo {
+  background: linear-gradient(135deg, #1a2733, #243647) !important;
+}
+
+html[data-theme="dark"] .trusted-card-initials {
+  color: #9bb3c8 !important;
+}
+
+html[data-theme="dark"] .trusted-card-shimmer {
+  background: linear-gradient(90deg, #1e2f3d 25%, #243647 50%, #1e2f3d 75%) !important;
+  background-size: 200% 100% !important;
+}
+
 /* Parallax */
 .parallax-bg {
   will-change: transform;

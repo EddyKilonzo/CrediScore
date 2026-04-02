@@ -151,7 +151,7 @@ export class OCRService {
   } {
     try {
       const hasOcrKey = !!this.apiKey;
-      const hasOpenAiKey = !!process.env.OPENAI_API_KEY;
+      const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
       const googleVisionHealth = this.googleVisionService.healthCheck();
 
       // Check if at least one OCR service is available
@@ -165,11 +165,10 @@ export class OCRService {
         };
       }
 
-      if (!hasOpenAiKey) {
+      if (!hasAnthropicKey) {
         return {
           status: 'warning',
-          message:
-            'OpenAI API key not configured - AI analysis will use fallback',
+          message: 'Anthropic API key not configured - AI analysis will use fallback',
           configured: false,
         };
       }
@@ -683,46 +682,42 @@ export class OCRService {
    */
   private async callOpenAI(prompt: string): Promise<string> {
     try {
-      const openaiApiKey = process.env.OPENAI_API_KEY;
-      if (!openaiApiKey) {
-        this.logger.error('OpenAI API key not configured');
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicApiKey) {
+        this.logger.error('Anthropic API key not configured');
         throw new Error(
-          'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.',
+          'Anthropic API key not configured. Please set ANTHROPIC_API_KEY environment variable.',
         );
       }
 
-      this.logger.log('Calling OpenAI API for document analysis');
+      this.logger.log('Calling Claude API for document analysis');
 
-      const response = await axios.post<OpenAIResponse>(
-        'https://api.openai.com/v1/chat/completions',
+      const response = await axios.post<{ content: Array<{ text: string }> }>(
+        'https://api.anthropic.com/v1/messages',
         {
-          model: 'gpt-3.5-turbo',
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1024,
+          system: 'You are an expert document analyst specializing in business document verification. Always respond with valid JSON only, no markdown.',
           messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert document analyst specializing in business document verification. Always respond with valid JSON.',
-            },
             {
               role: 'user',
               content: prompt,
             },
           ],
-          max_tokens: 1000,
-          temperature: 0.1,
         },
         {
           headers: {
-            Authorization: `Bearer ${openaiApiKey}`,
+            'x-api-key': anthropicApiKey,
+            'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json',
           },
-          timeout: 60000, // Increased from 30s to 60s for slow networks
+          timeout: 60000,
         },
       );
 
-      return response.data.choices[0].message.content;
+      return response.data.content[0].text;
     } catch (error) {
-      this.logger.error('OpenAI API call failed:', error);
+      this.logger.error('Claude API call failed:', error);
       throw error;
     }
   }

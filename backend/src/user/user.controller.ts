@@ -601,6 +601,15 @@ export class UserPublicController {
   async getTrendingBusinesses(@Query('limit') limit?: number) {
     return this.userService.getTrendingBusinesses(limit ? +limit : 6);
   }
+
+  @Public()
+  @Get('top-trusted')
+  @ApiOperation({ summary: 'Get top verified businesses sorted by trust score (public)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Top trusted businesses retrieved successfully' })
+  async getTopTrustedBusinesses(@Query('limit') limit?: number) {
+    return this.userService.getTopTrustedBusinesses(limit ? +limit : 12);
+  }
 }
 
 @ApiTags('Business')

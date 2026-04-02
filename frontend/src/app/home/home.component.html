@@ -620,262 +620,86 @@
   </div>
 </section>
 <!-- Top Trusted Businesses Section -->
-<section class="py-24 bg-white/90 backdrop-blur-md relative overflow-hidden">
-  <!-- Background Decoration -->
+<section class="py-20 bg-white/90 backdrop-blur-md relative overflow-hidden">
   <div class="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-primary-50 to-transparent opacity-30"></div>
-  
+
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
     <!-- Section Header -->
-    <div class="text-center mb-16">
+    <div class="text-center mb-12">
       <div class="inline-flex items-center px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold mb-6 fade-in-up">
-        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
+        <i class="uil uil-shield-check text-base mr-2"></i>
         Top Rated
       </div>
-      <h2 class="text-5xl font-bold text-gray-900 mb-6 leading-tight fade-in-up-delay-1">
+      <h2 class="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-tight fade-in-up-delay-1">
         Top Trusted Businesses
       </h2>
-      <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed fade-in-up-delay-2">
-        Discover Kenya's most trusted businesses with the highest verification scores and customer satisfaction.
+      <p class="text-lg text-gray-600 max-w-2xl mx-auto fade-in-up-delay-2">
+        Kenya's highest-scoring verified businesses, ranked by trust score and customer satisfaction.
       </p>
     </div>
+  </div>
 
-    <!-- Business Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-      <!-- Business Card 1: Safaricom -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-3">
-        <!-- Gradient Background with Logo -->
-        <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
-          <!-- Top Verified Badge -->
-          <div class="flex justify-center mb-4">
-            <span class="inline-flex items-center px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold text-white">
-              <i class="uil uil-shield-check text-sm mr-1"></i>
-              Verified Business
-            </span>
-            </div>
-          
-          <!-- Logo Container -->
-          <div class="flex justify-center items-center h-32">
-            <div class="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center p-4 group-hover:scale-105 transition-transform duration-300">
-              <img src="/images/saf.png" alt="Safaricom Logo" class="w-full h-full object-contain">
-            </div>
-            </div>
+  <!-- Marquee — full width, no horizontal padding -->
+  <div class="trusted-marquee-wrapper" *ngIf="!topBusinessesLoading && topBusinesses.length > 0">
+    <div class="trusted-marquee-track">
+      <!-- Render twice for seamless loop -->
+      <ng-container *ngFor="let pass of [0,1]">
+        <div
+          *ngFor="let biz of topBusinesses"
+          class="trusted-card group"
+          [routerLink]="['/businesses', biz.id]"
+          style="cursor:pointer">
+
+          <!-- Logo / initials -->
+          <div class="trusted-card-logo">
+            <img *ngIf="biz.logo" [src]="biz.logo" [alt]="biz.name" class="w-full h-full object-contain rounded-xl">
+            <span *ngIf="!biz.logo" class="trusted-card-initials">{{ getTopInitials(biz.name) }}</span>
           </div>
 
-        <!-- Business Info Section -->
-        <div class="bg-white px-6 py-6">
-          <!-- Business Name with Verification -->
-          <div class="flex items-center justify-center mb-2">
-            <h3 class="text-xl font-bold text-gray-900">Safaricom Limited</h3>
-            <i class="uil uil-check-circle text-emerald-500 text-xl ml-2"></i>
+          <!-- Info -->
+          <div class="trusted-card-body">
+            <div class="flex items-center gap-1 mb-1">
+              <span class="font-bold text-gray-900 text-sm leading-tight truncate max-w-[140px]">{{ biz.name }}</span>
+              <i class="uil uil-check-circle text-emerald-500 text-base flex-shrink-0"></i>
             </div>
-
-          <p class="text-sm text-gray-500 text-center mb-4">
-            Telecommunications leader in Kenya
-          </p>
-
-          <!-- Stats Row -->
-          <div class="flex items-center justify-between py-4 border-t border-b border-gray-100 mb-4">
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-users-alt text-primary text-lg mr-2"></i>
-              <span class="text-sm font-semibold">2.4K</span>
-              </div>
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-star text-yellow-400 text-lg mr-2"></i>
-              <span class="text-sm font-semibold">4.8/5</span>
-            </div>
-            <div class="flex items-center">
-              <span class="text-2xl font-bold text-primary">92%</span>
-          </div>
-        </div>
-
-          <!-- Action Button -->
-          <button class="w-full py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center">
-            <span>View Profile</span>
-            <i class="uil uil-plus text-lg ml-2"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Business Card 2: Equity Bank -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-4">
-        <!-- Gradient Background with Logo -->
-        <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
-          <!-- Top Verified Badge -->
-          <div class="flex justify-center mb-4">
-            <span class="inline-flex items-center px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold text-white">
-              <i class="uil uil-shield-check text-sm mr-1"></i>
-              Verified Business
-            </span>
-            </div>
-          
-          <!-- Logo Container -->
-          <div class="flex justify-center items-center h-32">
-            <div class="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center p-4 group-hover:scale-105 transition-transform duration-300">
-              <div class="text-center">
-                <div class="text-lg font-bold text-primary leading-tight">EQUITY<br/>BANK</div>
-                <i class="uil uil-university text-primary text-xl mt-1"></i>
-              </div>
-            </div>
+            <p class="text-xs text-gray-500 truncate mb-2">{{ biz.category }}</p>
+            <div class="flex items-center gap-3">
+              <span
+                class="text-xs font-bold px-2 py-0.5 rounded-full"
+                [style.background-color]="getTopGradeColor(biz.trustScore?.grade || '') + '20'"
+                [style.color]="getTopGradeColor(biz.trustScore?.grade || '')">
+                {{ biz.trustScore?.grade || 'N/A' }}
+              </span>
+              <span class="text-xs text-gray-500">
+                <i class="uil uil-users-alt mr-1"></i>{{ biz.reviewCount }}
+              </span>
+              <span class="text-xs font-semibold text-primary">{{ biz.trustScore?.score || 0 }}%</span>
             </div>
           </div>
-
-        <!-- Business Info Section -->
-        <div class="bg-white px-6 py-6">
-          <!-- Business Name with Verification -->
-          <div class="flex items-center justify-center mb-2">
-            <h3 class="text-xl font-bold text-gray-900">Equity Bank</h3>
-            <i class="uil uil-check-circle text-emerald-500 text-xl ml-2"></i>
-            </div>
-
-          <p class="text-sm text-gray-500 text-center mb-4">
-            Banking & Financial Services
-          </p>
-
-          <!-- Stats Row -->
-          <div class="flex items-center justify-between py-4 border-t border-b border-gray-100 mb-4">
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-users-alt text-primary text-lg mr-2"></i>
-              <span class="text-sm font-semibold">1.8K</span>
-              </div>
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-star text-yellow-400 text-lg mr-2"></i>
-              <span class="text-sm font-semibold">4.6/5</span>
-            </div>
-            <div class="flex items-center">
-              <span class="text-2xl font-bold text-primary">89%</span>
-          </div>
         </div>
-
-          <!-- Action Button -->
-          <button class="w-full py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center">
-            <span>View Profile</span>
-            <i class="uil uil-plus text-lg ml-2"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Business Card 3: KCB Bank -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-5">
-        <!-- Gradient Background with Logo -->
-        <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
-          <!-- Top Verified Badge -->
-          <div class="flex justify-center mb-4">
-            <span class="inline-flex items-center px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold text-white">
-              <i class="uil uil-shield-check text-sm mr-1"></i>
-              Verified Business
-            </span>
-            </div>
-          
-          <!-- Logo Container -->
-          <div class="flex justify-center items-center h-32">
-            <div class="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center p-4 group-hover:scale-105 transition-transform duration-300">
-              <img src="/images/kcb.png" alt="KCB Bank Logo" class="w-full h-full object-contain">
-            </div>
-            </div>
-          </div>
-
-        <!-- Business Info Section -->
-        <div class="bg-white px-6 py-6">
-          <!-- Business Name with Verification -->
-          <div class="flex items-center justify-center mb-2">
-            <h3 class="text-xl font-bold text-gray-900">KCB Bank</h3>
-            <i class="uil uil-check-circle text-emerald-500 text-xl ml-2"></i>
-            </div>
-
-          <p class="text-sm text-gray-500 text-center mb-4">
-            Trusted Banking Partner
-          </p>
-
-          <!-- Stats Row -->
-          <div class="flex items-center justify-between py-4 border-t border-b border-gray-100 mb-4">
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-users-alt text-primary text-lg mr-2"></i>
-              <span class="text-sm font-semibold">1.5K</span>
-              </div>
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-star text-yellow-400 text-lg mr-2"></i>
-              <span class="text-sm font-semibold">4.5/5</span>
-            </div>
-            <div class="flex items-center">
-              <span class="text-2xl font-bold text-primary">87%</span>
-          </div>
-        </div>
-
-          <!-- Action Button -->
-          <button class="w-full py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center">
-            <span>View Profile</span>
-            <i class="uil uil-plus text-lg ml-2"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Business Card 4: Naivas Supermarket -->
-      <div class="group relative rounded-3xl shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden business-card fade-in-up-delay-6">
-        <!-- Gradient Background with Logo -->
-        <div class="relative h-64 bg-gradient-to-br from-primary via-primary-500 to-primary-700 p-6">
-          <!-- Top Verified Badge -->
-          <div class="flex justify-center mb-4">
-            <span class="inline-flex items-center px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold text-white">
-              <i class="uil uil-shield-check text-sm mr-1"></i>
-              Verified Business
-            </span>
-            </div>
-          
-          <!-- Logo Container -->
-          <div class="flex justify-center items-center h-32">
-            <div class="w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center p-4 group-hover:scale-105 transition-transform duration-300">
-              <img src="/images/naivas.png" alt="Naivas Logo" class="w-full h-full object-contain">
-            </div>
-            </div>
-          </div>
-
-        <!-- Business Info Section -->
-        <div class="bg-white px-6 py-6">
-          <!-- Business Name with Verification -->
-          <div class="flex items-center justify-center mb-2">
-            <h3 class="text-xl font-bold text-gray-900">Naivas Supermarket</h3>
-            <i class="uil uil-check-circle text-emerald-500 text-xl ml-2"></i>
-            </div>
-
-          <p class="text-sm text-gray-500 text-center mb-4">
-            Kenya's Leading Retail Chain
-          </p>
-
-          <!-- Stats Row -->
-          <div class="flex items-center justify-between py-4 border-t border-b border-gray-100 mb-4">
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-users-alt text-primary text-lg mr-2"></i>
-              <span class="text-sm font-semibold">3.1K</span>
-              </div>
-            <div class="flex items-center text-gray-600">
-              <i class="uil uil-star text-yellow-400 text-lg mr-2"></i>
-              <span class="text-sm font-semibold">4.4/5</span>
-            </div>
-            <div class="flex items-center">
-              <span class="text-2xl font-bold text-primary">85%</span>
-          </div>
-        </div>
-
-          <!-- Action Button -->
-          <button class="w-full py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center">
-            <span>View Profile</span>
-            <i class="uil uil-plus text-lg ml-2"></i>
-          </button>
-        </div>
-      </div>
+      </ng-container>
     </div>
+  </div>
 
-    <!-- View All Button -->
-    <div class="text-center mt-12 fade-in-up">
-      <button class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-        View All Trusted Businesses
-        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-      </button>
+  <!-- Loading shimmer -->
+  <div class="trusted-marquee-wrapper" *ngIf="topBusinessesLoading">
+    <div class="flex gap-4 px-4">
+      <div *ngFor="let i of [1,2,3,4,5]" class="trusted-card-shimmer"></div>
     </div>
+  </div>
+
+  <!-- Empty state (no verified businesses yet) -->
+  <div *ngIf="!topBusinessesLoading && topBusinesses.length === 0" class="text-center py-8 text-gray-500">
+    <i class="uil uil-building text-4xl mb-2 block text-gray-300"></i>
+    <p class="text-sm">No verified businesses yet. Be the first to get verified!</p>
+  </div>
+
+  <!-- View All -->
+  <div class="text-center mt-10">
+    <a routerLink="/businesses" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
+      View All Businesses
+      <i class="uil uil-arrow-right text-lg ml-2"></i>
+    </a>
   </div>
 </section>
 

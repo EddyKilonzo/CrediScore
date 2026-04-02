@@ -17,6 +17,16 @@ interface TrendingBusiness {
   trustScore?: { grade: string; score: number };
 }
 
+interface TopBusiness {
+  id: string;
+  name: string;
+  logo?: string;
+  category?: string;
+  isVerified: boolean;
+  reviewCount: number;
+  trustScore?: { grade: string; score: number };
+}
+
 interface Statistic {
   iconClass: string;
   count: number;
@@ -59,6 +69,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   // Trending businesses
   trendingBusinesses: TrendingBusiness[] = [];
   trendingLoading = true;
+
+  // Top trusted businesses (marquee)
+  topBusinesses: TopBusiness[] = [];
+  topBusinessesLoading = true;
   
   // Testimonial slider properties
   currentTestimonialIndex = 0;
@@ -135,6 +149,33 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Load trending businesses
     this.loadTrendingBusinesses();
+
+    // Load top trusted businesses
+    this.loadTopTrustedBusinesses();
+  }
+
+  loadTopTrustedBusinesses() {
+    this.http.get<TopBusiness[]>(`${environment.apiUrl}/api/user/top-trusted?limit=12`).subscribe({
+      next: (businesses) => {
+        this.topBusinesses = businesses || [];
+        this.topBusinessesLoading = false;
+      },
+      error: () => {
+        this.topBusinessesLoading = false;
+      }
+    });
+  }
+
+  getTopGradeColor(grade: string): string {
+    if (!grade) return '#6b7280';
+    if (grade.startsWith('A')) return '#059669';
+    if (grade.startsWith('B')) return '#2563eb';
+    if (grade.startsWith('C')) return '#d97706';
+    return '#dc2626';
+  }
+
+  getTopInitials(name: string): string {
+    return (name || '').split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
   }
 
   loadTrendingBusinesses() {

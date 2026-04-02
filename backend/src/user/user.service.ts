@@ -2437,6 +2437,28 @@ export class UserService {
       .filter(Boolean);
   }
 
+  async getTopTrustedBusinesses(limit: number = 12): Promise<any[]> {
+    const businesses = await this.prisma.business.findMany({
+      where: { isActive: true, isVerified: true },
+      include: {
+        trustScore: true,
+        _count: { select: { reviews: true } },
+      },
+      orderBy: { trustScore: { score: 'desc' } },
+      take: limit,
+    });
+
+    return businesses.map((b) => ({
+      id: b.id,
+      name: b.name,
+      logo: b.logo,
+      category: b.category,
+      isVerified: b.isVerified,
+      reviewCount: b._count.reviews,
+      trustScore: b.trustScore ? { grade: b.trustScore.grade, score: b.trustScore.score } : null,
+    }));
+  }
+
   async updateNotificationPrefs(
     userId: string,
     prefs: Record<string, boolean>,
