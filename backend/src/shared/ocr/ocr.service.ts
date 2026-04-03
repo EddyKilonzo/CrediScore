@@ -33,13 +33,9 @@ interface OCRWord {
   Height?: number;
 }
 
-// OpenAI API Response Types
+// Anthropic API response type (used by callOpenAI which now calls Claude)
 interface OpenAIResponse {
-  choices: {
-    message: {
-      content: string;
-    };
-  }[];
+  content: Array<{ text: string }>;
 }
 
 // AI Analysis Response Types

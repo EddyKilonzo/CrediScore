@@ -33,11 +33,14 @@ export interface ReviewValidationResult {
   validationNotes: string[];
 }
 
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
+const ANTHROPIC_VERSION = '2023-06-01';
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
-  private readonly openaiApiKey: string;
-  private readonly openaiBaseUrl: string;
+  private readonly anthropicApiKey: string;
   private readonly rateLimitMap = new Map<
     string,
     { count: number; resetTime: number }
@@ -51,10 +54,29 @@ export class AiService {
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly metricsService: MetricsService,
   ) {
-    this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY') || '';
-    this.openaiBaseUrl =
-      this.configService.get<string>('OPENAI_BASE_URL') ||
-      'https://api.openai.com/v1';
+    this.anthropicApiKey = this.configService.get<string>('ANTHROPIC_API_KEY') || '';
+  }
+
+  /** Shared helper — call Claude and return the text response */
+  private async callClaude(prompt: string, maxTokens = 1024): Promise<string> {
+    const response = await axios.post<{ content: Array<{ text: string }> }>(
+      ANTHROPIC_API_URL,
+      {
+        model: ANTHROPIC_MODEL,
+        max_tokens: maxTokens,
+        system: 'You are an expert AI assistant. Always respond with valid JSON only, no markdown or extra text.',
+        messages: [{ role: 'user', content: prompt }],
+      },
+      {
+        headers: {
+          'x-api-key': this.anthropicApiKey,
+          'anthropic-version': ANTHROPIC_VERSION,
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000,
+      },
+    );
+    return response.data.content[0].text;
   }
 
   /**
@@ -463,28 +485,9 @@ export class AiService {
         Return only valid JSON, no additional text.
       `;
 
-      const response = await axios.post(
-        `${this.openaiBaseUrl}/chat/completions`,
-        {
-          model: 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-          max_tokens: 500,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
+      const responseText = await this.callClaude(prompt, 512);
 
-      const data = response.data as {
-        choices: Array<{ message: { content?: string } }>;
-      };
-      const extractedData = JSON.parse(
-        data.choices[0].message.content || '{}',
-      ) as {
+      const extractedData = JSON.parse(responseText || '{}') as {
         documentType: string;
         businessName?: string;
         registrationNumber?: string;
@@ -606,42 +609,16 @@ export class AiService {
             Return only valid JSON without any additional text or explanations.
           `;
 
-          const response: { data: unknown } =
+          const responseText: string =
             await this.circuitBreakerService.execute(
-              'openai_api',
-              async () => {
-                return await axios.post(
-                  `${this.openaiBaseUrl}/chat/completions`,
-                  {
-                    model: 'gpt-4',
-                    messages: [
-                      {
-                        role: 'user',
-                        content: prompt,
-                      },
-                    ],
-                    max_tokens: 500,
-                    temperature: 0.1,
-                  },
-                  {
-                    headers: {
-                      Authorization: `Bearer ${this.openaiApiKey}`,
-                      'Content-Type': 'application/json',
-                    },
-                  },
-                );
-              },
+              'claude_api',
+              async () => this.callClaude(prompt, 512),
               {
                 failureThreshold: 3,
-                timeout: 30000,
+                timeout: 60000,
                 resetTimeout: 60000,
               },
             );
-
-          const data = response.data as {
-            choices: Array<{ message: { content: string } }>;
-          };
-          const responseText = data.choices[0].message.content;
 
           try {
             const parsedData = JSON.parse(responseText) as ReceiptData;
@@ -658,7 +635,7 @@ export class AiService {
 
       const duration = (Date.now() - startTime) / 1000;
       this.metricsService.recordAiRequest(
-        'openai',
+        'claude',
         'parse_receipt',
         'success',
         duration,
@@ -669,7 +646,7 @@ export class AiService {
     } catch (error) {
       const duration = (Date.now() - startTime) / 1000;
       this.metricsService.recordAiRequest(
-        'openai',
+        'claude',
         'parse_receipt',
         'error',
         duration,
@@ -1053,41 +1030,15 @@ export class AiService {
             Return only a number between 0 and 100 representing the credibility score.
           `;
 
-          const response = await this.circuitBreakerService.execute(
-            'openai_api',
-            async () => {
-              return await axios.post(
-                `${this.openaiBaseUrl}/chat/completions`,
-                {
-                  model: 'gpt-4',
-                  messages: [
-                    {
-                      role: 'user',
-                      content: prompt,
-                    },
-                  ],
-                  max_tokens: 10,
-                  temperature: 0.1,
-                },
-                {
-                  headers: {
-                    Authorization: `Bearer ${this.openaiApiKey}`,
-                    'Content-Type': 'application/json',
-                  },
-                },
-              );
-            },
+          const scoreText: string = await this.circuitBreakerService.execute(
+            'claude_api',
+            async () => this.callClaude(prompt, 16),
             {
               failureThreshold: 3,
-              timeout: 30000,
+              timeout: 60000,
               resetTimeout: 60000,
             },
           );
-
-          const data = response.data as {
-            choices: Array<{ message: { content: string } }>;
-          };
-          const scoreText = data.choices[0].message.content;
           const score = parseInt(scoreText.replace(/\D/g, ''), 10);
 
           if (isNaN(score) || score < 0 || score > 100) {
@@ -1108,7 +1059,7 @@ export class AiService {
 
       const duration = (Date.now() - startTime) / 1000;
       this.metricsService.recordAiRequest(
-        'openai',
+        'claude',
         'credibility_score',
         'success',
         duration,
@@ -1119,7 +1070,7 @@ export class AiService {
     } catch (error) {
       const duration = (Date.now() - startTime) / 1000;
       this.metricsService.recordAiRequest(
-        'openai',
+        'claude',
         'credibility_score',
         'error',
         duration,
