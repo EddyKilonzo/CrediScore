@@ -852,6 +852,74 @@ html[data-theme="dark"] .empty-state p {
   color: #9bb3c8 !important;
 }
 
+/* Business-view component dark mode overrides */
+html[data-theme="dark"] .business-info-container,
+html[data-theme="dark"] .trust-score-card,
+html[data-theme="dark"] .rating-card,
+html[data-theme="dark"] .info-section,
+html[data-theme="dark"] .sidebar-card,
+html[data-theme="dark"] .review-modal-content,
+html[data-theme="dark"] .review-success-message,
+html[data-theme="dark"] .review-media {
+  background: #1e2f3d !important;
+  border-color: #2d4255 !important;
+  color: #e2eaf2 !important;
+}
+
+html[data-theme="dark"] .review-card-compact {
+  background: #1e2f3d !important;
+  border-color: #2d4255 !important;
+  color: #e2eaf2 !important;
+}
+
+html[data-theme="dark"] .review-card-compact:hover {
+  background: #253d4e !important;
+}
+
+html[data-theme="dark"] .social-link {
+  background: #1e2f3d !important;
+  border-color: #2d4255 !important;
+  color: #e2eaf2 !important;
+}
+
+html[data-theme="dark"] .image-drop-zone {
+  background: #1e2f3d !important;
+  border-color: #2d4255 !important;
+  color: #9bb3c8 !important;
+}
+
+html[data-theme="dark"] .image-drop-zone:hover {
+  background: #253d4e !important;
+  border-color: #3E6A8A !important;
+}
+
+html[data-theme="dark"] .sidebar-title,
+html[data-theme="dark"] .review-media-title,
+html[data-theme="dark"] .review-modal-content h2,
+html[data-theme="dark"] .review-modal-content h3,
+html[data-theme="dark"] .review-success-message h3 {
+  color: #e2eaf2 !important;
+}
+
+html[data-theme="dark"] .review-success-message p {
+  color: #9bb3c8 !important;
+}
+
+html[data-theme="dark"] .business-info-item {
+  background: #162330 !important;
+  border-color: #2d4255 !important;
+}
+
+html[data-theme="dark"] .business-info-item:hover {
+  background: #253d4e !important;
+  border-color: #3E6A8A !important;
+}
+
+html[data-theme="dark"] .logo-container {
+  background: #1e2f3d !important;
+  border-color: #2d4255 !important;
+}
+
 @media (min-width: 1024px) {
   .modal,
   .overlay,

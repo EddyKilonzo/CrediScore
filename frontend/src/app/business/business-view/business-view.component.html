@@ -35,6 +35,10 @@
             <i [class]="isBookmarked ? 'uil uil-bookmark-full' : 'uil uil-bookmark'" [style.color]="isBookmarked ? '#f59e0b' : ''"></i>
             <span>{{ isBookmarked ? 'Saved' : 'Save' }}</span>
           </button>
+          <button *ngIf="isAuthenticated() && !isBusinessOwner()" (click)="openFraudReportModal()" class="refresh-button-hero report-fraud-btn" title="Report Fraud">
+            <i class="uil uil-shield-exclamation"></i>
+            <span>Report</span>
+          </button>
         </div>
         
         <div class="hero-main">
@@ -274,7 +278,7 @@
           </div>
         </section>
 
-        <!-- Location Map Section — always show when business exists; uses name as fallback for directions -->
+        <!-- Location Map Section — Leaflet / OpenStreetMap -->
         <section class="info-section map-section" *ngIf="business">
           <h2 class="section-title">
             <i class="uil uil-map"></i>
@@ -282,29 +286,18 @@
           </h2>
           <div class="map-container">
             <div class="map-wrapper">
-              <iframe
-                *ngIf="getMapUrl()"
-                [src]="sanitizeMapUrl(getMapUrl()!)"
-                width="100%"
-                height="400"
-                style="border:0; border-radius: 0.75rem;"
-                allowfullscreen=""
-                loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"
-                class="google-map"
-                title="Business location on Google Maps"
-              ></iframe>
-              <div *ngIf="!getMapUrl()" class="map-placeholder">
+              <div id="business-leaflet-map" class="leaflet-map-view" *ngIf="hasMapCoordinates()"></div>
+              <div *ngIf="!hasMapCoordinates()" class="map-placeholder">
                 <i class="uil uil-map-marker"></i>
                 <p>{{ business.location || business.name }}</p>
                 <a
-                  [href]="getGoogleMapsSearchUrl()"
+                  [href]="getOsmSearchUrl()"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="open-maps-btn"
                 >
                   <i class="uil uil-external-link-alt"></i>
-                  Open in Google Maps
+                  Open in OpenStreetMap
                 </a>
               </div>
             </div>
@@ -312,7 +305,7 @@
               <i class="uil uil-map-marker"></i>
               <span>{{ business.location || (business.latitude && business.longitude ? (business.latitude + ', ' + business.longitude) : business.name) }}</span>
               <a
-                [href]="getGoogleMapsSearchUrl()"
+                [href]="getOsmDirectionsUrl()"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="directions-link"
@@ -1066,6 +1059,58 @@
         <button type="button" class="btn btn-primary" (click)="submitDispute()" [disabled]="!disputeReason.trim() || isSubmittingDispute" style="background:#6366f1;border-color:#6366f1;">
           <span *ngIf="!isSubmittingDispute">Submit Dispute</span>
           <span *ngIf="isSubmittingDispute">Submitting...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fraud Report Modal -->
+<div class="review-modal-overlay" *ngIf="showFraudReportModal" (click)="closeFraudReportModal()">
+  <div class="review-modal-content fraud-report-modal" (click)="$event.stopPropagation()" style="max-width:520px;">
+    <button class="review-modal-close" (click)="closeFraudReportModal()"><i class="uil uil-times"></i></button>
+    <div class="delete-confirm-content">
+      <div class="delete-confirm-icon" style="color:#dc2626;"><i class="uil uil-shield-exclamation"></i></div>
+      <h2 class="delete-confirm-title">Report Fraudulent Business</h2>
+      <p class="delete-confirm-message">
+        Help keep our community safe. Reports are reviewed by our trust & safety team.
+      </p>
+      <div style="width:100%;margin:1rem 0;">
+        <label style="display:block;font-weight:600;font-size:0.875rem;margin-bottom:0.5rem;color:var(--text-primary,#1e293b);">
+          Reason <span style="color:#dc2626;">*</span>
+        </label>
+        <select [(ngModel)]="fraudReportReason" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;background:white;">
+          <option value="">Select a reason</option>
+          <option value="FAKE_BUSINESS">Fake or non-existent business</option>
+          <option value="FAKE_REVIEWS">Buying or generating fake reviews</option>
+          <option value="SCAM">Scam / fraudulent activity</option>
+          <option value="IDENTITY_THEFT">Impersonating another business</option>
+          <option value="MISLEADING_INFO">Misleading or false information</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <label style="display:block;font-weight:600;font-size:0.875rem;margin:1rem 0 0.5rem;color:var(--text-primary,#1e293b);">
+          Description <span style="color:#dc2626;">*</span>
+        </label>
+        <textarea
+          [(ngModel)]="fraudReportDescription"
+          placeholder="Describe what you observed in detail..."
+          rows="4"
+          maxlength="1000"
+          style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;"
+        ></textarea>
+        <div style="text-align:right;font-size:0.75rem;color:#94a3b8;">{{ fraudReportDescription.length }}/1000</div>
+      </div>
+      <div class="delete-confirm-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeFraudReportModal()">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          (click)="submitFraudReport()"
+          [disabled]="!fraudReportReason || !fraudReportDescription.trim() || isSubmittingFraudReport"
+          style="background:#dc2626;border-color:#dc2626;"
+        >
+          <span *ngIf="!isSubmittingFraudReport"><i class="uil uil-shield-exclamation"></i> Submit Report</span>
+          <span *ngIf="isSubmittingFraudReport">Submitting...</span>
         </button>
       </div>
     </div>

@@ -109,6 +109,8 @@ export class FraudDetectionService {
       /\b(buy now|click here|free money|earn \$|make money fast|100% guarantee|limited offer|act now)\b/i,
       /\b(casino|lottery|winner|prize|jackpot)\b/i,
       /https?:\/\/\S+/g, // URLs in reviews
+      /\b(follow us|visit our|check out our|dm us|whatsapp us)\b/i,
+      /\b(order now|shop now|download now|sign up now)\b/i,
     ];
     for (const pattern of spamPatterns) {
       if (pattern.test(text)) {
@@ -116,6 +118,35 @@ export class FraudDetectionService {
         riskScore += 25;
         break;
       }
+    }
+
+    // Generic/template review detection — suspiciously common phrases
+    const templatePhrases = [
+      /^(great|good|excellent|amazing|wonderful|fantastic|terrible|worst|bad)\s*!*$/i,
+      /\b(highly recommend|would (not )?recommend|five stars|best (ever|in town|around))\b/i,
+      /\b(perfect service|great service|good service|poor service|bad service)\s*[.!]*$/i,
+    ];
+    let templateMatches = 0;
+    for (const pattern of templatePhrases) {
+      if (pattern.test(text)) templateMatches++;
+    }
+    if (templateMatches >= 2 && wordCount < 10) {
+      fraudReasons.push('Review appears to be a generic template');
+      riskScore += 15;
+    }
+
+    // Gibberish detection: mostly numbers or special characters
+    const alphaRatio = (text.match(/[a-zA-Z]/g) || []).length / Math.max(text.length, 1);
+    if (wordCount >= 3 && alphaRatio < 0.4) {
+      fraudReasons.push('Review contains mostly non-alphabetic characters');
+      riskScore += 15;
+    }
+
+    // Excessive punctuation / emoticons without substance
+    const punctRatio = (text.match(/[!?]{2,}/g) || []).length;
+    if (punctRatio > 3 && wordCount < 15) {
+      fraudReasons.push('Excessive punctuation with minimal text');
+      riskScore += 10;
     }
 
     // Copy-paste indicators: very long exact phrases repeated
@@ -274,6 +305,12 @@ export class FraudDetectionService {
   ): Promise<ReviewPatternAnalysis> {
     try {
 
+      // Get user and their account age
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { createdAt: true, flagCount: true },
+      });
+
       // Get user's reviews from the last 30 days
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -368,6 +405,56 @@ export class FraudDetectionService {
         riskScore += similarTexts * 5;
       }
 
+      // Pattern 7: New account with many reviews (account age risk)
+      if (user?.createdAt) {
+        const accountAgeDays = Math.floor(
+          (Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        if (accountAgeDays < 7 && totalReviews >= 3) {
+          suspiciousPatterns.push(
+            `Account ${accountAgeDays} days old with ${totalReviews} reviews`,
+          );
+          riskScore += 30;
+        } else if (accountAgeDays < 30 && totalReviews >= 10) {
+          suspiciousPatterns.push(
+            `New account (${accountAgeDays} days) with unusually high review count`,
+          );
+          riskScore += 20;
+        }
+      }
+
+      // Pattern 8: All no-comment reviews (rating bombs)
+      const noCommentReviews = reviews.filter(
+        (r) => !r.comment || r.comment.trim().length < 5,
+      ).length;
+      if (noCommentReviews >= 5 && noCommentReviews === totalReviews) {
+        suspiciousPatterns.push('All reviews posted without comments (rating bombs)');
+        riskScore += 20;
+      }
+
+      // Pattern 9: Multiple reviews on same day to different businesses
+      const reviewsByDay = new Map<string, number>();
+      reviews.forEach((r) => {
+        const day = r.createdAt.toISOString().split('T')[0];
+        reviewsByDay.set(day, (reviewsByDay.get(day) || 0) + 1);
+      });
+      const peakDayReviews = Math.max(...reviewsByDay.values(), 0);
+      if (peakDayReviews >= 5) {
+        suspiciousPatterns.push(
+          `${peakDayReviews} reviews posted in a single day`,
+        );
+        riskScore += 25;
+      }
+
+      // Pattern 10: Previously flagged user continues posting
+      const flagCount = user?.flagCount ?? 0;
+      if (flagCount >= 2 && totalReviews >= 3) {
+        suspiciousPatterns.push(
+          `User has been flagged ${flagCount} times and continues reviewing`,
+        );
+        riskScore += flagCount * 10;
+      }
+
       return {
         totalReviews,
         unverifiedReviews,
@@ -396,21 +483,9 @@ export class FraudDetectionService {
    */
   async checkUserForFlagging(userId: string): Promise<UserFlaggingResult> {
     try {
+      const patternAnalysis = await this.analyzeUserReviewPatterns(userId);
 
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          reviews: {
-            where: {
-              createdAt: {
-                gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
-              },
-            },
-          },
-        },
-      });
-
-      if (!user) {
+      if (patternAnalysis.suspiciousPatterns.includes('Analysis failed')) {
         return {
           shouldFlag: false,
           flagReason: 'User not found',
@@ -420,7 +495,6 @@ export class FraudDetectionService {
         };
       }
 
-      const patternAnalysis = await this.analyzeUserReviewPatterns(userId);
       const shouldFlag = patternAnalysis.riskScore >= 50;
 
       let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
@@ -437,9 +511,7 @@ export class FraudDetectionService {
         recommendation = 'FLAG';
       }
 
-      const flagReason = this.generateFlagReason(patternAnalysis, {
-        flagCount: (user as { flagCount?: number }).flagCount || 0,
-      });
+      const flagReason = this.generateFlagReason(patternAnalysis, {});
 
       return {
         shouldFlag,
@@ -720,7 +792,7 @@ export class FraudDetectionService {
    */
   private generateFlagReason(
     analysis: ReviewPatternAnalysis,
-    user: { flagCount?: number },
+    _user: { flagCount?: number },
   ): string {
     const reasons: string[] = [];
 
@@ -736,12 +808,8 @@ export class FraudDetectionService {
 
     if (analysis.suspiciousPatterns.length > 0) {
       reasons.push(
-        `Suspicious patterns: ${analysis.suspiciousPatterns.slice(0, 2).join(', ')}`,
+        `Suspicious patterns: ${analysis.suspiciousPatterns.slice(0, 3).join(', ')}`,
       );
-    }
-
-    if (user.flagCount && user.flagCount > 0) {
-      reasons.push(`Previously flagged ${user.flagCount} times`);
     }
 
     return reasons.length > 0

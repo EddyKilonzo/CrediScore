@@ -1,12 +1,13 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import * as L from 'leaflet';
 import { BusinessService, Business, BusinessStatus } from '../../core/services/business.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ReviewService } from '../../core/services/review.service';
+import { ToastService } from '../../shared/components/toast/toast.service';
 import { environment } from '../../../environments/environment';
 import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
 import { ImageLightboxComponent } from '../../shared/components/image-lightbox/image-lightbox.component';
@@ -82,7 +83,7 @@ interface UploadedImage {
   templateUrl: './business-view.component.html',
   styleUrls: ['./business-view.component.css']
 })
-export class BusinessViewComponent implements OnInit {
+export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private businessService = inject(BusinessService);
@@ -90,7 +91,8 @@ export class BusinessViewComponent implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private reviewService = inject(ReviewService);
-  private sanitizer = inject(DomSanitizer);
+  private toastService = inject(ToastService);
+  private leafletMap: L.Map | null = null;
   
   business: BusinessWithDetails | null = null;
   loading = true;
@@ -113,6 +115,12 @@ export class BusinessViewComponent implements OnInit {
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private readonly MAX_IMAGES = 5;
 
+  // Fraud report modal state
+  showFraudReportModal = false;
+  fraudReportReason = '';
+  fraudReportDescription = '';
+  isSubmittingFraudReport = false;
+
   ngOnInit() {
     // Initialize review form
     this.reviewForm = this.fb.group({
@@ -130,6 +138,17 @@ export class BusinessViewComponent implements OnInit {
     } else {
       this.error = 'Business ID not found';
       this.loading = false;
+    }
+  }
+
+  ngAfterViewInit() {
+    // Map is initialized after business loads — see initLeafletMap()
+  }
+
+  ngOnDestroy() {
+    if (this.leafletMap) {
+      this.leafletMap.remove();
+      this.leafletMap = null;
     }
   }
 
@@ -162,6 +181,8 @@ export class BusinessViewComponent implements OnInit {
         }
 
         this.loading = false;
+        // Initialize Leaflet map after Angular renders the map container
+        setTimeout(() => this.initLeafletMap(), 200);
       },
       error: (err) => {
         console.error('Error loading business:', err);
@@ -534,40 +555,63 @@ export class BusinessViewComponent implements OnInit {
     }
   }
 
-  // Map Methods
-  getMapUrl(): string | null {
-    if (!this.business) return null;
-
-    let query = '';
-
-    if (this.business.latitude && this.business.longitude) {
-      query = `${this.business.latitude},${this.business.longitude}`;
-    } else if (this.business.location) {
-      query = encodeURIComponent(this.business.location);
-    } else if (this.business.name) {
-      query = encodeURIComponent(this.business.name);
-    } else {
-      return null;
-    }
-
-    return `https://maps.google.com/maps?q=${query}&hl=en&z=15&output=embed`;
+  // Map Methods — Leaflet / OpenStreetMap
+  hasMapCoordinates(): boolean {
+    return !!(this.business?.latitude && this.business?.longitude);
   }
 
-  sanitizeMapUrl(url: string): SafeResourceUrl {
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  getOsmSearchUrl(): string {
+    if (!this.business) return 'https://www.openstreetmap.org';
+    if (this.business.latitude && this.business.longitude) {
+      return `https://www.openstreetmap.org/?mlat=${this.business.latitude}&mlon=${this.business.longitude}&zoom=15`;
+    }
+    const q = encodeURIComponent(this.business.location || this.business.name || '');
+    return `https://www.openstreetmap.org/search?query=${q}`;
   }
 
-  getGoogleMapsSearchUrl(): string {
-    if (!this.business) return 'https://www.google.com/maps';
-
-    // Use coordinates if available
+  getOsmDirectionsUrl(): string {
+    if (!this.business) return 'https://www.openstreetmap.org';
     if (this.business.latitude && this.business.longitude) {
-      return `https://www.google.com/maps/search/?api=1&query=${this.business.latitude},${this.business.longitude}`;
+      return `https://www.openstreetmap.org/directions?to=${this.business.latitude}%2C${this.business.longitude}`;
+    }
+    const q = encodeURIComponent(this.business.location || this.business.name || '');
+    return `https://www.openstreetmap.org/search?query=${q}`;
+  }
+
+  initLeafletMap() {
+    if (!this.business?.latitude || !this.business?.longitude) return;
+    const container = document.getElementById('business-leaflet-map');
+    if (!container) return;
+
+    // Destroy existing map instance if any
+    if (this.leafletMap) {
+      this.leafletMap.remove();
+      this.leafletMap = null;
     }
 
-    // Otherwise use location or business name
-    const location = encodeURIComponent(this.business.location || this.business.name || '');
-    return `https://www.google.com/maps/search/?api=1&query=${location}`;
+    const lat = this.business.latitude;
+    const lng = this.business.longitude;
+    const name = this.business.name || 'Business Location';
+
+    this.leafletMap = L.map(container).setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(this.leafletMap);
+
+    const icon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    L.marker([lat, lng], { icon })
+      .addTo(this.leafletMap)
+      .bindPopup(`<strong>${name}</strong>${this.business.location ? '<br>' + this.business.location : ''}`)
+      .openPopup();
   }
 
   // Lightbox
@@ -981,5 +1025,42 @@ export class BusinessViewComponent implements OnInit {
     if (this.selectedReview && this.selectedReview.replies) {
       this.selectedReview.replies = this.selectedReview.replies.filter(r => r.id !== replyId);
     }
+  }
+
+  // Fraud Report Modal
+  openFraudReportModal() {
+    this.fraudReportReason = '';
+    this.fraudReportDescription = '';
+    this.showFraudReportModal = true;
+  }
+
+  closeFraudReportModal() {
+    this.showFraudReportModal = false;
+  }
+
+  submitFraudReport() {
+    if (!this.fraudReportReason || !this.fraudReportDescription.trim() || !this.business?.id) return;
+    this.isSubmittingFraudReport = true;
+
+    this.http.post(
+      `${this.API_URL}/user/fraud-reports`,
+      {
+        businessId: this.business.id,
+        reason: this.fraudReportReason,
+        description: this.fraudReportDescription.trim()
+      },
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }
+    ).subscribe({
+      next: () => {
+        this.isSubmittingFraudReport = false;
+        this.showFraudReportModal = false;
+        this.toastService.success('Report submitted. Our trust & safety team will review it.');
+      },
+      error: (err) => {
+        this.isSubmittingFraudReport = false;
+        const msg = err?.error?.message || 'Failed to submit report. Please try again.';
+        this.toastService.error(msg);
+      }
+    });
   }
 }
