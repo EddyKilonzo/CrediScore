@@ -47,7 +47,7 @@
     }
 
     <!-- Dashboard Content -->
-    <ng-container *ngIf="!isLoading">
+    @if (!isLoading) {
       <div class="flex flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr),18rem] lg:gap-6 xl:gap-8">
         <div class="space-y-8 order-2 lg:order-none">
       
@@ -1709,6 +1709,7 @@
     </div>
   </div>
 </div>
+    }
 
 <!-- Add Payment Method Modal -->
 <div *ngIf="showAddPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 modal-backdrop">
