@@ -18,6 +18,10 @@ interface GoogleProfile {
   photos: Array<{ value: string }>;
 }
 
+// Server-side store to pass role through the OAuth round-trip reliably.
+// Keyed by a nonce (passed as state); expires after 5 minutes.
+const roleStore = new Map<string, { role: string; expires: number }>();
+
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(
@@ -36,10 +40,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
-  // Pass the role query param as OAuth state so it survives the redirect round-trip
+  // Called for both the initiation (/auth/google?role=business) and the callback.
+  // On initiation: store the role server-side and pass a nonce as the OAuth state.
+  // On callback: state is the nonce we sent — passport reads req.query.code to detect callback.
   override authenticate(req: Request, options?: any): void {
-    const role = (req.query?.role as string) || 'user';
-    super.authenticate(req, { ...options, state: role });
+    if (req.query?.role) {
+      // Initiation phase — user clicked "Continue with Google"
+      const role = (req.query.role as string) || 'user';
+      const nonce = `role_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      roleStore.set(nonce, { role, expires: Date.now() + 5 * 60 * 1000 });
+      super.authenticate(req, { ...options, state: nonce });
+    } else {
+      // Callback phase — no role query param, just proceed
+      super.authenticate(req, options);
+    }
   }
 
   async validate(
@@ -51,17 +65,25 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ): Promise<void> {
     try {
       const { name, emails, photos } = profile;
-      // state is returned by Google as-is — contains the role we sent
-      const role = (req.query?.state as string) || 'user';
+
+      // Recover role from the server-side store using the nonce in state
+      let role = 'user';
+      const nonce = req.query?.state as string;
+      if (nonce) {
+        const entry = roleStore.get(nonce);
+        if (entry && entry.expires > Date.now()) {
+          role = entry.role;
+          roleStore.delete(nonce);
+        }
+      }
+
+      console.log(`Google OAuth validate — state nonce: ${nonce}, resolved role: ${role}`);
 
       let cloudinaryAvatarUrl: string | undefined = undefined;
 
       // Upload Google profile image to Cloudinary if available
       if (photos && photos[0]?.value) {
         try {
-          console.log('Uploading Google profile image to Cloudinary...');
-
-          // Create upload options for Google profile images
           const uploadOptions = {
             folder: 'crediscore/google-profiles',
             public_id: `google_profile_${profile.id}_${Date.now()}`,
@@ -80,16 +102,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
           );
 
           cloudinaryAvatarUrl = uploadResult.secure_url;
-          console.log(
-            'Google profile image uploaded to Cloudinary:',
-            cloudinaryAvatarUrl,
-          );
         } catch (uploadError) {
           console.error(
             'Failed to upload Google profile image to Cloudinary:',
             uploadError,
           );
-          // Continue with original Google image URL if Cloudinary upload fails
           cloudinaryAvatarUrl = photos[0].value;
         }
       }

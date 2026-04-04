@@ -536,26 +536,28 @@ export class AuthService {
       });
 
       if (user) {
-        // Update existing user with OAuth info if not already set
+        // Build update payload for existing user
+        const updateData: Record<string, unknown> = { emailVerified: true };
+
+        // Link OAuth provider if not already set
         if (!user.providerId) {
-          user = await this.prisma.user.update({
-            where: { id: (user as User).id },
-            data: {
-              provider: oauthUser.provider,
-              providerId: oauthUser.providerId,
-              avatar: oauthUser.avatar,
-              emailVerified: true,
-            },
-          });
+          updateData.provider = oauthUser.provider;
+          updateData.providerId = oauthUser.providerId;
+          updateData.avatar = oauthUser.avatar;
         } else if (oauthUser.avatar && !user.avatar) {
-          // Update avatar if user doesn't have one but OAuth provides one
-          user = await this.prisma.user.update({
-            where: { id: (user as User).id },
-            data: {
-              avatar: oauthUser.avatar,
-            },
-          });
+          updateData.avatar = oauthUser.avatar;
         }
+
+        // Promote to BUSINESS_OWNER when explicitly selected via the register flow
+        if (oauthUser.role === 'business' && user.role !== UserRole.BUSINESS_OWNER) {
+          this.logger.log(`Upgrading existing user ${(user as User).id} to BUSINESS_OWNER via OAuth`);
+          updateData.role = UserRole.BUSINESS_OWNER;
+        }
+
+        user = await this.prisma.user.update({
+          where: { id: (user as User).id },
+          data: updateData,
+        });
       } else {
         // Map frontend role string to UserRole enum
         let userRole: UserRole = UserRole.CUSTOMER;

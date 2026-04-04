@@ -191,7 +191,7 @@ export class BusinessMapViewComponent implements OnInit, AfterViewInit, OnDestro
           location: b.location || 'Location not specified',
           latitude: b.latitude,
           longitude: b.longitude,
-          category: b.category || b.businessCategoryId,
+          category: b.businessCategory?.name || b.category || null,
           logo: b.logo,
           description: b.description
         }));

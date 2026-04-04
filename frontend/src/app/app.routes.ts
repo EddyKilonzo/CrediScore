@@ -60,6 +60,13 @@ export const routes: Routes = [
     loadComponent: () => import('./search/search.component').then(m => m.SearchComponent)
   },
 
+  // Map Route - accessible to all authenticated users
+  {
+    path: 'map',
+    loadComponent: () => import('./shared/components/business-map-view/business-map-view.component').then(m => m.BusinessMapViewComponent),
+    canActivate: [AuthGuard]
+  },
+
   // Profile Route
   {
     path: 'profile',

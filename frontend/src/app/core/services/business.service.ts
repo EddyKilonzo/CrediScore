@@ -299,7 +299,7 @@ export class BusinessService {
     this.error.set(null);
     
     // Use the public endpoint to get all businesses for map view
-    return this.http.get<any>(`${this.API_URL}/public/business/search`)
+    return this.http.get<any>(`${this.API_URL}/public/business/search?limit=500`)
       .pipe(
         tap(response => {
           const businesses = Array.isArray(response) ? response : (response?.businesses || []);
