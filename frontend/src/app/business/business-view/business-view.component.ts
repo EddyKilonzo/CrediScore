@@ -98,6 +98,9 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   /** When the API has no lat/lng, geocode from address/name for the embedded map */
   private geocodedCoords: { lat: number; lng: number } | null = null;
   mapGeocodeLoading = false;
+  /** User's current GPS location — fetched once on load */
+  userLocation: { lat: number; lng: number } | null = null;
+  userLocationLoading = false;
   
   business: BusinessWithDetails | null = null;
   loading = true;
@@ -145,6 +148,25 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       this.error = 'Business ID not found';
       this.loading = false;
     }
+
+    // Fetch user location in background — used for routing on the map
+    this.fetchUserLocation();
+  }
+
+  private fetchUserLocation(): void {
+    this.userLocationLoading = true;
+    this.mapService.getCurrentLocation()
+      .then(loc => {
+        this.userLocation = loc;
+        this.userLocationLoading = false;
+        // If the map is already initialised, refresh it with the user pin
+        if (this.leafletMap) {
+          this.initLeafletMap();
+        }
+      })
+      .catch(() => {
+        this.userLocationLoading = false;
+      });
   }
 
   ngAfterViewInit() {
@@ -659,9 +681,13 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getOsmDirectionsUrl(): string {
     if (!this.business) return 'https://www.openstreetmap.org';
-    const c = this.getMapCoords();
-    if (c) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;
+    const dest = this.getMapCoords();
+    if (dest) {
+      // Include origin (user's current location) when available for a full route
+      if (this.userLocation) {
+        return `https://www.google.com/maps/dir/?api=1&origin=${this.userLocation.lat},${this.userLocation.lng}&destination=${dest.lat},${dest.lng}`;
+      }
+      return `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`;
     }
     const q = encodeURIComponent(this.getGeocodeQuery() || this.business.name || '');
     return `https://www.google.com/maps/search/?api=1&query=${q}`;
@@ -679,18 +705,23 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       this.leafletMap = null;
     }
 
-    const lat = coords.lat;
-    const lng = coords.lng;
+    const destLat = coords.lat;
+    const destLng = coords.lng;
     const name = this.business.name || 'Business Location';
+    const user = this.userLocation;
 
-    this.leafletMap = L.map(container).setView([lat, lng], 15);
+    // Decide initial view: fit both points if we have user location, else center on business
+    const mapCenter: L.LatLngExpression = [destLat, destLng];
+    this.leafletMap = L.map(container).setView(mapCenter, 15);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19
     }).addTo(this.leafletMap);
 
-    const icon = L.icon({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    // Business pin — red marker
+    const businessIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
       shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       iconSize: [25, 41],
       iconAnchor: [12, 41],
@@ -702,22 +733,64 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     const locLine = this.getDisplayLocation();
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+    // Distance string (if user location known)
+    let distanceHtml = '';
+    if (user) {
+      const dist = this.mapService.calculateDistance(user, { lat: destLat, lng: destLng });
+      const distStr = dist < 1 ? `${Math.round(dist * 1000)} m away` : `${dist.toFixed(1)} km away`;
+      distanceHtml = `<p style="margin:4px 0;font-size:0.82rem;color:#3E6A8A;font-weight:600;">📍 ${distStr} from you</p>`;
+    }
+
     const popupContent = `
-      <div style="min-width: 150px; padding: 5px;">
-        <strong style="display: block; margin-bottom: 5px; font-size: 1.1rem;">${esc(name)}</strong>
-        ${locLine ? '<p style="margin: 5px 0; font-size: 0.9rem; color: #666;"><i class="uil uil-map-marker"></i> ' + esc(locLine) + '</p>' : ''}
-        <a href="${directionsUrl}" target="_blank" 
-           style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 8px 12px; margin-top: 10px; background-color: #3E6A8A; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;">
-          <i class="uil uil-directions" style="margin-right: 6px; font-size: 1.1rem;"></i>
-          Get Directions
+      <div style="min-width:180px;padding:6px 2px;">
+        <strong style="display:block;margin-bottom:4px;font-size:1rem;color:#1e293b;">${esc(name)}</strong>
+        ${locLine ? `<p style="margin:4px 0;font-size:0.85rem;color:#64748b;">📌 ${esc(locLine)}</p>` : ''}
+        ${distanceHtml}
+        <a href="${directionsUrl}" target="_blank"
+           style="display:inline-flex;align-items:center;justify-content:center;width:100%;padding:8px 12px;margin-top:10px;background:#3E6A8A;color:white;text-decoration:none;border-radius:6px;font-weight:600;font-size:0.85rem;">
+          🧭 Get Directions
         </a>
       </div>
     `;
 
-    L.marker([lat, lng], { icon })
+    L.marker([destLat, destLng], { icon: businessIcon })
       .addTo(this.leafletMap)
       .bindPopup(popupContent)
       .openPopup();
+
+    // User location marker — blue dot + dashed route line
+    if (user) {
+      const userIcon = L.divIcon({
+        className: '',
+        html: `<div style="
+          width:18px;height:18px;
+          background:#3b82f6;
+          border:3px solid white;
+          border-radius:50%;
+          box-shadow:0 0 0 3px rgba(59,130,246,0.35),0 2px 6px rgba(0,0,0,0.3);
+        "></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9]
+      });
+
+      L.marker([user.lat, user.lng], { icon: userIcon })
+        .addTo(this.leafletMap)
+        .bindPopup('<div style="padding:4px 2px;font-size:0.9rem;font-weight:600;color:#1e293b;">📍 Your location</div>');
+
+      // Dashed polyline from user → business
+      L.polyline(
+        [[user.lat, user.lng], [destLat, destLng]],
+        { color: '#3E6A8A', weight: 3, dashArray: '8 6', opacity: 0.75 }
+      ).addTo(this.leafletMap);
+
+      // Fit map to show both points with padding
+      const bounds = L.latLngBounds(
+        [user.lat, user.lng],
+        [destLat, destLng]
+      );
+      this.leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    }
 
     setTimeout(() => this.leafletMap?.invalidateSize(), 150);
   }

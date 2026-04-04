@@ -249,24 +249,33 @@
 
       <!-- Map View -->
       <div *ngIf="!isLoading && !error && viewMode === 'map'" class="map-view-container">
-        <div *ngIf="getBusinessesWithLocation().length > 0; else noLocationData" class="map-view-wrapper">
-          <!-- Main Map — Interactive Leaflet Map -->
+        <div class="map-view-wrapper">
+          <!-- Interactive Leaflet Map — always shown; markers only for businesses with coords -->
           <div class="businesses-map">
             <app-business-map-view
               [embedded]="true"
               [externalLocations]="mapLocationsForChild"
             ></app-business-map-view>
           </div>
-          
-          <!-- Businesses List with Map Links -->
-          <div class="map-businesses-list">
+
+          <!-- No pins notice (shown when none have coords) -->
+          <div *ngIf="mapLocationsForChild.length === 0 && filteredBusinesses.length > 0" class="map-no-pins-notice">
+            <i class="uil uil-map-marker-question"></i>
+            <span>None of these businesses have pinned their exact location yet — browse them below.</span>
+          </div>
+
+          <!-- All filtered businesses list -->
+          <div class="map-businesses-list" *ngIf="filteredBusinesses.length > 0">
             <h3 class="map-list-title">
-              <i class="uil uil-map-marker"></i>
-              Businesses with Location ({{ getBusinessesWithLocation().length }})
+              <i class="uil uil-list-ul"></i>
+              {{ filteredBusinesses.length }} {{ filteredBusinesses.length === 1 ? 'Business' : 'Businesses' }}
+              <span *ngIf="mapLocationsForChild.length > 0" class="map-pin-count">
+                ({{ mapLocationsForChild.length }} pinned on map)
+              </span>
             </h3>
             <div class="map-businesses-grid">
               <div
-                *ngFor="let business of getBusinessesWithLocation()"
+                *ngFor="let business of filteredBusinesses; trackBy: trackByBusinessId"
                 class="map-business-card"
                 role="link"
                 tabindex="0"
@@ -275,65 +284,86 @@
                 (keyup.enter)="viewBusiness(business.id)"
                 (keyup.space)="$event.preventDefault(); viewBusiness(business.id)"
               >
-                <div class="map-card-header">
-                  <h4 class="map-business-name">{{ business.name || 'Business' }}</h4>
-                  <div class="map-business-badges">
-                    <div class="map-grade-badge" *ngIf="getBusinessGrade(business) !== 'N/A'" 
-                         [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'" 
-                         [style.color]="getGradeColor(getBusinessGrade(business))">
-                      {{ getBusinessGrade(business) }}
-                    </div>
-                    <img *ngIf="business.isVerified" src="/images/verfied.png" alt="Verified" 
-                         class="map-verified-badge" (error)="$event.target.style.display='none'" />
+                <!-- Logo -->
+                <div class="map-card-logo">
+                  <img *ngIf="business.logo" [src]="business.logo" [alt]="business.name"
+                       class="map-card-logo-img" (error)="$event.target.style.display='none'" />
+                  <div *ngIf="!business.logo" class="map-card-logo-placeholder">
+                    <i class="uil uil-building"></i>
+                  </div>
+                  <div *ngIf="business.isVerified" class="map-card-verified-dot">
+                    <i class="uil uil-check-circle"></i>
                   </div>
                 </div>
-                <div class="map-card-body">
-                  <p class="map-business-location" *ngIf="getCardLocationLine(business)">
-                    <i class="uil uil-map-marker"></i>
-                    {{ getCardLocationLine(business) }}
-                  </p>
-                  <p class="map-business-category text-xs text-gray-500 mt-1" *ngIf="getCardCategoryLabel(business)">
-                    <i class="uil uil-tag"></i> {{ getCardCategoryLabel(business) }}
-                  </p>
-                  <div class="map-card-actions">
-                    <a
-                      [href]="getGoogleMapsDirectionsUrl(business)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="map-directions-btn"
-                      (click)="$event.stopPropagation()"
-                    >
-                      <i class="uil uil-directions"></i>
-                      Get Directions
-                    </a>
-                    <button class="map-view-btn" (click)="viewBusiness(business.id); $event.stopPropagation()">
-                      <i class="uil uil-eye"></i>
-                      View Details
-                    </button>
+
+                <div class="map-card-content">
+                  <div class="map-card-header">
+                    <h4 class="map-business-name">{{ business.name || 'Business' }}</h4>
+                    <div class="map-business-badges">
+                      <div class="map-grade-badge" *ngIf="getBusinessGrade(business) !== 'N/A'"
+                           [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'"
+                           [style.color]="getGradeColor(getBusinessGrade(business))">
+                        {{ getBusinessGrade(business) }}
+                      </div>
+                      <span class="map-pin-badge" *ngIf="business.latitude != null && business.longitude != null" title="Location pinned on map">
+                        <i class="uil uil-map-marker"></i>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="map-card-body">
+                    <p class="map-business-category">
+                      <i class="uil uil-tag"></i> {{ getCardCategoryLabel(business) }}
+                    </p>
+                    <p class="map-business-location" *ngIf="getCardLocationLine(business)">
+                      <i class="uil uil-map-marker"></i>
+                      {{ getCardLocationLine(business) }}
+                    </p>
+                    <!-- Rating -->
+                    <div class="map-card-rating" *ngIf="(business.totalReviews || 0) > 0">
+                      <i *ngFor="let i of [1,2,3,4,5]" class="uil uil-star"
+                         [class.star-filled]="i <= (business.averageRating || 0)"
+                         [class.star-empty]="i > (business.averageRating || 0)"></i>
+                      <span>{{ business.averageRating || 0 }} ({{ business.totalReviews }})</span>
+                    </div>
+                    <div class="map-card-actions">
+                      <a *ngIf="business.latitude != null && business.longitude != null"
+                        [href]="getGoogleMapsDirectionsUrl(business)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="map-directions-btn"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <i class="uil uil-directions"></i>
+                        Directions
+                      </a>
+                      <button class="map-view-btn" (click)="viewBusiness(business.id); $event.stopPropagation()">
+                        <i class="uil uil-eye"></i>
+                        View Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <ng-template #noLocationData>
-          <div class="no-location-data">
-            <i class="uil uil-map-marker-slash"></i>
-            <h3>No businesses with location data</h3>
-            <p>None of the filtered businesses have uploaded their location information.</p>
-            <button (click)="viewMode = 'list'" class="back-to-list-btn">
-              <i class="uil uil-list-ul"></i>
-              Back to List View
+
+          <!-- Empty state inside map view -->
+          <div *ngIf="filteredBusinesses.length === 0" class="map-empty-state">
+            <i class="uil uil-search-slash"></i>
+            <h3>No businesses match your filters</h3>
+            <p>Try adjusting your search or filters.</p>
+            <button (click)="clearFilters()" class="back-to-list-btn" *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())">
+              <i class="uil uil-times-circle"></i>
+              Clear Filters
             </button>
           </div>
-        </ng-template>
+        </div>
       </div>
 
         <!-- Business Cards Grid (List View) -->
-      <div *ngIf="!isLoading && !error && viewMode === 'list'" class="business-cards-grid">
+      <div *ngIf="!isLoading && !error && viewMode === 'list' && filteredBusinesses.length > 0" class="business-cards-grid">
         <div
-          *ngFor="let business of filteredBusinesses"
+          *ngFor="let business of filteredBusinesses; trackBy: trackByBusinessId"
           class="business-card"
           role="link"
           tabindex="0"
@@ -386,13 +416,19 @@
 
           <!-- Card Body -->
           <div class="card-body">
-            <h3 class="business-name">{{ business.name || 'Business' }}</h3>
+            <h3 class="business-name">{{ business.name || 'Unnamed Business' }}</h3>
 
-            <!-- Category -->
-            <p class="business-category">
-              <i class="uil uil-tag"></i>
-              {{ getCardCategoryLabel(business) }}
-            </p>
+            <!-- Category + Status row -->
+            <div class="card-meta-row">
+              <p class="business-category">
+                <i class="uil uil-tag"></i>
+                {{ getCardCategoryLabel(business) }}
+              </p>
+              <div class="status-badge" [class.open]="isBusinessOpen(business)" [class.closed]="!isBusinessOpen(business)">
+                <span class="status-dot"></span>
+                {{ isBusinessOpen(business) ? 'Open Now' : 'Closed' }}
+              </div>
+            </div>
 
             <!-- Location -->
             <p class="business-location-inline" *ngIf="getCardLocationLine(business)">
@@ -461,6 +497,12 @@
                 <i [class]="'uil ' + social.icon"></i>
               </a>
             </div>
+
+            <!-- View Profile CTA -->
+            <button class="card-view-btn" (click)="viewBusiness(business.id); $event.stopPropagation()">
+              <i class="uil uil-eye"></i>
+              View Profile
+            </button>
           </div>
 
           <!-- Card Footer -->
@@ -488,30 +530,26 @@
             </div>
           </div>
 
-          <!-- Location footer strip -->
-          <div class="card-location" *ngIf="getCardLocationLine(business)">
-            <i class="uil uil-map-marker"></i>
-            <span>{{ getCardLocationLine(business) }}</span>
-          </div>
         </div>
       </div>
 
       <!-- Empty State -->
-      <div *ngIf="!isLoading && !error && filteredBusinesses.length === 0" class="empty-state">
+      <div *ngIf="!isLoading && !error && viewMode === 'list' && filteredBusinesses.length === 0" class="empty-state">
         <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <h3>No businesses found</h3>
-        <p *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly">
+        <p *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim()) || searchQuery">
           Try adjusting your filters or search for a different term.
         </p>
-        <p *ngIf="!selectedStars && !selectedGrade && !selectedCategory && !verifiedOnly">
-          Try searching for a different term.
+        <p *ngIf="!selectedStars && !selectedGrade && !selectedCategory && !verifiedOnly && !(locationFilter && locationFilter.trim()) && !searchQuery">
+          No businesses are listed yet.
         </p>
-        <button *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly" (click)="clearFilters()" class="clear-filters-btn">
+        <button *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())" (click)="clearFilters()" class="clear-filters-btn">
+          <i class="uil uil-times-circle"></i>
           Clear Filters
         </button>
-          </div>
+      </div>
         </div>
       </div>
     </div>

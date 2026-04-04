@@ -804,14 +804,74 @@
   gap: 1rem;
 }
 
-.map-business-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+/* No-pins notice banner */
+.map-no-pins-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
   border-radius: 0.5rem;
+  color: #92400e;
+  font-size: 0.875rem;
+}
+
+.map-no-pins-notice i {
+  font-size: 1.25rem;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.map-pin-count {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #3E6A8A;
+  margin-left: 0.25rem;
+}
+
+/* Map empty state */
+.map-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  gap: 0.75rem;
+}
+
+.map-empty-state i {
+  font-size: 3rem;
+  color: #cbd5e1;
+}
+
+.map-empty-state h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.map-empty-state p {
+  color: #64748b;
+  margin: 0;
+}
+
+.map-business-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
   padding: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-primary);
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
 }
 
 .map-business-card:focus {
@@ -824,10 +884,64 @@
 }
 
 .map-business-card:hover {
-  background: white;
+  background: #f8fafc;
   border-color: #3E6A8A;
-  box-shadow: var(--shadow-primary);
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.12);
   transform: translateY(-2px);
+}
+
+/* Map card logo */
+.map-card-logo {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+}
+
+.map-card-logo-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 0.625rem;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+
+.map-card-logo-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 0.625rem;
+  background: linear-gradient(135deg, #e8f0f7, #d1e0ec);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3E6A8A;
+  font-size: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.map-card-verified-dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 18px;
+  height: 18px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+.map-card-verified-dot i {
+  font-size: 0.6rem;
+  color: white;
+}
+
+/* Map card content area */
+.map-card-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .map-card-header {
@@ -835,8 +949,39 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
 }
+
+/* Pin badge */
+.map-pin-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #dbeafe;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.map-pin-badge i {
+  font-size: 0.7rem;
+  color: #1d4ed8;
+}
+
+/* Map card rating */
+.map-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.4rem;
+}
+
+.map-card-rating .star-filled { color: #fbbf24; }
+.map-card-rating .star-empty  { color: #e2e8f0; }
+.map-card-rating i { font-size: 0.75rem; }
 
 .map-business-name {
   font-size: 1rem;
@@ -1312,6 +1457,44 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Category + status row */
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* View Profile CTA button */
+.card-view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.card-view-btn:hover {
+  background: linear-gradient(135deg, #2C5270, #4A7A95);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.3);
+}
+
+.card-view-btn i {
+  font-size: 1rem;
 }
 
 /* Rating row */

@@ -880,6 +880,14 @@
   flex-wrap: wrap;
 }
 
+.map-info-location {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
 .map-info i {
   font-size: 1.5rem;
   color: #3E6A8A;

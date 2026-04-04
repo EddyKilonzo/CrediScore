@@ -306,8 +306,10 @@
               </div>
             </div>
             <div class="map-info">
-              <i class="uil uil-map-marker"></i>
-              <span>{{ getDisplayLocation() }}</span>
+              <div class="map-info-location">
+                <i class="uil uil-map-marker"></i>
+                <span>{{ getDisplayLocation() }}</span>
+              </div>
               <a
                 [href]="getOsmDirectionsUrl()"
                 target="_blank"
@@ -315,7 +317,7 @@
                 class="directions-link"
               >
                 <i class="uil uil-directions"></i>
-                Get Directions
+                {{ userLocation ? 'Get Directions from My Location' : 'Get Directions' }}
                 <i class="uil uil-arrow-right"></i>
               </a>
             </div>

@@ -151,7 +151,8 @@ export class SearchComponent implements OnInit, OnDestroy {
         this.applySearchAndFilters();
         this.isLoading = false;
       },
-      error: () => {
+      error: (err: any) => {
+        console.error('Failed to load businesses:', err);
         this.allBusinesses = [];
         this.filteredBusinesses = [];
         this.mapLocationsForChild = [];
@@ -159,6 +160,10 @@ export class SearchComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  trackByBusinessId(_index: number, business: BusinessWithRating): string {
+    return business.id;
   }
 
   enrichBusinesses(businesses: Business[]): BusinessWithRating[] {
