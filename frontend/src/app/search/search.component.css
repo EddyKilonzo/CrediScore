@@ -1220,11 +1220,9 @@
 .card-body {
   padding: 1.5rem;
   flex: 1;
-  pointer-events: none;
 }
 
 .card-body * {
-  pointer-events: none;
 }
 
 .business-name {
@@ -1386,11 +1384,9 @@
   padding: 1rem 1.5rem;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
-  pointer-events: none;
 }
 
 .card-footer * {
-  pointer-events: none;
 }
 
 .stat-item {

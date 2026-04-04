@@ -149,56 +149,50 @@ export class SearchComponent implements OnInit, OnDestroy {
       let averageRating = 0;
       let totalReviews = 0;
 
-      const businessWithRating = business as unknown as BusinessWithRating & { _count?: { reviews?: number } };
+      // Type cast for internal count and reviews
+      const b = business as any;
 
       // Prefer API-returned averageRating (pre-calculated by backend aggregation)
-      if (typeof businessWithRating.averageRating === 'number' && businessWithRating.averageRating > 0) {
-        averageRating = Math.round(businessWithRating.averageRating * 10) / 10;
-      } else if (businessWithRating.reviews && Array.isArray(businessWithRating.reviews) && businessWithRating.reviews.length > 0) {
-        const activeReviews = businessWithRating.reviews.filter((r: Review) => r.isActive);
+      if (typeof b.averageRating === 'number' && b.averageRating > 0) {
+        averageRating = Math.round(b.averageRating * 10) / 10;
+      } else if (b.reviews && Array.isArray(b.reviews) && b.reviews.length > 0) {
+        const activeReviews = b.reviews.filter((r: any) => r.isActive);
         if (activeReviews.length > 0) {
-          const sum = activeReviews.reduce((acc: number, review: Review) => acc + review.rating, 0);
+          const sum = activeReviews.reduce((acc: number, review: any) => acc + review.rating, 0);
           averageRating = Math.round((sum / activeReviews.length) * 10) / 10;
         }
       }
 
       // Prefer _count.reviews from Prisma, then reviews array length
-      totalReviews = businessWithRating._count?.reviews
-        ?? businessWithRating.reviews?.filter((r: Review) => r.isActive).length
+      totalReviews = b._count?.reviews
+        ?? b.reviews?.filter((r: any) => r.isActive).length
         ?? 0;
 
-      // Handle trustScore - it might be a number in core service or an object
-      let trustScore: TrustScore | number | undefined;
+      // Handle trustScore
+      let scoreNum = 0;
+      let gradeStr = 'F';
+      
       if (typeof business.trustScore === 'number') {
-        // Keep as number for now, convert to TrustScore object when needed
-        trustScore = business.trustScore;
-      } else if (businessWithRating.trustScore) {
-        trustScore = businessWithRating.trustScore;
-      } else {
-        trustScore = undefined;
+        scoreNum = business.trustScore;
+        gradeStr = this.getGradeFromScore(scoreNum);
+      } else if (b.trustScore && typeof b.trustScore === 'object') {
+        scoreNum = b.trustScore.score || 0;
+        gradeStr = b.trustScore.grade || this.getGradeFromScore(scoreNum);
       }
 
-      // Create new object with all properties
-      const { trustScore: _, ...businessWithoutTrustScore } = business;
-      
-      // Convert trustScore number to TrustScore object if needed
-      let finalTrustScore: TrustScore | number | undefined = trustScore;
-      if (typeof trustScore === 'number' && !businessWithRating.trustScore) {
-        finalTrustScore = {
-          id: '',
-          grade: this.getGradeFromScore(trustScore),
-          score: trustScore,
-          businessId: business.id
-        };
-      }
+      const finalTrustScore: TrustScore = {
+        id: b.trustScore?.id || '',
+        grade: gradeStr,
+        score: scoreNum,
+        businessId: business.id
+      };
       
       return {
-        ...businessWithoutTrustScore,
-        isVerified: business.isVerified, // Explicitly preserve isVerified
+        ...business, // Copy all original properties (name, description, logo, etc.)
         averageRating,
         totalReviews,
-        trustScore: finalTrustScore || business.trustScore,
-        businessHours: business.businessHours as any[] || []
+        trustScore: finalTrustScore,
+        businessHours: business.businessHours || []
       } as BusinessWithRating;
     });
   }
