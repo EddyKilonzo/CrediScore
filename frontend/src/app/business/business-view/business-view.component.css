@@ -2634,3 +2634,168 @@
   font-size: 0.875rem;
 }
 
+/* Fraud report modal — evidence upload (styled drop zone) */
+.fraud-evidence-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin: 1rem 0 0.35rem;
+  color: var(--text-primary, #1e293b);
+}
+
+.fraud-evidence-label-muted {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.fraud-evidence-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.fraud-evidence-upload-box {
+  position: relative;
+  margin-bottom: 0.65rem;
+}
+
+.fraud-evidence-input-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fraud-evidence-surface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 1.1rem 1rem;
+  border: 2px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #fafbfc 0%, #f1f5f9 100%);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.fraud-evidence-upload-box:focus-within .fraud-evidence-surface {
+  outline: none;
+  border-color: #3e6a8a;
+  box-shadow: 0 0 0 3px rgba(62, 106, 138, 0.2);
+}
+
+.fraud-evidence-upload-box--active .fraud-evidence-surface {
+  border-color: #3e6a8a;
+  border-style: solid;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(62, 106, 138, 0.12);
+}
+
+.fraud-evidence-surface:hover {
+  border-color: #94a3b8;
+}
+
+.fraud-evidence-icon {
+  color: #64748b;
+  line-height: 0;
+}
+
+.fraud-evidence-cta {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.fraud-evidence-cta strong {
+  color: #0f172a;
+}
+
+.fraud-evidence-meta {
+  font-size: 0.7rem;
+  color: #64748b;
+  line-height: 1.4;
+  max-width: 17rem;
+}
+
+.fraud-evidence-count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.fraud-evidence-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.fraud-evidence-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem 0.45rem 0.45rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.78rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.fraud-evidence-kind {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: linear-gradient(135deg, #3e6a8a 0%, #2d5368 100%);
+  padding: 0.22rem 0.4rem;
+  border-radius: 0.3rem;
+  line-height: 1;
+}
+
+.fraud-evidence-filename {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1e293b;
+}
+
+.fraud-evidence-remove {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  border-radius: 9999px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.fraud-evidence-remove:hover {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+

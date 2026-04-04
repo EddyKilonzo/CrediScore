@@ -50,6 +50,8 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
   evidenceFiles: File[] = [];
   readonly maxEvidenceFiles = 5;
   readonly maxEvidenceBytes = 10 * 1024 * 1024;
+  /** Visual highlight while dragging files over the drop zone */
+  evidenceDropActive = false;
   submitting = false;
 
   readonly reasonOptions: { value: string; label: string }[] = [
@@ -171,10 +173,7 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  onEvidenceFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const picked = input.files ? Array.from(input.files) : [];
-    input.value = '';
+  private addEvidenceFiles(picked: File[]): void {
     for (const file of picked) {
       if (this.evidenceFiles.length >= this.maxEvidenceFiles) {
         this.toastService.warning(
@@ -189,6 +188,47 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
       }
       this.evidenceFiles.push(file);
     }
+  }
+
+  onEvidenceFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    this.addEvidenceFiles(picked);
+  }
+
+  onEvidenceDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+    this.evidenceDropActive = true;
+  }
+
+  onEvidenceDragLeave(event: DragEvent): void {
+    const related = event.relatedTarget as Node | null;
+    const cur = event.currentTarget as HTMLElement;
+    if (!related || !cur.contains(related)) {
+      this.evidenceDropActive = false;
+    }
+  }
+
+  onEvidenceDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.evidenceDropActive = false;
+    const dt = event.dataTransfer;
+    if (dt?.files?.length) {
+      this.addEvidenceFiles(Array.from(dt.files));
+    }
+  }
+
+  evidenceFileKindLabel(file: File): string {
+    const t = file.type || '';
+    if (t.startsWith('image/')) return 'IMG';
+    if (t === 'application/pdf') return 'PDF';
+    return 'DOC';
   }
 
   removeEvidenceFile(index: number): void {

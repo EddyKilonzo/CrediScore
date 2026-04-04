@@ -78,26 +78,50 @@
         placeholder="e.g. Order #12345 on 3 Apr, M-Pesa SMS ref ABC… (describe what proves your claim)"
       ></textarea>
 
-      <label class="field-label" for="report-evidence-files">
-        Photos &amp; documents <span class="muted">(optional, up to {{ maxEvidenceFiles }} files, 10MB each)</span>
-      </label>
+      <span class="field-label">Photos &amp; documents <span class="muted">(optional)</span></span>
       <p class="muted small evidence-upload-hint">
-        Images, PDF, or Word — e.g. receipts, chats, listings. Files are uploaded securely when you submit.
+        Receipts, screenshots, chats, or listing proof. Images, PDF, or Word — uploaded securely when you submit.
       </p>
-      <div class="evidence-file-row">
+      <div
+        class="evidence-upload-box"
+        [class.evidence-upload-box--active]="evidenceDropActive"
+        (dragover)="onEvidenceDragOver($event)"
+        (dragleave)="onEvidenceDragLeave($event)"
+        (drop)="onEvidenceDrop($event)"
+      >
         <input
           id="report-evidence-files"
           type="file"
-          class="evidence-file-input"
+          class="evidence-file-input-sr"
           multiple
           accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           (change)="onEvidenceFilesSelected($event)"
         />
+        <label for="report-evidence-files" class="evidence-upload-surface">
+          <span class="evidence-upload-icon" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </span>
+          <span class="evidence-upload-title"><strong>Choose files</strong> or drag and drop</span>
+          <span class="evidence-upload-meta">Up to {{ maxEvidenceFiles }} files · 10MB each · PNG, JPG, WebP, PDF, Word</span>
+          <span class="evidence-upload-count" *ngIf="evidenceFiles.length > 0">{{ evidenceFiles.length }} file(s) ready</span>
+        </label>
       </div>
       <ul class="evidence-file-list" *ngIf="evidenceFiles.length > 0">
         <li *ngFor="let f of evidenceFiles; let i = index" class="evidence-file-chip">
+          <span class="evidence-file-type">{{ evidenceFileKindLabel(f) }}</span>
           <span class="evidence-file-name" [title]="f.name">{{ f.name }}</span>
-          <button type="button" class="evidence-file-remove" (click)="removeEvidenceFile(i)" aria-label="Remove file">×</button>
+          <button
+            type="button"
+            class="evidence-file-remove"
+            (click)="removeEvidenceFile(i)"
+            [attr.aria-label]="'Remove ' + f.name"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
         </li>
       </ul>
 

@@ -138,6 +138,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   fraudEvidenceFiles: File[] = [];
   readonly fraudEvidenceMaxFiles = 5;
   readonly fraudEvidenceMaxBytes = 10 * 1024 * 1024;
+  fraudEvidenceDropActive = false;
   isSubmittingFraudReport = false;
 
   ngOnInit() {
@@ -1269,6 +1270,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     this.fraudReportEvidenceSummary = '';
     this.fraudReportEvidenceLinksRaw = '';
     this.fraudEvidenceFiles = [];
+    this.fraudEvidenceDropActive = false;
     this.showFraudReportModal = true;
   }
 
@@ -1296,10 +1298,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     return null;
   }
 
-  onFraudEvidenceFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const picked = input.files ? Array.from(input.files) : [];
-    input.value = '';
+  private addFraudEvidenceFiles(picked: File[]): void {
     for (const file of picked) {
       if (this.fraudEvidenceFiles.length >= this.fraudEvidenceMaxFiles) {
         this.toastService.warning(
@@ -1314,6 +1313,47 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       this.fraudEvidenceFiles.push(file);
     }
+  }
+
+  onFraudEvidenceFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    this.addFraudEvidenceFiles(picked);
+  }
+
+  onFraudEvidenceDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+    this.fraudEvidenceDropActive = true;
+  }
+
+  onFraudEvidenceDragLeave(event: DragEvent): void {
+    const related = event.relatedTarget as Node | null;
+    const cur = event.currentTarget as HTMLElement;
+    if (!related || !cur.contains(related)) {
+      this.fraudEvidenceDropActive = false;
+    }
+  }
+
+  onFraudEvidenceDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.fraudEvidenceDropActive = false;
+    const dt = event.dataTransfer;
+    if (dt?.files?.length) {
+      this.addFraudEvidenceFiles(Array.from(dt.files));
+    }
+  }
+
+  fraudEvidenceFileKindLabel(file: File): string {
+    const t = file.type || '';
+    if (t.startsWith('image/')) return 'IMG';
+    if (t === 'application/pdf') return 'PDF';
+    return 'DOC';
   }
 
   removeFraudEvidenceFile(index: number): void {
