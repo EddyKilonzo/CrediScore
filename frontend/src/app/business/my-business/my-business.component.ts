@@ -1308,6 +1308,16 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.toastService.show(`${document.name}: ${message}`, 'error');
   }
 
+  /** Merge a partial update response back onto currentBusiness, preserving relations
+   *  the backend doesn't include in the update response (payments, documents, etc.) */
+  private mergeBusinessUpdate(updated: Business): Business {
+    const prev = this.currentBusiness;
+    const merged = { ...prev, ...updated } as Business;
+    if (!updated.payments && prev?.payments) merged.payments = prev.payments;
+    if (!(updated as any).documents && (prev as any)?.documents) (merged as any).documents = (prev as any).documents;
+    return merged;
+  }
+
   getStatusColor(status: 'pending' | 'completed' | 'in-progress'): string {
     switch (status) {
       case 'completed': return 'text-green-600 bg-green-100';
@@ -1420,7 +1430,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       longitude: this.businessLongitude
     }).subscribe({
       next: (business) => {
-        this.currentBusiness = business;
+        this.currentBusiness = this.mergeBusinessUpdate(business);
+        this.loadBusinessLocation();
         this.toastService.show('Location updated successfully!', 'success');
         this.updateSocialsAndLocationCompletion();
       },
@@ -1473,27 +1484,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (updatedBusiness) => {
-          const previousBusiness = this.currentBusiness;
-          const mergedBusiness = {
-            ...previousBusiness,
-            ...updatedBusiness,
-          } as Business;
-
-          if (
-            updatedBusiness.payments === undefined &&
-            previousBusiness?.payments
-          ) {
-            mergedBusiness.payments = previousBusiness.payments;
-          }
-
-          if (
-            updatedBusiness.documents === undefined &&
-            previousBusiness?.documents
-          ) {
-            mergedBusiness.documents = previousBusiness.documents;
-          }
-
-          this.currentBusiness = mergedBusiness;
+          this.currentBusiness = this.mergeBusinessUpdate(updatedBusiness);
           this.socialLinks = this.normalizeSocialLinks(
             (updatedBusiness as any).socialLinks ?? trimmedLinks,
           );
@@ -1532,12 +1523,14 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     if (!this.currentBusiness?.id) return;
     this.isLoadingTemplates = true;
     const url = `${environment.apiUrl}/api/business/${this.currentBusiness.id}/response-templates`;
-    // Using inject would be cleaner; we use businessService's http via a workaround
-    // Since businessService has no method, we'll use fetch-like approach via window.fetch
+    const token = localStorage.getItem('token') || '';
     fetch(url, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` }
-    }).then(r => r.json()).then(data => {
-      this.responseTemplates = data.templates || data || [];
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).then(r => {
+      if (!r.ok) throw new Error('Failed to load templates');
+      return r.json();
+    }).then(data => {
+      this.responseTemplates = Array.isArray(data) ? data : (data.templates || []);
       this.isLoadingTemplates = false;
     }).catch(() => { this.isLoadingTemplates = false; });
   }
@@ -1562,7 +1555,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   saveTemplate() {
     if (!this.currentBusiness?.id || !this.templateForm.name.trim() || !this.templateForm.content.trim()) return;
     this.isSavingTemplate = true;
-    const token = localStorage.getItem('accessToken') || '';
+    const token = localStorage.getItem('token') || '';
     const isEdit = !!this.editingTemplateId;
     const url = isEdit
       ? `${environment.apiUrl}/api/business/response-templates/${this.editingTemplateId}`
@@ -1588,7 +1581,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   deleteTemplate(templateId: string) {
     if (!confirm('Delete this response template?')) return;
-    const token = localStorage.getItem('accessToken') || '';
+    const token = localStorage.getItem('token') || '';
     fetch(`${environment.apiUrl}/api/business/response-templates/${templateId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
@@ -1611,7 +1604,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     this.businessService.updateBusiness({ id: this.currentBusiness.id, businessHours: this.businessHours } as any)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: (updatedBusiness) => {
+          this.currentBusiness = this.mergeBusinessUpdate(updatedBusiness);
+          this.loadBusinessHours();
           this.isSavingHours = false;
           this.toastService.show('Business hours updated successfully', 'success');
         },
@@ -1699,19 +1694,19 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (updatedBusiness) => {
-          this.currentBusiness = updatedBusiness;
-          
+          this.currentBusiness = this.mergeBusinessUpdate(updatedBusiness);
+
           // Update local profile data to match response
           this.businessProfile = {
             name: updatedBusiness.name || '',
-            catchphrase: (updatedBusiness as any).catchphrase || '', // Load from backend
-            logo: (updatedBusiness as any).logo || '', // Load from backend
+            catchphrase: (updatedBusiness as any).catchphrase || '',
+            logo: (updatedBusiness as any).logo || '',
             description: updatedBusiness.description || '',
             website: updatedBusiness.website || '',
             phone: updatedBusiness.phone || '',
             email: updatedBusiness.email || ''
           };
-          
+
           this.originalBusinessProfile = { ...this.businessProfile };
           this.profileFormTouched = false;
           this.isUpdatingProfile = false;
@@ -1937,7 +1932,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (updatedBusiness) => {
-          this.currentBusiness = updatedBusiness;
+          this.currentBusiness = this.mergeBusinessUpdate(updatedBusiness);
           this.businessProfile.logo = (updatedBusiness as any).logo || logoUrl;
           this.originalBusinessProfile = { ...this.businessProfile };
           this.toastService.show('Logo saved successfully', 'success');
@@ -1984,7 +1979,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (updatedBusiness) => {
-          this.currentBusiness = updatedBusiness;
+          this.currentBusiness = this.mergeBusinessUpdate(updatedBusiness);
           this.businessProfile.logo = '';
           this.originalBusinessProfile = { ...this.businessProfile };
           this.toastService.show('Logo removed successfully', 'success');

@@ -418,6 +418,12 @@ export class BusinessService {
             },
           },
           businessCategory: true,
+          payments: {
+            orderBy: { addedAt: 'desc' },
+          },
+          documents: {
+            orderBy: { uploadedAt: 'desc' },
+          },
         },
       });
 
