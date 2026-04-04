@@ -3,8 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { forkJoin, of, Subject, Subscription } from 'rxjs';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  map,
+  switchMap,
+} from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { BusinessService } from '../../core/services/business.service';
 import { ReviewService } from '../../core/services/review.service';
@@ -40,6 +46,10 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
   evidenceSummary = '';
   /** One URL per line (https://…) */
   evidenceLinksRaw = '';
+  /** Screenshots / PDFs / docs uploaded before submit (see maxEvidenceFiles) */
+  evidenceFiles: File[] = [];
+  readonly maxEvidenceFiles = 5;
+  readonly maxEvidenceBytes = 10 * 1024 * 1024;
   submitting = false;
 
   readonly reasonOptions: { value: string; label: string }[] = [
@@ -144,6 +154,47 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
       .filter((s) => /^https?:\/\/.+/i.test(s));
   }
 
+  private evidenceFileError(file: File): string | null {
+    if (file.size > this.maxEvidenceBytes) {
+      return `"${file.name}" is larger than 10MB.`;
+    }
+    const t = file.type || '';
+    const okImage = t.startsWith('image/');
+    const okPdf = t === 'application/pdf';
+    const okWord =
+      t === 'application/msword' ||
+      t ===
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (!okImage && !okPdf && !okWord) {
+      return `"${file.name}" must be an image, PDF, or Word document.`;
+    }
+    return null;
+  }
+
+  onEvidenceFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    for (const file of picked) {
+      if (this.evidenceFiles.length >= this.maxEvidenceFiles) {
+        this.toastService.warning(
+          `You can attach up to ${this.maxEvidenceFiles} files.`,
+        );
+        break;
+      }
+      const err = this.evidenceFileError(file);
+      if (err) {
+        this.toastService.warning(err);
+        continue;
+      }
+      this.evidenceFiles.push(file);
+    }
+  }
+
+  removeEvidenceFile(index: number): void {
+    this.evidenceFiles.splice(index, 1);
+  }
+
   submit(): void {
     if (!this.businessId || !this.reason) {
       this.toastService.warning('Choose a business and a reason.');
@@ -154,18 +205,36 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
       return;
     }
     this.submitting = true;
-    const links = this.parseEvidenceLinks();
-    this.reviewService
-      .submitFraudReport({
-        businessId: this.businessId,
-        reason: this.reason,
-        description: this.description.trim() || '',
-        evidenceSummary: this.evidenceSummary.trim() || undefined,
-        evidenceLinks: links.length ? links : undefined,
-      })
+    const manualLinks = this.parseEvidenceLinks();
+    const uploadedUrls$ =
+      this.evidenceFiles.length === 0
+        ? of([] as string[])
+        : forkJoin(
+            this.evidenceFiles.map((f) =>
+              this.reviewService
+                .uploadFraudEvidence(f, this.businessId)
+                .pipe(map((r) => r.url)),
+            ),
+          );
+
+    uploadedUrls$
+      .pipe(
+        switchMap((uploaded) => {
+          const all = [...manualLinks, ...uploaded];
+          return this.reviewService.submitFraudReport({
+            businessId: this.businessId,
+            reason: this.reason,
+            description: this.description.trim() || '',
+            evidenceSummary: this.evidenceSummary.trim() || undefined,
+            evidenceLinks: all.length ? all : undefined,
+          });
+        }),
+        finalize(() => {
+          this.submitting = false;
+        }),
+      )
       .subscribe({
         next: () => {
-          this.submitting = false;
           this.toastService.success(
             'Report submitted. Our team will review it and take action if needed.',
           );
@@ -173,10 +242,10 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
           this.description = '';
           this.evidenceSummary = '';
           this.evidenceLinksRaw = '';
+          this.evidenceFiles = [];
           this.router.navigate(['/search']);
         },
         error: (err) => {
-          this.submitting = false;
           const msg =
             err?.error?.message ||
             'Could not submit your report. Please try again later.';

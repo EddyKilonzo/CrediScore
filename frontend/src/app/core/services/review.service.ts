@@ -159,5 +159,20 @@ export class ReviewService {
   }): Observable<unknown> {
     return this.http.post(`${this.API_URL}/user/fraud-reports`, payload);
   }
+
+  /** Upload screenshot / photo / PDF / Word doc; append returned URL to evidenceLinks when submitting report */
+  uploadFraudEvidence(file: File, businessId?: string): Observable<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (businessId) {
+      formData.append('businessId', businessId);
+    }
+    return this.http
+      .post<{ url: string }>(
+        `${this.API_URL}/user/fraud-reports/upload-evidence`,
+        formData,
+      )
+      .pipe(map((res) => ({ url: res.url })));
+  }
 }
 

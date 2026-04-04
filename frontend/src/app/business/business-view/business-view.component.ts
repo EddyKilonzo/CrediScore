@@ -14,6 +14,7 @@ import {
   inferNominatimCountryCodes,
 } from '../../core/utils/geo-coords';
 import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
 import { ImageLightboxComponent } from '../../shared/components/image-lightbox/image-lightbox.component';
 import { signal } from '@angular/core';
@@ -134,6 +135,9 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   fraudReportDescription = '';
   fraudReportEvidenceSummary = '';
   fraudReportEvidenceLinksRaw = '';
+  fraudEvidenceFiles: File[] = [];
+  readonly fraudEvidenceMaxFiles = 5;
+  readonly fraudEvidenceMaxBytes = 10 * 1024 * 1024;
   isSubmittingFraudReport = false;
 
   ngOnInit() {
@@ -1264,6 +1268,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     this.fraudReportDescription = '';
     this.fraudReportEvidenceSummary = '';
     this.fraudReportEvidenceLinksRaw = '';
+    this.fraudEvidenceFiles = [];
     this.showFraudReportModal = true;
   }
 
@@ -1274,36 +1279,89 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       .filter((s) => /^https?:\/\/.+/i.test(s));
   }
 
+  private fraudEvidenceFileError(file: File): string | null {
+    if (file.size > this.fraudEvidenceMaxBytes) {
+      return `"${file.name}" is larger than 10MB.`;
+    }
+    const t = file.type || '';
+    const okImage = t.startsWith('image/');
+    const okPdf = t === 'application/pdf';
+    const okWord =
+      t === 'application/msword' ||
+      t ===
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (!okImage && !okPdf && !okWord) {
+      return `"${file.name}" must be an image, PDF, or Word document.`;
+    }
+    return null;
+  }
+
+  onFraudEvidenceFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    for (const file of picked) {
+      if (this.fraudEvidenceFiles.length >= this.fraudEvidenceMaxFiles) {
+        this.toastService.warning(
+          `You can attach up to ${this.fraudEvidenceMaxFiles} files.`,
+        );
+        break;
+      }
+      const err = this.fraudEvidenceFileError(file);
+      if (err) {
+        this.toastService.warning(err);
+        continue;
+      }
+      this.fraudEvidenceFiles.push(file);
+    }
+  }
+
+  removeFraudEvidenceFile(index: number): void {
+    this.fraudEvidenceFiles.splice(index, 1);
+  }
+
   closeFraudReportModal() {
     this.showFraudReportModal = false;
   }
 
-  submitFraudReport() {
+  async submitFraudReport() {
     if (!this.fraudReportReason || !this.fraudReportDescription.trim() || !this.business?.id) return;
     this.isSubmittingFraudReport = true;
 
-    const links = this.parseFraudEvidenceLinks();
-    this.http.post(
-      `${this.API_URL}/user/fraud-reports`,
-      {
-        businessId: this.business.id,
-        reason: this.fraudReportReason,
-        description: this.fraudReportDescription.trim(),
-        evidenceSummary: this.fraudReportEvidenceSummary.trim() || undefined,
-        evidenceLinks: links.length ? links : undefined,
-      },
-      { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }
-    ).subscribe({
-      next: () => {
-        this.isSubmittingFraudReport = false;
-        this.showFraudReportModal = false;
-        this.toastService.success('Report submitted. Our trust & safety team will review it.');
-      },
-      error: (err) => {
-        this.isSubmittingFraudReport = false;
-        const msg = err?.error?.message || 'Failed to submit report. Please try again.';
-        this.toastService.error(msg);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of this.fraudEvidenceFiles) {
+        const res = await firstValueFrom(
+          this.reviewService.uploadFraudEvidence(file, this.business.id),
+        );
+        uploadedUrls.push(res.url);
       }
-    });
+      const manualLinks = this.parseFraudEvidenceLinks();
+      const allLinks = [...manualLinks, ...uploadedUrls];
+
+      await firstValueFrom(
+        this.http.post(
+          `${this.API_URL}/user/fraud-reports`,
+          {
+            businessId: this.business.id,
+            reason: this.fraudReportReason,
+            description: this.fraudReportDescription.trim(),
+            evidenceSummary: this.fraudReportEvidenceSummary.trim() || undefined,
+            evidenceLinks: allLinks.length ? allLinks : undefined,
+          },
+          { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } },
+        ),
+      );
+
+      this.showFraudReportModal = false;
+      this.fraudEvidenceFiles = [];
+      this.toastService.success('Report submitted. Our trust & safety team will review it.');
+    } catch (err: any) {
+      const msg =
+        err?.error?.message || 'Failed to submit report. Please try again.';
+      this.toastService.error(msg);
+    } finally {
+      this.isSubmittingFraudReport = false;
+    }
   }
 }

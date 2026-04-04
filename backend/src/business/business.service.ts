@@ -1557,7 +1557,9 @@ export class BusinessService {
           },
           fraudReports: {
             where: {
-              status: { in: ['PENDING', 'UNDER_REVIEW', 'UPHELD'] },
+              status: {
+                in: ['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'UPHELD'],
+              },
             },
           },
         },
@@ -1650,17 +1652,25 @@ export class BusinessService {
       );
       const openPenalty = Math.min(openReports.length * 5, 25);
 
+      // Resolved as valid concern: moderate fixed penalty per report
+      const resolvedReports = business.fraudReports.filter(
+        (r) => r.status === 'RESOLVED',
+      );
+      const resolvedPenalty = Math.min(resolvedReports.length * 5, 25);
+
       // Admin-substantiated reports: stronger penalty (evidence-backed findings)
       const upheldReports = business.fraudReports.filter(
         (r) => r.status === 'UPHELD',
       );
       const upheldPenalty = Math.min(upheldReports.length * 15, 45);
 
-      const fraudPenalty = openPenalty + upheldPenalty;
+      const fraudPenalty = openPenalty + resolvedPenalty + upheldPenalty;
       score -= fraudPenalty;
       factors.fraudReports = {
         openCount: openReports.length,
         openPenalty,
+        resolvedCount: resolvedReports.length,
+        resolvedPenalty,
         upheldCount: upheldReports.length,
         upheldPenalty,
         totalPenalty: fraudPenalty,

@@ -551,6 +551,11 @@ html, body {
   box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.2);
 }
 
+.status-indicator.upheld {
+  background: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.2);
+}
+
 /* Card Body */
 .card-body {
   padding: 0 1.5rem 1rem 1.5rem;
@@ -761,6 +766,7 @@ html, body {
 
 .status-badge.pending { background: #fef3c7; color: #92400e; }
 .status-badge.under-review { background: #dbeafe; color: #1e40af; }
+.status-badge.upheld { background: #fee2e2; color: #991b1b; }
 .status-badge.resolved { background: #dcfce7; color: #166534; }
 .status-badge.dismissed { background: #f3f4f6; color: #6b7280; }
 .status-badge.active { background: #dcfce7; color: #166534; }

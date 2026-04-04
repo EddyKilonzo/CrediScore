@@ -1117,6 +1117,23 @@
           style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;"
         ></textarea>
         <label style="display:block;font-weight:600;font-size:0.875rem;margin:1rem 0 0.5rem;color:var(--text-primary,#1e293b);">
+          Photos &amp; documents <span style="color:#94a3b8;font-weight:500;">(optional, up to {{ fraudEvidenceMaxFiles }}, 10MB each)</span>
+        </label>
+        <p style="margin:0 0 0.5rem;font-size:0.75rem;color:#94a3b8;line-height:1.4;">Images, PDF, or Word — uploaded when you submit.</p>
+        <input
+          type="file"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          (change)="onFraudEvidenceFilesSelected($event)"
+          style="width:100%;font-size:0.8rem;margin-bottom:0.5rem;"
+        />
+        <div *ngIf="fraudEvidenceFiles.length > 0" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.75rem;">
+          <span *ngFor="let f of fraudEvidenceFiles; let i = index" style="display:inline-flex;align-items:center;gap:0.25rem;padding:0.2rem 0.45rem;background:#f1f5f9;border-radius:6px;font-size:0.75rem;max-width:100%;">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;" [title]="f.name">{{ f.name }}</span>
+            <button type="button" (click)="removeFraudEvidenceFile(i)" style="border:none;background:transparent;color:#64748b;cursor:pointer;padding:0 2px;line-height:1;" aria-label="Remove">×</button>
+          </span>
+        </div>
+        <label style="display:block;font-weight:600;font-size:0.875rem;margin:1rem 0 0.5rem;color:var(--text-primary,#1e293b);">
           Evidence links <span style="color:#94a3b8;font-weight:500;">(optional, one https URL per line)</span>
         </label>
         <textarea

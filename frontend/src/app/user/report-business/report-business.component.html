@@ -78,6 +78,29 @@
         placeholder="e.g. Order #12345 on 3 Apr, M-Pesa SMS ref ABC… (describe what proves your claim)"
       ></textarea>
 
+      <label class="field-label" for="report-evidence-files">
+        Photos &amp; documents <span class="muted">(optional, up to {{ maxEvidenceFiles }} files, 10MB each)</span>
+      </label>
+      <p class="muted small evidence-upload-hint">
+        Images, PDF, or Word — e.g. receipts, chats, listings. Files are uploaded securely when you submit.
+      </p>
+      <div class="evidence-file-row">
+        <input
+          id="report-evidence-files"
+          type="file"
+          class="evidence-file-input"
+          multiple
+          accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          (change)="onEvidenceFilesSelected($event)"
+        />
+      </div>
+      <ul class="evidence-file-list" *ngIf="evidenceFiles.length > 0">
+        <li *ngFor="let f of evidenceFiles; let i = index" class="evidence-file-chip">
+          <span class="evidence-file-name" [title]="f.name">{{ f.name }}</span>
+          <button type="button" class="evidence-file-remove" (click)="removeEvidenceFile(i)" aria-label="Remove file">×</button>
+        </li>
+      </ul>
+
       <label class="field-label" for="report-evidence-urls">Evidence links <span class="muted">(optional, one https URL per line)</span></label>
       <textarea
         id="report-evidence-urls"

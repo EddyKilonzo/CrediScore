@@ -204,6 +204,67 @@
   cursor: not-allowed;
 }
 
+.evidence-upload-hint {
+  margin: 0 0 0.5rem;
+  line-height: 1.4;
+}
+
+.evidence-file-row {
+  margin-bottom: 0.75rem;
+}
+
+.evidence-file-input {
+  width: 100%;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.evidence-file-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.evidence-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.evidence-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+  color: #334155;
+}
+
+.evidence-file-remove {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  border-radius: 0.25rem;
+}
+
+.evidence-file-remove:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
 :host-context(html[data-theme='dark']) .report-page {
   background: linear-gradient(180deg, #152028 0%, #0f172a 100%);
 }

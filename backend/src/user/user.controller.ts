@@ -510,6 +510,70 @@ export class UserController {
   }
 
   // Fraud Report Management
+  @Post('fraud-reports/upload-evidence')
+  @UseInterceptors(FileInterceptor('file'))
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Upload image or document evidence for a fraud report (Cloudinary)',
+  })
+  @ApiResponse({ status: 200, description: 'Evidence file uploaded; use returned URL in evidenceLinks' })
+  @ApiResponse({ status: 400, description: 'Invalid file type or size' })
+  async uploadFraudReportEvidence(
+    @Request() req: { user: UserWithoutPassword },
+    @UploadedFile() file: any,
+    @Body('businessId') businessId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new BadRequestException('File must be 10MB or smaller');
+    }
+
+    const mime = file.mimetype || '';
+    const isImage = mime.startsWith('image/');
+    const isPdf = mime === 'application/pdf';
+    const isWord =
+      mime === 'application/msword' ||
+      mime ===
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (!isImage && !isPdf && !isWord) {
+      throw new BadRequestException(
+        'Allowed: images (JPEG, PNG, WebP, GIF), PDF, or Word (.doc, .docx)',
+      );
+    }
+
+    const resourceType = isImage ? ('image' as const) : ('raw' as const);
+
+    try {
+      const uploadResult = await this.cloudinaryService.uploadFile(
+        {
+          buffer: file.buffer,
+          originalname: file.originalname,
+          mimetype: mime,
+        },
+        {
+          folder: `fraud-reports/evidence/${req.user.id}`,
+          tags: ['fraud-evidence', businessId || 'unspecified'],
+          resource_type: resourceType,
+        },
+      );
+
+      return {
+        url: uploadResult.secure_url,
+        publicId: uploadResult.public_id,
+        format: uploadResult.format,
+        resourceType,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to upload evidence: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   @Post('fraud-reports')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a fraud report' })

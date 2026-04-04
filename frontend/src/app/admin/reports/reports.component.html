@@ -126,20 +126,21 @@
           <input 
             type="text" 
             placeholder="Search reports by business name, reporter name, or reason..."
-            [(ngModel)]="searchTerm"
-            (ngModelChange)="onSearch()"
+            [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event); onSearch()"
             class="search-input">
         </div>
         
         <div class="filter-controls">
           <select 
-            [(ngModel)]="statusFilter"
-            (ngModelChange)="onFilterChange()"
+            [ngModel]="statusFilter()"
+            (ngModelChange)="statusFilter.set($event); onFilterChange()"
             class="filter-select"
             data-filter="status">
             <option value="">All Status</option>
             <option value="PENDING">Pending</option>
             <option value="UNDER_REVIEW">Under Review</option>
+            <option value="UPHELD">Substantiated</option>
             <option value="RESOLVED">Resolved</option>
             <option value="DISMISSED">Dismissed</option>
           </select>
@@ -439,10 +440,12 @@
             <label for="statusSelect">Select New Status:</label>
             <select 
               id="statusSelect"
-              [(ngModel)]="newStatus"
+              [ngModel]="newStatus()"
+              (ngModelChange)="newStatus.set($event)"
               class="status-select">
               <option value="PENDING">Pending</option>
               <option value="UNDER_REVIEW">Under Review</option>
+              <option value="UPHELD">Substantiated</option>
               <option value="RESOLVED">Resolved</option>
               <option value="DISMISSED">Dismissed</option>
             </select>
@@ -452,7 +455,8 @@
             <label for="adminNotes">Admin Notes (Optional):</label>
             <textarea 
               id="adminNotes"
-              [(ngModel)]="adminNotes"
+              [ngModel]="adminNotes()"
+              (ngModelChange)="adminNotes.set($event)"
               placeholder="Add any additional notes or comments..."
               class="admin-notes-textarea"
               rows="4"></textarea>

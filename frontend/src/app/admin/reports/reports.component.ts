@@ -175,6 +175,8 @@ export class ReportsComponent implements OnInit {
         return 'status-badge pending';
       case 'under_review':
         return 'status-badge under-review';
+      case 'upheld':
+        return 'status-badge upheld';
       case 'resolved':
         return 'status-badge resolved';
       case 'dismissed':
@@ -190,6 +192,8 @@ export class ReportsComponent implements OnInit {
         return 'Pending';
       case 'under_review':
         return 'Under Review';
+      case 'upheld':
+        return 'Substantiated';
       case 'resolved':
         return 'Resolved';
       case 'dismissed':
@@ -308,6 +312,8 @@ export class ReportsComponent implements OnInit {
         return 'status-indicator pending';
       case 'under_review':
         return 'status-indicator under-review';
+      case 'upheld':
+        return 'status-indicator upheld';
       case 'resolved':
         return 'status-indicator resolved';
       case 'dismissed':

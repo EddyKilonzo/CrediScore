@@ -52,6 +52,9 @@ export interface AdminDashboardStats {
   fraudReportStats: AdminFraudReportStats;
 }
 
+/** Points deducted from the reporter's user reputation when a fraud report is dismissed as meritless. */
+const FRAUD_REPORT_DISMISSED_REPUTATION_PENALTY = 15;
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
@@ -793,13 +796,41 @@ export class AdminService {
         throw new NotFoundException('Fraud report not found');
       }
 
-      await this.prisma.fraudReport.update({
-        where: { id: reportId },
-        data: {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          status: status as any,
-          ...(adminNotes !== undefined && { adminNotes }),
-        },
+      const previousStatus = report.status;
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.fraudReport.update({
+          where: { id: reportId },
+          data: {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            status: status as any,
+            ...(adminNotes !== undefined && { adminNotes }),
+          },
+        });
+
+        if (
+          status === 'DISMISSED' &&
+          previousStatus !== 'DISMISSED' &&
+          report.reporterId
+        ) {
+          const reporter = await tx.user.findUnique({
+            where: { id: report.reporterId },
+            select: { reputation: true },
+          });
+          if (reporter) {
+            const nextRep = Math.max(
+              0,
+              reporter.reputation - FRAUD_REPORT_DISMISSED_REPUTATION_PENALTY,
+            );
+            await tx.user.update({
+              where: { id: report.reporterId },
+              data: { reputation: nextRep },
+            });
+            this.logger.log(
+              `Reporter ${report.reporterId} reputation ${reporter.reputation} -> ${nextRep} (dismissed fraud report ${reportId})`,
+            );
+          }
+        }
       });
 
       try {
