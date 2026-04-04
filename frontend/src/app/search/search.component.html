@@ -92,7 +92,7 @@
                 Verified Only
               </h3>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;color:#374151;">
-                <input type="checkbox" [(ngModel)]="verifiedOnly" (change)="applySearchAndFilters()" style="width:16px;height:16px;accent-color:#2C5270;" />
+                <input type="checkbox" [(ngModel)]="verifiedOnly" (ngModelChange)="applySearchAndFilters()" style="width:16px;height:16px;accent-color:#2C5270;" />
                 Show verified businesses only
               </label>
             </div>
@@ -205,7 +205,8 @@
         </h2>
         <div class="view-toggle">
           <button 
-            (click)="toggleViewMode()" 
+            type="button"
+            (click)="setViewMode('list')" 
             [class.active]="viewMode === 'list'"
             class="view-toggle-btn"
             title="List View"
@@ -214,7 +215,8 @@
             <span>List</span>
           </button>
           <button 
-            (click)="toggleViewMode()" 
+            type="button"
+            (click)="setViewMode('map')" 
             [class.active]="viewMode === 'map'"
             class="view-toggle-btn"
             title="Map View"
@@ -243,10 +245,15 @@
               <div
                 *ngFor="let business of getBusinessesWithLocation()"
                 class="map-business-card"
+                role="link"
+                tabindex="0"
+                [attr.aria-label]="'View ' + (business.name || 'business')"
                 (click)="viewBusiness(business.id)"
+                (keyup.enter)="viewBusiness(business.id)"
+                (keyup.space)="$event.preventDefault(); viewBusiness(business.id)"
               >
                 <div class="map-card-header">
-                  <h4 class="map-business-name">{{ business.name }}</h4>
+                  <h4 class="map-business-name">{{ business.name || 'Business' }}</h4>
                   <div class="map-business-badges">
                     <div class="map-grade-badge" *ngIf="getBusinessGrade(business) !== 'N/A'" 
                          [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'" 
@@ -258,9 +265,12 @@
                   </div>
                 </div>
                 <div class="map-card-body">
-                  <p class="map-business-location" *ngIf="business.location">
+                  <p class="map-business-location" *ngIf="getCardLocationLine(business)">
                     <i class="uil uil-map-marker"></i>
-                    {{ business.location }}
+                    {{ getCardLocationLine(business) }}
+                  </p>
+                  <p class="map-business-category text-xs text-gray-500 mt-1" *ngIf="getCardCategoryLabel(business)">
+                    <i class="uil uil-tag"></i> {{ getCardCategoryLabel(business) }}
                   </p>
                   <div class="map-card-actions">
                     <a
@@ -302,7 +312,12 @@
         <div
           *ngFor="let business of filteredBusinesses"
           class="business-card"
+          role="link"
+          tabindex="0"
+          [attr.aria-label]="'View details for ' + (business.name || 'business')"
           (click)="viewBusiness(business.id)"
+          (keyup.enter)="viewBusiness(business.id)"
+          (keyup.space)="$event.preventDefault(); viewBusiness(business.id)"
         >
           <!-- Card Header with Logo -->
           <div class="card-header">
@@ -333,10 +348,12 @@
 
           <!-- Card Body -->
           <div class="card-body">
-            <div class="flex items-center justify-between mb-2">
-              <p class="business-category" *ngIf="business.category">
+            <h3 class="business-name">{{ business.name || 'Business' }}</h3>
+
+            <div class="flex items-center justify-between mb-2 mt-1 flex-wrap gap-2">
+              <p class="business-category">
                 <i class="uil uil-tag"></i>
-                {{ business.category }}
+                {{ getCardCategoryLabel(business) }}
               </p>
               <div class="status-badge" [class.open]="isBusinessOpen(business)" [class.closed]="!isBusinessOpen(business)">
                 <span class="status-dot"></span>
@@ -344,10 +361,13 @@
               </div>
             </div>
 
-            <h3 class="business-name">{{ business.name }}</h3>
+            <p class="business-location-inline" *ngIf="getCardLocationLine(business)">
+              <i class="uil uil-map-marker"></i>
+              {{ getCardLocationLine(business) }}
+            </p>
             
-            <p class="business-description" *ngIf="getListCardBlurb(business) as blurb">
-              {{ blurb }}
+            <p class="business-description" *ngIf="getListCardBlurb(business)">
+              {{ getListCardBlurb(business) }}
             </p>
 
             <!-- Business Hours Summary -->
@@ -431,10 +451,10 @@
             <span>{{ business.responseRate }}% response rate</span>
           </div>
 
-          <!-- Location -->
-          <div class="card-location" *ngIf="business.location">
+          <!-- Location footer strip -->
+          <div class="card-location" *ngIf="getCardLocationLine(business)">
             <i class="uil uil-map-marker"></i>
-            <span>{{ business.location }}</span>
+            <span>{{ getCardLocationLine(business) }}</span>
           </div>
         </div>
       </div>

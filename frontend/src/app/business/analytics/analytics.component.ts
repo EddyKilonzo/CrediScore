@@ -272,93 +272,242 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     downloadPDF(): void {
         const biz = this.currentBusiness;
         if (!biz) return;
-        const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const now = new Date();
+        const date = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const logoUrl = window.location.origin + '/images/CrediScore.png';
+        const esc = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const gradeColor = (score: number) =>
+            score >= 90 ? '#059669' : score >= 80 ? '#10b981' : score >= 70 ? '#3b82f6' :
+            score >= 60 ? '#f59e0b' : score >= 50 ? '#f97316' : '#ef4444';
 
         const ratingRows = this.ratingDistribution.map(r =>
             `<tr>
-              <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)} (${r.rating})</td>
-              <td>${r.count}</td>
-              <td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:100%;"><div style="background:#2C5270;height:8px;border-radius:4px;width:${r.percentage.toFixed(1)}%;"></div></div></td>
-              <td>${r.percentage.toFixed(1)}%</td>
+              <td style="letter-spacing:1px;color:#f59e0b;">${'★'.repeat(r.rating)}<span style="color:#d1d5db;">${'★'.repeat(5 - r.rating)}</span> <span style="color:#6b7280;font-size:11px;">(${r.rating} star)</span></td>
+              <td style="font-weight:600;">${r.count}</td>
+              <td style="width:40%;padding-right:16px;">
+                <div style="background:#E8EEF3;border-radius:6px;height:10px;">
+                  <div style="background:linear-gradient(90deg,#3E6A8A,#2C5270);height:10px;border-radius:6px;width:${r.percentage.toFixed(1)}%;"></div>
+                </div>
+              </td>
+              <td style="font-weight:600;color:#2C5270;">${r.percentage.toFixed(1)}%</td>
             </tr>`
         ).join('');
 
         const trendRows = this.reviewTrends.map(t =>
-            `<tr><td>${t.month}</td><td>${t.count}</td><td>${t.averageRating > 0 ? t.averageRating.toFixed(1) : '—'}</td></tr>`
+            `<tr>
+              <td>${t.month}</td>
+              <td style="font-weight:600;">${t.count}</td>
+              <td style="color:#f59e0b;">${t.averageRating > 0 ? '★ ' + t.averageRating.toFixed(1) : '—'}</td>
+            </tr>`
         ).join('');
 
         const reviewRows = this.recentReviews.slice(0, 10).map(r =>
             `<tr>
-              <td>${this.formatDate(r.createdAt)}</td>
-              <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</td>
-              <td>${(r.comment || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+              <td style="white-space:nowrap;">${this.formatDate(r.createdAt)}</td>
+              <td style="color:#f59e0b;letter-spacing:1px;">${'★'.repeat(r.rating)}<span style="color:#d1d5db;">${'★'.repeat(5 - r.rating)}</span></td>
+              <td style="color:#4b5563;">${esc(r.comment || '—')}</td>
             </tr>`
         ).join('');
 
-        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>Analytics Report — ${biz.name}</title>
+        const trustGradeColor = gradeColor(this.summary.trustScore);
+        const period = this.selectedPeriod === 'month' ? 'Last Month' :
+                       this.selectedPeriod === '3months' ? 'Last 3 Months' :
+                       this.selectedPeriod === '6months' ? 'Last 6 Months' :
+                       this.selectedPeriod === 'year' ? 'Last Year' : this.selectedPeriod;
+
+        const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>Analytics Report — ${esc(biz.name)}</title>
 <style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; margin: 0; padding: 0; }
-  .page { max-width: 860px; margin: auto; padding: 36px 40px; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #2C5270; padding-bottom: 16px; margin-bottom: 28px; }
-  .brand { font-size: 22px; font-weight: 700; color: #2C5270; }
-  .subtitle { font-size: 13px; color: #6b7280; margin-top: 4px; }
-  .meta { text-align: right; font-size: 12px; color: #6b7280; }
-  .section-title { font-size: 15px; font-weight: 700; color: #2C5270; border-left: 4px solid #2C5270; padding-left: 10px; margin: 28px 0 14px; }
-  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 8px; }
-  .kpi { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
-  .kpi-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
-  .kpi-value { font-size: 26px; font-weight: 700; color: #1f2937; margin-top: 4px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
-  th { background: #2C5270; color: white; padding: 8px 10px; text-align: left; font-size: 12px; }
-  td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-  tr:nth-child(even) td { background: #f9fafb; }
-  .footer { margin-top: 36px; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 11px; color: #9ca3af; display: flex; justify-content: space-between; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-</style></head><body><div class="page">
-  <div class="header">
-    <div>
-      <div class="brand">CrediScore — Business Analytics</div>
-      <div class="subtitle">${biz.name}${biz.category ? ' · ' + biz.category : ''}</div>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif; background: #fff; color: #1f2937; }
+  .page { max-width: 900px; margin: 0 auto; }
+
+  /* ── Header Banner ── */
+  .brand-header {
+    background: linear-gradient(135deg, #1a3a52 0%, #2C5270 50%, #3E6A8A 100%);
+    padding: 28px 40px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    color: white;
+  }
+  .brand-left { display: flex; align-items: center; gap: 16px; }
+  .brand-logo { height: 52px; width: auto; }
+  .brand-name { font-size: 26px; font-family: 'Brush Script MT', 'Segoe Script', cursive; color: white; line-height: 1; }
+  .brand-tagline { font-size: 11px; color: rgba(255,255,255,0.7); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 3px; }
+  .brand-right { text-align: right; }
+  .report-title { font-size: 16px; font-weight: 700; color: white; }
+  .report-meta { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+  /* ── Subheader strip ── */
+  .subheader {
+    background: #E8EEF3; padding: 12px 40px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #c8d8e4;
+  }
+  .biz-name { font-size: 15px; font-weight: 700; color: #2C5270; }
+  .biz-cat { font-size: 12px; color: #5C8BA5; margin-top: 2px; }
+  .period-badge {
+    background: #2C5270; color: white; font-size: 11px; font-weight: 600;
+    padding: 4px 12px; border-radius: 20px; letter-spacing: 0.04em;
+  }
+
+  /* ── Body ── */
+  .body { padding: 32px 40px 40px; }
+  .section-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+    color: #2C5270; border-left: 4px solid #3E6A8A; padding-left: 10px;
+    margin: 28px 0 14px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── KPI Grid ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .kpi {
+    background: #f5f8fb; border: 1px solid #dce8f0; border-radius: 10px;
+    padding: 14px 16px; border-top: 3px solid #3E6A8A;
+  }
+  .kpi-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: #1f2937; margin-top: 6px; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .kpi.accent { border-top-color: #5C8BA5; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: linear-gradient(90deg, #2C5270, #3E6A8A); }
+  th { color: white; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  td { padding: 8px 12px; border-bottom: 1px solid #eef2f5; vertical-align: middle; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  tbody tr:hover td { background: #EFF5F9; }
+
+  /* ── Verified chip ── */
+  .chip-verified { display:inline-flex; align-items:center; gap:4px; background:#d1fae5; color:#065f46; font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; }
+  .chip-pending  { display:inline-flex; align-items:center; gap:4px; background:#fef9c3; color:#854d0e; font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; }
+
+  /* ── Footer ── */
+  .pdf-footer {
+    background: #f5f8fb; border-top: 2px solid #3E6A8A;
+    padding: 14px 40px; display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: #6b7280;
+  }
+  .footer-brand { font-size: 13px; font-family: 'Brush Script MT', cursive; color: #3E6A8A; }
+  .footer-conf { font-size: 10px; color: #9ca3af; }
+
+  /* ── Print ── */
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { max-width: 100%; }
+  }
+  @page { margin: 0; size: A4; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Brand Header -->
+  <div class="brand-header">
+    <div class="brand-left">
+      <img src="${logoUrl}" alt="CrediScore" class="brand-logo" onerror="this.style.display='none'">
+      <div>
+        <div class="brand-name">CrediScore</div>
+        <div class="brand-tagline">Business Trust Platform</div>
+      </div>
     </div>
-    <div class="meta">Period: ${this.selectedPeriod}<br>Generated: ${date}</div>
+    <div class="brand-right">
+      <div class="report-title">Business Analytics Report</div>
+      <div class="report-meta">Generated: ${date}</div>
+    </div>
   </div>
 
-  <div class="section-title">Key Metrics</div>
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-label">Total Reviews</div><div class="kpi-value">${this.summary.totalReviews}</div></div>
-    <div class="kpi"><div class="kpi-label">Avg Rating</div><div class="kpi-value">${this.summary.averageRating.toFixed(1)} / 5</div></div>
-    <div class="kpi"><div class="kpi-label">Trust Score</div><div class="kpi-value">${this.summary.trustScore.toFixed(1)}%</div></div>
-    <div class="kpi"><div class="kpi-label">Verification</div><div class="kpi-value" style="font-size:16px;">${this.summary.verificationStatus}</div></div>
-    <div class="kpi"><div class="kpi-label">Documents</div><div class="kpi-value">${this.summary.totalDocuments}</div></div>
-    <div class="kpi"><div class="kpi-label">Payments</div><div class="kpi-value">${this.summary.totalPayments}</div></div>
+  <!-- Sub-header -->
+  <div class="subheader">
+    <div>
+      <div class="biz-name">${esc(biz.name)}</div>
+      ${biz.category ? `<div class="biz-cat">${esc(biz.category)}</div>` : ''}
+    </div>
+    <span class="period-badge">${period}</span>
   </div>
 
-  <div class="section-title">Rating Distribution</div>
-  <table><thead><tr><th>Stars</th><th>Count</th><th>Bar</th><th>%</th></tr></thead>
-  <tbody>${ratingRows}</tbody></table>
+  <div class="body">
 
-  <div class="section-title">Review Trends</div>
-  <table><thead><tr><th>Month</th><th>Reviews</th><th>Avg Rating</th></tr></thead>
-  <tbody>${trendRows}</tbody></table>
+    <!-- KPIs -->
+    <div class="section-title">Key Metrics</div>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-label">Total Reviews</div>
+        <div class="kpi-value">${this.summary.totalReviews}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Average Rating</div>
+        <div class="kpi-value" style="color:#f59e0b;">${this.summary.averageRating.toFixed(1)}<span style="font-size:14px;color:#9ca3af;"> / 5</span></div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Trust Score</div>
+        <div class="kpi-value" style="color:${trustGradeColor};">${this.summary.trustScore.toFixed(1)}<span style="font-size:14px;"> %</span></div>
+      </div>
+      <div class="kpi accent">
+        <div class="kpi-label">Verification</div>
+        <div style="margin-top:8px;">
+          ${this.summary.verificationStatus === 'Verified'
+            ? '<span class="chip-verified">✓ Verified</span>'
+            : '<span class="chip-pending">⏳ Pending</span>'}
+        </div>
+      </div>
+      <div class="kpi accent">
+        <div class="kpi-label">Documents</div>
+        <div class="kpi-value">${this.summary.totalDocuments}</div>
+      </div>
+      <div class="kpi accent">
+        <div class="kpi-label">Payments</div>
+        <div class="kpi-value">${this.summary.totalPayments}</div>
+      </div>
+    </div>
 
-  ${this.recentReviews.length > 0 ? `
-  <div class="section-title">Recent Reviews (last 10)</div>
-  <table><thead><tr><th>Date</th><th>Rating</th><th>Comment</th></tr></thead>
-  <tbody>${reviewRows}</tbody></table>` : ''}
+    <!-- Rating Distribution -->
+    <div class="section-title">Rating Distribution</div>
+    <table>
+      <thead><tr><th>Stars</th><th>Count</th><th>Distribution</th><th>%</th></tr></thead>
+      <tbody>${ratingRows}</tbody>
+    </table>
 
-  <div class="footer">
-    <span>CrediScore Business Analytics Report</span>
-    <span>${date}</span>
+    <!-- Review Trends -->
+    <div class="section-title">Monthly Review Trends — ${period}</div>
+    <table>
+      <thead><tr><th>Month</th><th>Reviews</th><th>Avg Rating</th></tr></thead>
+      <tbody>${trendRows || '<tr><td colspan="3" style="text-align:center;color:#9ca3af;padding:20px;">No trend data for this period</td></tr>'}</tbody>
+    </table>
+
+    ${this.recentReviews.length > 0 ? `
+    <!-- Recent Reviews -->
+    <div class="section-title">Recent Reviews (last ${Math.min(this.recentReviews.length, 10)})</div>
+    <table>
+      <thead><tr><th>Date</th><th>Rating</th><th>Comment</th></tr></thead>
+      <tbody>${reviewRows}</tbody>
+    </table>` : ''}
+
+  </div><!-- /body -->
+
+  <!-- Footer -->
+  <div class="pdf-footer">
+    <div>
+      <span class="footer-brand">CrediScore</span>
+      <span style="margin-left:8px;">Business Analytics Report</span>
+    </div>
+    <div style="text-align:right;">
+      <div>${date}</div>
+      <div class="footer-conf">Confidential — For business owner use only</div>
+    </div>
   </div>
-</div></body></html>`;
 
-        const win = window.open('', '_blank', 'width=960,height=720');
+</div><!-- /page -->
+</body></html>`;
+
+        const win = window.open('', '_blank', 'width=1000,height=780');
         if (!win) { this.toastService.error('Pop-ups are blocked. Please allow pop-ups and try again.'); return; }
         win.document.write(html);
         win.document.close();
         win.focus();
-        setTimeout(() => { win.print(); }, 600);
+        setTimeout(() => { win.print(); }, 700);
     }
 
     getMaxTrendCount(): number {

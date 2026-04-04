@@ -92,7 +92,12 @@ export class SearchComponent implements OnInit, OnDestroy {
       if (query.trim().length >= 2) {
         const q = query.toLowerCase();
         this.autocompleteResults = this.allBusinesses
-          .filter(b => b.name.toLowerCase().includes(q) || b.category?.toLowerCase().includes(q))
+          .filter(b => {
+            const name = b.name?.toLowerCase() || '';
+            const cat = b.category?.toLowerCase() || '';
+            const loc = (b.location || b.address || '').toLowerCase();
+            return name.includes(q) || cat.includes(q) || loc.includes(q);
+          })
           .slice(0, 6);
         this.showAutocomplete = this.autocompleteResults.length > 0;
       } else {
@@ -197,10 +202,17 @@ export class SearchComponent implements OnInit, OnDestroy {
         (business.address && String(business.address).trim()) ||
         business.location;
 
+      const latNum =
+        b.latitude != null && b.latitude !== '' ? Number(b.latitude) : NaN;
+      const lngNum =
+        b.longitude != null && b.longitude !== '' ? Number(b.longitude) : NaN;
+
       return {
         ...business,
         category,
         location,
+        latitude: Number.isFinite(latNum) ? latNum : undefined,
+        longitude: Number.isFinite(lngNum) ? lngNum : undefined,
         averageRating,
         totalReviews,
         trustScore: finalTrustScore,
@@ -242,10 +254,10 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     // Apply grade filter
     if (this.selectedGrade) {
+      const want = this.selectedGrade.toUpperCase();
       filtered = filtered.filter(business => {
-        if (!business.trustScore) return false;
-        const grade = this.getBusinessGrade(business);
-        return grade.toUpperCase() === this.selectedGrade?.toUpperCase();
+        const grade = this.getBusinessGradeForFilter(business).toUpperCase();
+        return grade === want;
       });
     }
 
@@ -280,8 +292,11 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   extractCategories() {
     const cats = new Set<string>();
-    this.allBusinesses.forEach(b => { if (b.category) cats.add(b.category); });
-    this.availableCategories = Array.from(cats).sort();
+    this.allBusinesses.forEach(b => {
+      const c = (b.category || '').trim();
+      if (c) cats.add(c);
+    });
+    this.availableCategories = Array.from(cats).sort((a, b) => a.localeCompare(b));
   }
 
   onCategoryFilterChange(category: string | null) {
@@ -329,6 +344,25 @@ export class SearchComponent implements OnInit, OnDestroy {
       return s.length > 100 ? s.slice(0, 100) + '...' : s;
     }
     return '';
+  }
+
+  /** Category label for cards (API often only sends businessCategory.name) */
+  getCardCategoryLabel(business: BusinessWithRating): string {
+    const c = (business.category || '').trim();
+    return c || 'General';
+  }
+
+  getCardLocationLine(business: BusinessWithRating): string {
+    const loc = (business.location || '').trim();
+    if (loc) return loc;
+    const addr = (business.address || '').trim();
+    return addr;
+  }
+
+  /** Trust grade for filters — treat missing as F so grade filter matches */
+  private getBusinessGradeForFilter(business: BusinessWithRating): string {
+    const g = this.getBusinessGrade(business);
+    return g === 'N/A' ? 'F' : g;
   }
 
   onStarFilterChange(stars: number | null) {
@@ -430,6 +464,10 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   toggleViewMode() {
     this.viewMode = this.viewMode === 'list' ? 'map' : 'list';
+  }
+
+  setViewMode(mode: 'list' | 'map') {
+    this.viewMode = mode;
   }
 
   getBusinessesWithLocation(): BusinessWithRating[] {
