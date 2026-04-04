@@ -13,7 +13,13 @@
       "Bash(node -e \"const n = require\\(''@prisma/adapter-neon''\\); console.log\\(Object.keys\\(n\\)\\)\")",
       "Bash(grep -r \"@Post.*review\\\\|@Get.*review\\\\|@Put.*review\\\\|@Delete.*review\" /c/Users/Admin/Documents/Projects/CrediScore/backend/src --include=*.ts)",
       "Bash(node -e \":*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npm audit:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(xargs grep:*)",
+      "Bash(git rm:*)"
     ]
   }
 }

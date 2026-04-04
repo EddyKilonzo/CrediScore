@@ -17,13 +17,20 @@ export class App {
   protected readonly title = signal('CrediScore');
   protected readonly isLoading = isLoading();
   showNavbar = true;
+  showFooter = true;
 
   constructor(private router: Router) {
-    // Hide navbar on landing page, show on all other pages
+    this.applyChromeFromUrl(this.router.url);
     this.router.events.pipe(
-      filter(event => event instanceof NavigationEnd)
-    ).subscribe((event: any) => {
-      this.showNavbar = event.url !== '/' && event.url !== '/home';
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd)
+    ).subscribe((event) => {
+      this.applyChromeFromUrl(event.urlAfterRedirects);
     });
+  }
+
+  private applyChromeFromUrl(url: string): void {
+    const path = url.split('?')[0];
+    this.showNavbar = path !== '/' && path !== '/home';
+    this.showFooter = !path.startsWith('/auth');
   }
 }

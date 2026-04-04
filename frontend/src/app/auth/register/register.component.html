@@ -1,15 +1,15 @@
 <!-- Signup Page -->
-<div class="min-h-screen flex items-center justify-center p-4 pt-20 sm:pt-24">
+<div class="auth-page-shell auth-page-shell--centered">
   
   <!-- Signup Container -->
   <div class="w-full max-w-5xl mx-auto">
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden min-h-[500px] max-h-[90vh] flex flex-col animate-fadeInUp hover:shadow-xl transition-all duration-300" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px; width: 100%; max-width: 100%; box-sizing: border-box;">
+    <div class="auth-card-viewport bg-white rounded-xl shadow-lg overflow-hidden flex flex-col animate-fadeInUp hover:shadow-xl transition-all duration-300" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px; width: 100%; max-width: 100%; box-sizing: border-box;">
       
       <!-- Two Column Layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 flex-1 min-h-0">
+      <div class="grid grid-cols-1 lg:grid-cols-2 flex-1 min-h-0 max-h-full">
         
         <!-- Left Column: Form Content -->
-        <div class="p-4 sm:p-6 flex flex-col overflow-hidden">
+        <div class="p-4 sm:p-5 lg:p-5 flex flex-col min-h-0 overflow-hidden">
           
           <!-- Simple Header -->
           <div class="mb-3 sm:mb-4 flex-shrink-0">
@@ -20,7 +20,7 @@
           </div>
 
           <!-- Single Signup Form -->
-          <div class="flex-1 overflow-y-auto space-y-3 pr-1 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div class="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1 sm:pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             
             <form [formGroup]="signupForm" class="space-y-3 sm:space-y-4">
                 <div class="grid grid-cols-2 gap-3">
@@ -338,7 +338,7 @@
         </div>
 
         <!-- Right Column: Information/Visual -->
-        <div class="lg:p-6 p-4 relative overflow-hidden flex-col min-h-[300px] sm:min-h-[400px] hidden lg:flex" style="background: linear-gradient(135deg, rgba(44, 82, 112, 0.05) 0%, rgba(44, 82, 112, 0.1) 100%);">
+        <div class="lg:p-4 p-4 relative overflow-hidden flex-col min-h-[260px] sm:min-h-[320px] lg:min-h-0 lg:max-h-full hidden lg:flex" style="background: linear-gradient(135deg, rgba(44, 82, 112, 0.05) 0%, rgba(44, 82, 112, 0.1) 100%);">
           <!-- Background Image -->
           <div class="absolute inset-0">
             <img src="/images/sigup.jpg" alt="Signup Background" class="w-full h-full object-cover filter brightness-75">
@@ -348,29 +348,29 @@
           <div class="absolute inset-0 bg-gradient-to-br from-black/40 via-black/30 to-black/50"></div>
           
           <!-- Content Overlay -->
-          <div class="relative z-10 flex flex-col justify-center h-full text-white p-6">
+          <div class="relative z-10 flex flex-col justify-center h-full min-h-0 text-white p-4 lg:p-5 overflow-y-auto">
             
             <!-- Single Signup Content -->
             <div class="text-center">
               <!-- CrediScore Logo -->
-              <div class="w-32 h-32 mx-auto mb-8 flex items-center justify-center">
+              <div class="w-24 h-24 lg:w-20 lg:h-20 mx-auto mb-4 lg:mb-3 flex items-center justify-center shrink-0">
                 <img src="/images/CrediScore.png" alt="CrediScore Logo" class="w-full h-full object-contain filter drop-shadow-lg">
               </div>
-              <h3 class="text-2xl font-bold text-white mb-4 drop-shadow-lg">Join CrediScore Today</h3>
-              <p class="text-white/90 text-base mb-8 leading-relaxed drop-shadow-md">Create your account and start building trust in the business ecosystem. Verify businesses, share authentic reviews, and connect with trusted partners.</p>
+              <h3 class="text-xl lg:text-lg font-bold text-white mb-2 lg:mb-1.5 drop-shadow-lg">Join CrediScore Today</h3>
+              <p class="text-white/90 text-sm lg:text-xs mb-4 lg:mb-3 leading-snug lg:leading-relaxed drop-shadow-md">Create your account and start building trust in the business ecosystem. Verify businesses, share authentic reviews, and connect with trusted partners.</p>
               
               <!-- Features List -->
-              <div class="space-y-4">
-                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
-                  <i class="fas fa-shield-alt text-white/80 mr-3 text-lg"></i>
+              <div class="space-y-2 lg:space-y-1.5">
+                <div class="flex items-center justify-center text-xs lg:text-[11px] text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 lg:py-1.5 border border-white/20">
+                  <i class="fas fa-shield-alt text-white/80 mr-2 text-sm shrink-0"></i>
                   <span class="font-medium">Verified Businesses</span>
                 </div>
-                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
-                  <i class="fas fa-star text-white/80 mr-3 text-lg"></i>
+                <div class="flex items-center justify-center text-xs lg:text-[11px] text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 lg:py-1.5 border border-white/20">
+                  <i class="fas fa-star text-white/80 mr-2 text-sm shrink-0"></i>
                   <span class="font-medium">Authentic Reviews</span>
                 </div>
-                <div class="flex items-center justify-center text-sm text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20">
-                  <i class="fas fa-users text-white/80 mr-3 text-lg"></i>
+                <div class="flex items-center justify-center text-xs lg:text-[11px] text-white/95 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 lg:py-1.5 border border-white/20">
+                  <i class="fas fa-users text-white/80 mr-2 text-sm shrink-0"></i>
                   <span class="font-medium">Trusted Community</span>
                 </div>
               </div>

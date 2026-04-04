@@ -383,13 +383,6 @@ input[type="checkbox"]:checked {
   overflow-x: hidden;
 }
 
-.min-h-screen {
-  width: 100%;
-  max-width: 100vw;
-  overflow-x: hidden;
-  box-sizing: border-box;
-}
-
 .max-w-5xl {
   width: 100%;
   max-width: 100%;
@@ -413,11 +406,6 @@ input[type="checkbox"]:checked {
 }
 
 @media (max-width: 768px) {
-  .min-h-screen {
-    padding: 0.5rem;
-    padding-top: 1rem;
-  }
-  
   .signup-card {
     padding: 1.5rem;
     border-radius: 0.75rem !important;
@@ -467,21 +455,9 @@ input[type="checkbox"]:checked {
 
 @media (max-width: 640px) {
   /* Extra small screens */
-  .min-h-screen {
-    padding: 0.5rem;
-  }
-  
   .max-w-5xl {
     max-width: 100%;
     margin: 0;
-  }
-  
-  .min-h-\[500px\] {
-    min-height: auto !important;
-  }
-  
-  .max-h-\[90vh\] {
-    max-height: 95vh;
   }
   
   /* Stack form fields on very small screens */
@@ -507,50 +483,16 @@ input[type="checkbox"]:checked {
 
 /* Tablet adjustments */
 @media (min-width: 641px) and (max-width: 1023px) {
-  .min-h-screen {
-    padding: 2rem 1rem;
-  }
-  
   .max-w-5xl {
     max-width: 90%;
   }
 }
 
-/* Laptop adjustments - Larger elements */
+/* Laptop: width only — card height from global .auth-card-viewport */
 @media (min-width: 1024px) and (max-width: 1439px) {
-  .min-h-screen {
-    padding: 2rem;
-  }
-  
   .max-w-5xl {
     max-width: 100%;
-    padding: 0 1rem;
-  }
-  
-  .bg-white.rounded-xl {
-    min-height: 600px !important;
-    max-height: 85vh !important;
-  }
-  
-  /* Larger inputs and buttons on laptop */
-  input, textarea, select {
-    padding: 0.875rem 1rem !important;
-    font-size: 1rem !important;
-  }
-  
-  button {
-    padding: 0.875rem 1.5rem !important;
-    font-size: 1rem !important;
-  }
-  
-  label {
-    font-size: 1rem !important;
-  }
-  
-  /* Better spacing on laptop */
-  .space-y-3,
-  .sm\\:space-y-4 {
-    gap: 1rem !important;
+    padding: 0 0.5rem;
   }
 }
 

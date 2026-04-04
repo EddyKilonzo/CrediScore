@@ -1,18 +1,18 @@
-<div class="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-  <div class="sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="text-center">
-      <img class="mx-auto h-12 w-auto" src="/images/CrediScore.png" alt="CrediScore">
-      <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+<div class="auth-page-shell auth-page-shell--stacked">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md shrink-0">
+    <div class="text-center px-2">
+      <img class="mx-auto h-10 sm:h-12 w-auto" src="/images/CrediScore.png" alt="CrediScore">
+      <h2 class="mt-4 sm:mt-6 text-2xl sm:text-3xl font-extrabold text-gray-900">
         Verify Your Email
       </h2>
-      <p class="mt-2 text-sm text-gray-600">
+      <p class="mt-2 text-xs sm:text-sm text-gray-600">
         We've sent a 6-digit verification code to your email address
       </p>
     </div>
   </div>
 
-  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+  <div class="mt-4 sm:mt-6 w-full max-w-md mx-auto sm:px-0 px-2">
+    <div class="auth-verify-panel bg-white py-5 sm:py-8 px-4 shadow sm:rounded-lg sm:px-10">
       <!-- Verification Form -->
       <form class="space-y-6" [formGroup]="verificationForm" (ngSubmit)="onSubmit()">
         <div>
@@ -27,7 +27,7 @@
               formControlName="code"
               maxlength="6"
               placeholder="123456"
-              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-center text-2xl font-mono tracking-widest"
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-xl sm:text-2xl font-mono tracking-widest"
               [class.border-red-500]="verificationForm.get('code')?.invalid && verificationForm.get('code')?.touched"
             >
           </div>
