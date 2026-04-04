@@ -20,15 +20,18 @@
           </p>
         </div>
         
-        <!-- Export CSV (Feature 15) -->
-        <div class="flex items-center gap-3">
-          <a *ngIf="currentBusiness?.id"
-             [href]="apiUrl + '/api/business/' + currentBusiness!.id + '/export/analytics'"
-             target="_blank" download
-             class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5270] text-white rounded-lg hover:bg-[#1e3d54] transition-colors text-sm font-medium">
-            <i class="uil uil-download-alt"></i>
+        <!-- Export Buttons -->
+        <div class="flex items-center gap-2" *ngIf="currentBusiness?.id">
+          <button (click)="downloadCSV()"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5270] text-white rounded-lg hover:bg-[#1e3d54] transition-colors text-sm font-medium">
+            <i class="uil uil-file-download-alt"></i>
             Export CSV
-          </a>
+          </button>
+          <button (click)="downloadPDF()"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-[#1e3d54] text-white rounded-lg hover:bg-[#152d40] transition-colors text-sm font-medium">
+            <i class="uil uil-file-pdf-alt"></i>
+            Download PDF
+          </button>
         </div>
 
         <!-- Period Selector -->

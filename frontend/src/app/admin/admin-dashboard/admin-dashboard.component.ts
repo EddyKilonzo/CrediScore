@@ -89,6 +89,88 @@ export class AdminDashboardComponent implements OnInit {
     await this.loadDashboardStats();
   }
 
+  downloadPDF(): void {
+    const stats = this.dashboardStats();
+    if (!stats) { this.toastService.error('No data to export yet.'); return; }
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const u = stats.userStats;
+    const b = stats.businessStats;
+    const f = stats.fraudReportStats;
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Admin Dashboard Report — CrediScore</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; margin: 0; }
+  .page { max-width: 860px; margin: auto; padding: 36px 40px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #2C5270; padding-bottom: 16px; margin-bottom: 28px; }
+  .brand { font-size: 22px; font-weight: 700; color: #2C5270; }
+  .subtitle { font-size: 13px; color: #6b7280; margin-top: 4px; }
+  .meta { text-align: right; font-size: 12px; color: #6b7280; }
+  .section-title { font-size: 15px; font-weight: 700; color: #2C5270; border-left: 4px solid #2C5270; padding-left: 10px; margin: 28px 0 14px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .kpi { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
+  .kpi-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: #1f2937; margin-top: 4px; }
+  .kpi-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  th { background: #2C5270; color: white; padding: 8px 10px; text-align: left; font-size: 12px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  .footer { margin-top: 36px; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 11px; color: #9ca3af; display: flex; justify-content: space-between; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body><div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">CrediScore — Admin Dashboard Report</div>
+      <div class="subtitle">Platform Overview</div>
+    </div>
+    <div class="meta">Generated: ${date}</div>
+  </div>
+
+  <div class="section-title">User Statistics</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Users</div><div class="kpi-value">${u.totalUsers}</div><div class="kpi-sub">+${u.newUsersThisMonth} this month</div></div>
+    <div class="kpi"><div class="kpi-label">Active Users</div><div class="kpi-value">${u.activeUsers}</div></div>
+    <div class="kpi"><div class="kpi-label">Verified Email</div><div class="kpi-value">${u.usersWithVerifiedEmail}</div></div>
+    <div class="kpi"><div class="kpi-label">Business Owners</div><div class="kpi-value">${u.businessOwners}</div></div>
+    <div class="kpi"><div class="kpi-label">Customers</div><div class="kpi-value">${u.customers}</div></div>
+    <div class="kpi"><div class="kpi-label">Admins</div><div class="kpi-value">${u.admins}</div></div>
+  </div>
+
+  <div class="section-title">Business Statistics</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Businesses</div><div class="kpi-value">${b.totalBusinesses}</div><div class="kpi-sub">+${b.newBusinessesThisMonth} this month</div></div>
+    <div class="kpi"><div class="kpi-label">Verified</div><div class="kpi-value">${b.verifiedBusinesses}</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Verification</div><div class="kpi-value">${b.pendingVerification}</div></div>
+    <div class="kpi"><div class="kpi-label">Active</div><div class="kpi-value">${b.activeBusinesses}</div></div>
+    <div class="kpi"><div class="kpi-label">With Trust Scores</div><div class="kpi-value">${b.businessesWithTrustScores}</div></div>
+    <div class="kpi"><div class="kpi-label">Inactive</div><div class="kpi-value">${b.inactiveBusinesses}</div></div>
+  </div>
+
+  <div class="section-title">Fraud Report Statistics</div>
+  <table><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>
+    <tr><td>Total Reports</td><td>${f.totalReports}</td></tr>
+    <tr><td>Pending</td><td>${f.pendingReports}</td></tr>
+    <tr><td>Under Review</td><td>${f.underReviewReports}</td></tr>
+    <tr><td>Resolved</td><td>${f.resolvedReports}</td></tr>
+    <tr><td>Dismissed</td><td>${f.dismissedReports}</td></tr>
+    <tr><td>Reports This Month</td><td>${f.reportsThisMonth}</td></tr>
+  </tbody></table>
+
+  <div class="footer">
+    <span>CrediScore Admin Dashboard Report — Confidential</span>
+    <span>${date}</span>
+  </div>
+</div></body></html>`;
+
+    const win = window.open('', '_blank', 'width=960,height=720');
+    if (!win) { this.toastService.error('Pop-ups are blocked. Please allow pop-ups and try again.'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 600);
+  }
+
 
   getStats(): AdminDashboardStats | null {
     return this.dashboardStats();

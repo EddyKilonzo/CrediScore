@@ -248,6 +248,119 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         return 'text-gray-600';
     }
 
+    // ─── Exports ────────────────────────────────────────────────────────────
+
+    async downloadCSV(): Promise<void> {
+        if (!this.currentBusiness?.id) return;
+        const token = this.authService.getToken();
+        const url = `${this.apiUrl}/api/business/${this.currentBusiness.id}/export/analytics`;
+        try {
+            const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+            if (!response.ok) throw new Error('Download failed');
+            const blob = await response.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `analytics-${this.currentBusiness.name}-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            this.toastService.success('CSV downloaded successfully');
+        } catch {
+            this.toastService.error('Failed to download CSV. Please try again.');
+        }
+    }
+
+    downloadPDF(): void {
+        const biz = this.currentBusiness;
+        if (!biz) return;
+        const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const ratingRows = this.ratingDistribution.map(r =>
+            `<tr>
+              <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)} (${r.rating})</td>
+              <td>${r.count}</td>
+              <td><div style="background:#e5e7eb;border-radius:4px;height:8px;width:100%;"><div style="background:#2C5270;height:8px;border-radius:4px;width:${r.percentage.toFixed(1)}%;"></div></div></td>
+              <td>${r.percentage.toFixed(1)}%</td>
+            </tr>`
+        ).join('');
+
+        const trendRows = this.reviewTrends.map(t =>
+            `<tr><td>${t.month}</td><td>${t.count}</td><td>${t.averageRating > 0 ? t.averageRating.toFixed(1) : '—'}</td></tr>`
+        ).join('');
+
+        const reviewRows = this.recentReviews.slice(0, 10).map(r =>
+            `<tr>
+              <td>${this.formatDate(r.createdAt)}</td>
+              <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</td>
+              <td>${(r.comment || '—').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+            </tr>`
+        ).join('');
+
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Analytics Report — ${biz.name}</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; margin: 0; padding: 0; }
+  .page { max-width: 860px; margin: auto; padding: 36px 40px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #2C5270; padding-bottom: 16px; margin-bottom: 28px; }
+  .brand { font-size: 22px; font-weight: 700; color: #2C5270; }
+  .subtitle { font-size: 13px; color: #6b7280; margin-top: 4px; }
+  .meta { text-align: right; font-size: 12px; color: #6b7280; }
+  .section-title { font-size: 15px; font-weight: 700; color: #2C5270; border-left: 4px solid #2C5270; padding-left: 10px; margin: 28px 0 14px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 8px; }
+  .kpi { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 16px; }
+  .kpi-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: #1f2937; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  th { background: #2C5270; color: white; padding: 8px 10px; text-align: left; font-size: 12px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  .footer { margin-top: 36px; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 11px; color: #9ca3af; display: flex; justify-content: space-between; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body><div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">CrediScore — Business Analytics</div>
+      <div class="subtitle">${biz.name}${biz.category ? ' · ' + biz.category : ''}</div>
+    </div>
+    <div class="meta">Period: ${this.selectedPeriod}<br>Generated: ${date}</div>
+  </div>
+
+  <div class="section-title">Key Metrics</div>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total Reviews</div><div class="kpi-value">${this.summary.totalReviews}</div></div>
+    <div class="kpi"><div class="kpi-label">Avg Rating</div><div class="kpi-value">${this.summary.averageRating.toFixed(1)} / 5</div></div>
+    <div class="kpi"><div class="kpi-label">Trust Score</div><div class="kpi-value">${this.summary.trustScore.toFixed(1)}%</div></div>
+    <div class="kpi"><div class="kpi-label">Verification</div><div class="kpi-value" style="font-size:16px;">${this.summary.verificationStatus}</div></div>
+    <div class="kpi"><div class="kpi-label">Documents</div><div class="kpi-value">${this.summary.totalDocuments}</div></div>
+    <div class="kpi"><div class="kpi-label">Payments</div><div class="kpi-value">${this.summary.totalPayments}</div></div>
+  </div>
+
+  <div class="section-title">Rating Distribution</div>
+  <table><thead><tr><th>Stars</th><th>Count</th><th>Bar</th><th>%</th></tr></thead>
+  <tbody>${ratingRows}</tbody></table>
+
+  <div class="section-title">Review Trends</div>
+  <table><thead><tr><th>Month</th><th>Reviews</th><th>Avg Rating</th></tr></thead>
+  <tbody>${trendRows}</tbody></table>
+
+  ${this.recentReviews.length > 0 ? `
+  <div class="section-title">Recent Reviews (last 10)</div>
+  <table><thead><tr><th>Date</th><th>Rating</th><th>Comment</th></tr></thead>
+  <tbody>${reviewRows}</tbody></table>` : ''}
+
+  <div class="footer">
+    <span>CrediScore Business Analytics Report</span>
+    <span>${date}</span>
+  </div>
+</div></body></html>`;
+
+        const win = window.open('', '_blank', 'width=960,height=720');
+        if (!win) { this.toastService.error('Pop-ups are blocked. Please allow pop-ups and try again.'); return; }
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 600);
+    }
+
     getMaxTrendCount(): number {
         return Math.max(...this.reviewTrends.map(t => t.count), 1);
     }
