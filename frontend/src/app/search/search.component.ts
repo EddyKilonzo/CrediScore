@@ -129,9 +129,11 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.error = null;
 
-    this.businessService.searchBusinesses('').subscribe({
-      next: (businesses) => {
-        this.allBusinesses = this.enrichBusinesses(businesses || []);
+    // Use the 500-limit public endpoint so filters and map have full data
+    this.businessService.getAllPublicBusinesses().subscribe({
+      next: (response: any) => {
+        const raw: any[] = Array.isArray(response) ? response : (response?.businesses || []);
+        this.allBusinesses = this.enrichBusinesses(raw as Business[]);
         this.extractCategories();
         this.applySearchAndFilters();
         this.isLoading = false;
@@ -188,8 +190,17 @@ export class SearchComponent implements OnInit, OnDestroy {
         businessId: business.id
       };
       
+      // Normalise category — prefer flat string, fall back to relation name
+      const category = b.category || b.businessCategory?.name || '';
+      const location =
+        (business.location && String(business.location).trim()) ||
+        (business.address && String(business.address).trim()) ||
+        business.location;
+
       return {
-        ...business, // Copy all original properties (name, description, logo, etc.)
+        ...business,
+        category,
+        location,
         averageRating,
         totalReviews,
         trustScore: finalTrustScore,
@@ -211,20 +222,21 @@ export class SearchComponent implements OnInit, OnDestroy {
         const descMatch = business.description?.toLowerCase().includes(query);
         const categoryMatch = business.category?.toLowerCase().includes(query);
         const locationMatch = business.location?.toLowerCase().includes(query);
+        const addressMatch = business.address?.toLowerCase().includes(query);
         const phoneMatch = business.phone?.includes(query);
         
-        return nameMatch || descMatch || categoryMatch || locationMatch || phoneMatch;
+        return nameMatch || descMatch || categoryMatch || locationMatch || addressMatch || phoneMatch;
       });
     }
 
     // Store search-filtered results
     this.businesses = filtered;
 
-    // Apply star rating filter
+    // Apply star rating filter ("X stars & up")
     if (this.selectedStars !== null) {
       filtered = filtered.filter(business => {
         const rating = business.averageRating || 0;
-        return Math.floor(rating) === this.selectedStars;
+        return rating >= this.selectedStars!;
       });
     }
 
@@ -299,6 +311,24 @@ export class SearchComponent implements OnInit, OnDestroy {
     if (score >= 60) return 'C';
     if (score >= 50) return 'D';
     return 'F';
+  }
+
+  /** One line for list cards when description is empty */
+  getListCardBlurb(business: BusinessWithRating): string {
+    const d = business.description?.trim();
+    if (d) {
+      return d.length > 80 ? d.slice(0, 80) + '...' : d;
+    }
+    const tag = business.catchphrase?.trim();
+    if (tag) {
+      return tag.length > 80 ? tag.slice(0, 80) + '...' : tag;
+    }
+    const loc = business.location || business.address;
+    if (loc?.trim()) {
+      const s = loc.trim();
+      return s.length > 100 ? s.slice(0, 100) + '...' : s;
+    }
+    return '';
   }
 
   onStarFilterChange(stars: number | null) {
@@ -403,8 +433,9 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   getBusinessesWithLocation(): BusinessWithRating[] {
-    return this.filteredBusinesses.filter(business => 
-      (business.latitude && business.longitude) || business.location
+    return this.filteredBusinesses.filter(business =>
+      (business.latitude != null && business.longitude != null) ||
+      !!business.location?.trim()
     );
   }
 
