@@ -207,6 +207,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   selectedDocumentType: DocumentType | null = null;
   isScanning = false;
   scanningProgress = 0;
+  scanningStartTime: number | null = null;
   isDocumentUploading = false;
   documentUploadProgress = 0;
   selectedFile: File | null = null;
@@ -1118,8 +1119,9 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
               documentType.scanResult = undefined;
               this.isScanning = true;
               this.scanningProgress = 0;
+              this.scanningStartTime = Date.now();
             }
-            
+
             // Start polling for processing status
             this.startProcessingStatusPolling(document.id);
             
@@ -1181,11 +1183,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     }
     
     if (status.processingStatus === 'completed') {
-      // Complete the progress bar to 100%
+      // Complete the progress bar to 100%, let user see it before revealing results
       this.scanningProgress = 100;
       setTimeout(() => {
         this.completeDocumentScanning(status);
-      }, 500);
+      }, 1800);
     } else if (status.processingStatus === 'failed') {
       // Processing failed - check if it's a hard failure or recoverable
       let errorMessage = 'Document processing failed. Please try again.';
@@ -1198,7 +1200,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             rawError.includes('OCR') || rawError.includes('text extraction')) {
           // These are OCR-related errors - don't reject outright, treat as low confidence
           shouldReject = false;
-          // Mark as completed with low confidence instead of failed
           this.scanningProgress = 100;
           setTimeout(() => {
             this.completeDocumentScanning({
@@ -1215,7 +1216,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
                 ]
               }
             });
-          }, 500);
+          }, 1800);
           return;
         } else if (rawError.includes('Network') || rawError.includes('timeout')) {
           errorMessage = 'Network error. Please check your connection and try again.';
@@ -1264,6 +1265,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     document.verified = aiIsValid;
     this.isScanning = false;
     this.scanningProgress = 0;
+    this.scanningStartTime = null;
 
     const score = status.aiAnalysis?.authenticityScore || 0;
     const requiresManualReview = status.aiAnalysis?.requiresManualReview || false;
@@ -1366,9 +1368,23 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   getScanningTime(): number {
-    // Return a mock scanning time for demonstration
-    // In a real implementation, this would track actual scanning duration
-    return Math.floor(Math.random() * 5) + 3; // 3-7 seconds
+    if (!this.scanningStartTime) return 0;
+    return Math.round((Date.now() - this.scanningStartTime) / 1000);
+  }
+
+  getScanningPhase(): string {
+    if (this.scanningProgress < 35) return 'Reading document text...';
+    if (this.scanningProgress < 65) return 'Analyzing document content...';
+    if (this.scanningProgress < 90) return 'Verifying authenticity...';
+    if (this.scanningProgress < 100) return 'Checking security features...';
+    return 'Analysis complete';
+  }
+
+  getScanningPhaseIndex(): number {
+    if (this.scanningProgress < 35) return 0;
+    if (this.scanningProgress < 65) return 1;
+    if (this.scanningProgress < 90) return 2;
+    return 3;
   }
 
   formatTimeAgo(date: Date): string {
