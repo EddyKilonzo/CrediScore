@@ -103,7 +103,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   isAuthenticated = this.authService.isAuthenticated;
 
   // Review Form
-  reviewForm!: FormGroup;
+  reviewForm: FormGroup = new FormGroup({});
   selectedRating: number = 0;
   hoveredRating: number = 0;
   uploadedImages: UploadedImage[] = [];
@@ -687,7 +687,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   
   // Edit Review
   editingReview: Review | null = null;
-  editReviewForm!: FormGroup;
+  editReviewForm: FormGroup = new FormGroup({});
   editSelectedRating: number = 0;
   isUpdating: boolean = false;
   

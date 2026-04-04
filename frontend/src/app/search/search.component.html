@@ -348,14 +348,64 @@
 
           <!-- Card Body -->
           <div class="card-body">
+            <div class="flex items-center justify-between mb-2">
+              <p class="business-category" *ngIf="business.category">
+                <i class="uil uil-tag"></i>
+                {{ business.category }}
+              </p>
+              <div class="status-badge" [class.open]="isBusinessOpen(business)" [class.closed]="!isBusinessOpen(business)">
+                <span class="status-dot"></span>
+                {{ isBusinessOpen(business) ? 'Open Now' : 'Closed' }}
+              </div>
+            </div>
+
             <h3 class="business-name">{{ business.name }}</h3>
+            
             <p class="business-description" *ngIf="business.description">
-              {{ business.description.length > 100 ? (business.description | slice:0:100) + '...' : business.description }}
+              {{ business.description.length > 80 ? (business.description | slice:0:80) + '...' : business.description }}
             </p>
-            <p class="business-category" *ngIf="business.category">
-              <i class="uil uil-tag"></i>
-              {{ business.category }}
-            </p>
+
+            <!-- Business Hours Summary -->
+            <div class="business-hours-summary" *ngIf="business.businessHours && business.businessHours.length > 0">
+              <i class="uil uil-clock"></i>
+              <span>Hours Today: </span>
+              <ng-container *ngFor="let h of business.businessHours">
+                <span *ngIf="h.day.toLowerCase() === getTodayDay()">
+                  <span *ngIf="!h.isClosed">{{ h.open }} - {{ h.close }}</span>
+                  <span *ngIf="h.isClosed" class="text-red-500">Closed</span>
+                </span>
+              </ng-container>
+            </div>
+
+            <!-- Contact and Socials -->
+            <div class="card-contact-info mt-3 pt-3 border-t border-gray-100">
+              <div class="flex flex-wrap gap-3">
+                <a *ngIf="business.phone" [href]="'tel:' + business.phone" (click)="$event.stopPropagation()" class="contact-item" title="Call Business">
+                  <i class="uil uil-phone"></i>
+                  <span>Call</span>
+                </a>
+                <a *ngIf="business.email" [href]="'mailto:' + business.email" (click)="$event.stopPropagation()" class="contact-item" title="Email Business">
+                  <i class="uil uil-envelope"></i>
+                  <span>Email</span>
+                </a>
+                <a *ngIf="business.website" [href]="business.website" target="_blank" (click)="$event.stopPropagation()" class="contact-item" title="Visit Website">
+                  <i class="uil uil-globe"></i>
+                  <span>Web</span>
+                </a>
+              </div>
+              
+              <!-- Social Links -->
+              <div class="social-links-row mt-2 flex gap-2" *ngIf="getSocialLinksArray(business.socialLinks).length > 0">
+                <a *ngFor="let social of getSocialLinksArray(business.socialLinks)" 
+                   [href]="social.url" 
+                   target="_blank" 
+                   (click)="$event.stopPropagation()"
+                   class="social-icon-btn"
+                   [style.color]="social.color">
+                  <i [class]="'uil ' + social.icon"></i>
+                </a>
+              </div>
+            </div>
           </div>
 
           <!-- Card Footer with Stats -->

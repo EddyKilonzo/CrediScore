@@ -1546,8 +1546,8 @@ export class BusinessService {
 
       // Base score from verification status
       if (business.isVerified) {
-        score += 20;
-        factors.verified = 20;
+        score += 40;
+        factors.verified = 40;
       }
 
       // Score from reviews (weighted by verification status)
@@ -1580,7 +1580,7 @@ export class BusinessService {
         });
 
         const avgRating = totalWeight > 0 ? weightedRatingSum / totalWeight : 0;
-        const reviewScore = Math.min(avgRating * 8, 40); // Max 40 points from reviews
+        const reviewScore = Math.min(avgRating * 6, 30); // Max 30 points from reviews (reduced from 40)
 
         // Bonus points for verified reviews
         const verificationBonus = Math.min(verifiedReviews.length * 2, 10); // Max 10 bonus points
@@ -1611,7 +1611,7 @@ export class BusinessService {
       };
 
       // Score from verified payment methods
-      const paymentScore = Math.min(business.payments.length * 3, 15); // Max 15 points from payments
+      const paymentScore = Math.min(business.payments.length * 2, 10); // Max 10 points from payments (reduced from 15)
       score += paymentScore;
       factors.payments = {
         count: business.payments.length,

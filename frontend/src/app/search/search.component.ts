@@ -29,6 +29,7 @@ interface BusinessWithRating extends Omit<Business, 'trustScore'> {
   latitude?: number;
   longitude?: number;
   responseRate?: number;
+  businessHours?: any[];
 }
 
 @Component({
@@ -196,7 +197,8 @@ export class SearchComponent implements OnInit, OnDestroy {
         isVerified: business.isVerified, // Explicitly preserve isVerified
         averageRating,
         totalReviews,
-        trustScore: finalTrustScore || business.trustScore
+        trustScore: finalTrustScore || business.trustScore,
+        businessHours: business.businessHours as any[] || []
       } as BusinessWithRating;
     });
   }
@@ -421,16 +423,9 @@ export class SearchComponent implements OnInit, OnDestroy {
     const businessesWithCoords = businessesWithLocation.filter(b => b.latitude && b.longitude);
     
     if (businessesWithCoords.length > 0) {
-      // Use the first business as center, or calculate center point
-      const centerLat = businessesWithCoords[0].latitude!;
-      const centerLng = businessesWithCoords[0].longitude!;
-      
-      // Create markers for all businesses
-      const markers = businessesWithCoords.map(b => 
-        `${b.latitude},${b.longitude}`
-      ).join('|');
-      
-      return `https://www.google.com/maps?q=${centerLat},${centerLng}&hl=en&z=12&output=embed`;
+      // Use the first business as center
+      const first = businessesWithCoords[0];
+      return `https://www.google.com/maps?q=${first.latitude},${first.longitude}&hl=en&z=12&output=embed`;
     }
 
     // Fallback: use first business location as text
@@ -464,8 +459,51 @@ export class SearchComponent implements OnInit, OnDestroy {
     return 'https://www.google.com/maps';
   }
 
+  getTodayDay(): string {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return days[new Date().getDay()];
+  }
+
   sanitizeMapUrl(url: string): SafeResourceUrl {
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
-}
 
+  isBusinessOpen(business: BusinessWithRating): boolean {
+    if (!business.businessHours || business.businessHours.length === 0) return true;
+    
+    const now = new Date();
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDay = days[now.getDay()];
+    
+    // Convert current time to minutes from midnight
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    const todayHours = business.businessHours.find(h => h.day.toLowerCase() === currentDay);
+    if (!todayHours || todayHours.isClosed) return false;
+    
+    // Parse HH:mm to minutes from midnight
+    const parseTime = (timeStr: string) => {
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+    
+    const openMinutes = parseTime(todayHours.open);
+    const closeMinutes = parseTime(todayHours.close);
+    
+    return currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
+  }
+
+  getSocialLinksArray(socialLinks: any): Array<{ icon: string; url: string; color: string }> {
+    if (!socialLinks) return [];
+    
+    const links = [];
+    if (socialLinks.facebook) links.push({ icon: 'uil-facebook-f', url: socialLinks.facebook, color: '#1877F2' });
+    if (socialLinks.twitter) links.push({ icon: 'uil-twitter', url: socialLinks.twitter, color: '#1DA1F2' });
+    if (socialLinks.instagram) links.push({ icon: 'uil-instagram', url: socialLinks.instagram, color: '#E4405F' });
+    if (socialLinks.linkedin) links.push({ icon: 'uil-linkedin', url: socialLinks.linkedin, color: '#0A66C2' });
+    if (socialLinks.youtube) links.push({ icon: 'uil-youtube', url: socialLinks.youtube, color: '#FF0000' });
+    if (socialLinks.tiktok) links.push({ icon: 'uil-music', url: socialLinks.tiktok, color: '#000000' });
+    
+    return links;
+  }
+}
