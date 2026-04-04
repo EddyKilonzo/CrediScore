@@ -1447,7 +1447,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   // Social Media Methods
   updateSocialLinks() {
     if (!this.currentBusiness) {
-      this.toastService.show('Business not found. Please refresh the page.', 'error');
+      this.toastService.show('Please save your business profile first before adding social links.', 'warning');
       return;
     }
 
