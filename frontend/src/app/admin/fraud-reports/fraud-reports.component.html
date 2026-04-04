@@ -1,18 +1,17 @@
 <div class="admin-page">
   <div class="page-header fade-in-up">
     <div class="header-content">
-      <h1 class="fraud-title slide-in-left">Fraud Reports Management</h1>
-      <p class="slide-in-right">Review and manage fraud reports submitted by users</p>
+      <h1 class="fraud-title slide-in-left">Fraud Reports</h1>
+      <p class="slide-in-right">Review evidence, then mark under review, substantiate (trust penalty), or dismiss.</p>
     </div>
     <div class="header-actions">
-      <button class="btn-primary hover-lift" (click)="navigateToDashboard()">
+      <button type="button" class="btn-primary hover-lift" (click)="navigateToDashboard()">
         <i class="fas fa-tachometer-alt"></i>
         Dashboard
       </button>
     </div>
   </div>
 
-  <!-- Loading State -->
   @if (isLoading()) {
     <div class="loading-container fade-in-up">
       <div class="loading-spinner"></div>
@@ -20,77 +19,121 @@
     </div>
   }
 
-  <!-- Error State -->
   @if (error() && !isLoading()) {
     <div class="error-banner fade-in-up">
       <div class="error-content">
         <i class="fas fa-exclamation-triangle"></i>
         <span>{{ error() }}</span>
-        <button class="error-close" (click)="error.set(null)">
+        <button type="button" class="error-close" (click)="error.set(null)">
           <i class="fas fa-times"></i>
         </button>
       </div>
     </div>
   }
-  
+
   <div class="content-panel animated-panel fade-in-up">
     <div class="panel-header">
-      <h2 class="section-title slide-in-left">Pending Fraud Reports ({{ reports().length }})</h2>
+      <h2 class="section-title slide-in-left">Reports ({{ reports().length }} shown)</h2>
       <div class="header-actions slide-in-right">
         <select class="filter-select" [value]="selectedFilter()" (change)="onFilterChange($event)">
-          <option value="all">All Status</option>
+          <option value="all">All statuses</option>
           <option value="PENDING">Pending</option>
-          <option value="UNDER_REVIEW">Under Review</option>
+          <option value="UNDER_REVIEW">Under review</option>
+          <option value="UPHELD">Substantiated</option>
           <option value="RESOLVED">Resolved</option>
           <option value="DISMISSED">Dismissed</option>
         </select>
-        <button class="btn-primary hover-lift" (click)="loadReports()">
+        <button type="button" class="btn-primary hover-lift" (click)="loadReports()">
           <i class="fas fa-sync-alt"></i>
           Refresh
         </button>
-        <button class="btn-secondary hover-lift" (click)="exportData()">
+        <button type="button" class="btn-secondary hover-lift" (click)="exportData()">
           <i class="fas fa-download"></i>
           Export
         </button>
       </div>
     </div>
-    
+
     @if (reports().length === 0 && !isLoading()) {
       <div class="empty-state fade-in-up">
         <i class="fas fa-shield-alt"></i>
-        <h3>No Fraud Reports</h3>
-        <p>Great! There are currently no pending fraud reports requiring review.</p>
+        <h3>No fraud reports</h3>
+        <p>Nothing matches this filter, or no reports have been filed yet.</p>
       </div>
     } @else {
       <div class="reports-grid">
         @for (report of reports(); track report.id; let i = $index) {
-          <div class="report-card animated-card hover-lift" [style.animation-delay]="(i * 0.1) + 's'">
-            <div class="report-header">
-              <h3>{{ report.reason }}</h3>
-              <span class="priority-badge" [class]="'status-' + report.status.toLowerCase()">
-                {{ report.status | titlecase }}
-              </span>
+          <article class="report-card animated-card hover-lift" [style.animation-delay]="(i * 0.08) + 's'">
+            <div class="report-card-top">
+              <div class="report-card-title-row">
+                <h3 class="report-reason">{{ report.reason }}</h3>
+                <span class="priority-badge" [ngClass]="'status-' + report.status.toLowerCase()">
+                  {{ statusLabel(report.status) }}
+                </span>
+              </div>
+              <p class="report-meta">
+                <span><i class="fas fa-store"></i> {{ report.business.name }}</span>
+                <a [routerLink]="['/business', report.business.id]" class="report-meta-link">View business</a>
+              </p>
+              <p class="report-meta">
+                <span><i class="fas fa-user"></i> {{ report.reporter.name }}</span>
+                <span class="report-meta-email">{{ report.reporter.email }}</span>
+                <span class="report-rep">Rep {{ report.reporter.reputation != null ? report.reporter.reputation : 0 }}</span>
+              </p>
+              <p class="report-date"><i class="far fa-clock"></i> {{ report.createdAt | date:'medium' }}</p>
             </div>
-            <div class="report-content">
-              <p><strong>Reported by:</strong> {{ report.reporter.name }}</p>
-              <p><strong>Reporter Email:</strong> {{ report.reporter.email }}</p>
-              <p><strong>Target Business:</strong> {{ report.business.name }}</p>
-              <p><strong>Date:</strong> {{ report.createdAt | date:'MMM d, y' }}</p>
-              <p class="report-description">{{ report.description }}</p>
+
+            <div class="report-card-section">
+              <h4 class="report-section-title">Report details</h4>
+              <p class="report-description">{{ report.description || '—' }}</p>
             </div>
+
+            <div class="report-card-section evidence-section">
+              <h4 class="report-section-title"><i class="fas fa-paperclip"></i> Evidence</h4>
+              @if (report.evidenceSummary) {
+                <p class="evidence-summary">{{ report.evidenceSummary }}</p>
+              } @else {
+                <p class="evidence-empty">No evidence summary provided.</p>
+              }
+              @if (evidenceLinkList(report).length > 0) {
+                <ul class="evidence-links">
+                  @for (url of evidenceLinkList(report); track url) {
+                    <li>
+                      <a [href]="url" target="_blank" rel="noopener noreferrer">{{ url }}</a>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+
+            @if (report.adminNotes) {
+              <div class="report-card-section admin-notes-section">
+                <h4 class="report-section-title">Admin notes</h4>
+                <p class="admin-notes-text">{{ report.adminNotes }}</p>
+              </div>
+            }
+
             <div class="report-actions">
               @if (report.status === 'PENDING') {
-                <button class="btn-primary hover-lift" (click)="reviewReport(report.id)">
+                <button type="button" class="btn-secondary hover-lift" (click)="reviewReport(report.id)">
                   <i class="fas fa-eye"></i>
-                  Review
+                  Under review
                 </button>
               }
-              <button class="btn-secondary hover-lift" (click)="dismissReport(report.id)">
-                <i class="fas fa-times"></i>
-                Dismiss
-              </button>
+              @if (report.status === 'PENDING' || report.status === 'UNDER_REVIEW') {
+                <button type="button" class="btn-danger-outline hover-lift" (click)="substantiateReport(report.id)">
+                  <i class="fas fa-gavel"></i>
+                  Substantiate (penalize trust)
+                </button>
+              }
+              @if (report.status !== 'DISMISSED' && report.status !== 'UPHELD') {
+                <button type="button" class="btn-secondary hover-lift" (click)="dismissReport(report.id)">
+                  <i class="fas fa-times"></i>
+                  Dismiss
+                </button>
+              }
             </div>
-          </div>
+          </article>
         }
       </div>
     }

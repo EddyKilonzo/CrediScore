@@ -1556,7 +1556,9 @@ export class BusinessService {
             where: { verified: true },
           },
           fraudReports: {
-            where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
+            where: {
+              status: { in: ['PENDING', 'UNDER_REVIEW', 'UPHELD'] },
+            },
           },
         },
       });
@@ -1642,12 +1644,26 @@ export class BusinessService {
         score: paymentScore,
       };
 
-      // Penalty for active fraud reports (PENDING + UNDER_REVIEW — unresolved concerns)
-      const fraudPenalty = Math.min(business.fraudReports.length * 5, 25); // Max 25 point penalty
+      // Open concerns (pending / in review): moderate penalty per report
+      const openReports = business.fraudReports.filter(
+        (r) => r.status === 'PENDING' || r.status === 'UNDER_REVIEW',
+      );
+      const openPenalty = Math.min(openReports.length * 5, 25);
+
+      // Admin-substantiated reports: stronger penalty (evidence-backed findings)
+      const upheldReports = business.fraudReports.filter(
+        (r) => r.status === 'UPHELD',
+      );
+      const upheldPenalty = Math.min(upheldReports.length * 15, 45);
+
+      const fraudPenalty = openPenalty + upheldPenalty;
       score -= fraudPenalty;
       factors.fraudReports = {
-        count: business.fraudReports.length,
-        penalty: fraudPenalty,
+        openCount: openReports.length,
+        openPenalty,
+        upheldCount: upheldReports.length,
+        upheldPenalty,
+        totalPenalty: fraudPenalty,
       };
 
       // Ensure score is between 0 and 100

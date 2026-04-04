@@ -250,16 +250,21 @@ model TrustScore {
 }
 
 model FraudReport {
-  id          String       @id @default(uuid())
-  reporterId  String
-  businessId  String
-  reason      String
-  description String?
-  status      ReportStatus @default(PENDING)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  business    Business     @relation(fields: [businessId], references: [id])
-  reporter    User         @relation(fields: [reporterId], references: [id])
+  id               String       @id @default(uuid())
+  reporterId       String
+  businessId       String
+  reason           String
+  description      String?
+  /// Narrative of what evidence supports the report (screenshots described, timelines, etc.)
+  evidenceSummary  String?
+  /// JSON array of URL strings (e.g. image links, public posts)
+  evidenceLinks    Json?
+  adminNotes       String?
+  status           ReportStatus @default(PENDING)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  business         Business     @relation(fields: [businessId], references: [id])
+  reporter         User         @relation(fields: [reporterId], references: [id])
 }
 
 model BusinessCategory {
@@ -327,6 +332,8 @@ enum ReportStatus {
   UNDER_REVIEW
   RESOLVED
   DISMISSED
+  /// Admin substantiated the report — applies a stronger trust-score penalty
+  UPHELD
 }
 
 enum VoteType {

@@ -89,7 +89,8 @@ export class AdminDashboardComponent implements OnInit {
     await this.loadDashboardStats();
   }
 
-  downloadPDF(): void {
+  /** Print-friendly HTML report (user saves as PDF from the print dialog). */
+  downloadPDF = (): void => {
     const stats = this.dashboardStats();
     if (!stats) { this.toastService.error('No data to export yet.'); return; }
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -262,6 +263,7 @@ export class AdminDashboardComponent implements OnInit {
         <tr><td>Under Review</td><td class="num">${f.underReviewReports}</td><td class="pct">${pct(f.underReviewReports, f.totalReports)}</td></tr>
         <tr><td>Resolved</td><td class="num">${f.resolvedReports}</td><td class="pct">${pct(f.resolvedReports, f.totalReports)}</td></tr>
         <tr><td>Dismissed</td><td class="num">${f.dismissedReports}</td><td class="pct">${pct(f.dismissedReports, f.totalReports)}</td></tr>
+        <tr><td>Substantiated (upheld)</td><td class="num">${f.upheldReports ?? 0}</td><td class="pct">${pct(f.upheldReports ?? 0, f.totalReports)}</td></tr>
         <tr><td><strong>Reports This Month</strong></td><td class="num"><strong>${f.reportsThisMonth}</strong></td><td class="pct">—</td></tr>
       </tbody>
     </table>
@@ -285,8 +287,7 @@ export class AdminDashboardComponent implements OnInit {
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); }, 700);
-  }
-
+  };
 
   getStats(): AdminDashboardStats | null {
     return this.dashboardStats();

@@ -37,6 +37,9 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
 
   reason = '';
   description = '';
+  evidenceSummary = '';
+  /** One URL per line (https://…) */
+  evidenceLinksRaw = '';
   submitting = false;
 
   readonly reasonOptions: { value: string; label: string }[] = [
@@ -134,6 +137,13 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
     });
   }
 
+  private parseEvidenceLinks(): string[] {
+    return this.evidenceLinksRaw
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => /^https?:\/\/.+/i.test(s));
+  }
+
   submit(): void {
     if (!this.businessId || !this.reason) {
       this.toastService.warning('Choose a business and a reason.');
@@ -144,11 +154,14 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
       return;
     }
     this.submitting = true;
+    const links = this.parseEvidenceLinks();
     this.reviewService
       .submitFraudReport({
         businessId: this.businessId,
         reason: this.reason,
         description: this.description.trim() || '',
+        evidenceSummary: this.evidenceSummary.trim() || undefined,
+        evidenceLinks: links.length ? links : undefined,
       })
       .subscribe({
         next: () => {
@@ -158,6 +171,8 @@ export class ReportBusinessComponent implements OnInit, OnDestroy {
           );
           this.reason = '';
           this.description = '';
+          this.evidenceSummary = '';
+          this.evidenceLinksRaw = '';
           this.router.navigate(['/search']);
         },
         error: (err) => {

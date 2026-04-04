@@ -154,6 +154,8 @@ export class ReviewService {
     businessId: string;
     reason: string;
     description: string;
+    evidenceSummary?: string;
+    evidenceLinks?: string[];
   }): Observable<unknown> {
     return this.http.post(`${this.API_URL}/user/fraud-reports`, payload);
   }

@@ -12,6 +12,7 @@ import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { UpdateBusinessStatusDto } from '../business/dto/business.dto';
 import { MailerService } from '../shared/mailer/mailer.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
+import { BusinessService } from '../business/business.service';
 
 export interface AdminUserStats {
   totalUsers: number;
@@ -40,6 +41,8 @@ export interface AdminFraudReportStats {
   underReviewReports: number;
   resolvedReports: number;
   dismissedReports: number;
+  /** Admin substantiated — trust score penalized */
+  upheldReports: number;
   reportsThisMonth: number;
 }
 
@@ -57,6 +60,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly mailerService: MailerService,
     private readonly fraudDetectionService: FraudDetectionService,
+    private readonly businessService: BusinessService,
   ) {}
 
   // User Management
@@ -794,11 +798,17 @@ export class AdminService {
         data: {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           status: status as any,
-          ...(adminNotes && {
-            description: `${report.description}\n\nAdmin Notes: ${adminNotes}`,
-          }),
+          ...(adminNotes !== undefined && { adminNotes }),
         },
       });
+
+      try {
+        await this.businessService.calculateTrustScore(report.businessId);
+      } catch (e) {
+        this.logger.warn(
+          `Trust score recalc after fraud status ${status}: ${e}`,
+        );
+      }
 
       this.logger.log(`Fraud report status updated: ${reportId} -> ${status}`);
       return { message: 'Fraud report status updated successfully' };
@@ -908,6 +918,7 @@ export class AdminService {
       underReviewReports,
       resolvedReports,
       dismissedReports,
+      upheldReports,
       reportsThisMonth,
     ] = await Promise.all([
       this.prisma.fraudReport.count(),
@@ -915,6 +926,7 @@ export class AdminService {
       this.prisma.fraudReport.count({ where: { status: 'UNDER_REVIEW' } }),
       this.prisma.fraudReport.count({ where: { status: 'RESOLVED' } }),
       this.prisma.fraudReport.count({ where: { status: 'DISMISSED' } }),
+      this.prisma.fraudReport.count({ where: { status: 'UPHELD' } }),
       this.prisma.fraudReport.count({
         where: { createdAt: { gte: startOfMonth } },
       }),
@@ -926,6 +938,7 @@ export class AdminService {
       underReviewReports,
       resolvedReports,
       dismissedReports,
+      upheldReports,
       reportsThisMonth,
     };
   }
@@ -1466,143 +1479,10 @@ export class AdminService {
     }
   }
 
-  // Helper method to recalculate business trust score
+  /** Delegates to BusinessService so fraud penalties match the public trust algorithm. */
   private async recalculateBusinessTrustScore(businessId: string): Promise<void> {
     try {
-      const business = await this.prisma.business.findUnique({
-        where: { id: businessId },
-        include: {
-          reviews: {
-            where: { isActive: true },
-          },
-          documents: {
-            where: { verified: true },
-          },
-          payments: {
-            where: { verified: true },
-          },
-          fraudReports: {
-            where: { status: 'RESOLVED' },
-          },
-        },
-      });
-
-      if (!business) {
-        return;
-      }
-
-      let score = 0;
-      const factors: Record<string, any> = {};
-
-      // Base score from verification status
-      if (business.isVerified) {
-        score += 20;
-        factors.verified = 20;
-      }
-
-      // Score from reviews (weighted by verification status)
-      if (business.reviews.length > 0) {
-        const verifiedReviews = business.reviews.filter(
-          (review) => review.isVerified,
-        );
-        const unverifiedReviews = business.reviews.filter(
-          (review) => !review.isVerified,
-        );
-
-        // Calculate weighted average rating
-        let weightedRatingSum = 0;
-        let totalWeight = 0;
-
-        // Verified reviews get 2x weight
-        verifiedReviews.forEach((review) => {
-          weightedRatingSum += review.rating * 2;
-          totalWeight += 2;
-        });
-
-        // Unverified reviews get 1x weight
-        unverifiedReviews.forEach((review) => {
-          weightedRatingSum += review.rating;
-          totalWeight += 1;
-        });
-
-        const avgRating = totalWeight > 0 ? weightedRatingSum / totalWeight : 0;
-        const reviewScore = Math.min(avgRating * 8, 40); // Max 40 points from reviews
-
-        // Bonus points for verified reviews
-        const verificationBonus = Math.min(verifiedReviews.length * 2, 10); // Max 10 bonus points
-        const totalReviewScore = reviewScore + verificationBonus;
-
-        score += totalReviewScore;
-        factors.reviews = {
-          averageRating: avgRating,
-          totalReviews: business.reviews.length,
-          verifiedReviews: verifiedReviews.length,
-          unverifiedReviews: unverifiedReviews.length,
-          verificationRate:
-            business.reviews.length > 0
-              ? (verifiedReviews.length / business.reviews.length) * 100
-              : 0,
-          baseScore: reviewScore,
-          verificationBonus: verificationBonus,
-          totalScore: totalReviewScore,
-        };
-      }
-
-      // Score from verified documents
-      const documentScore = Math.min(business.documents.length * 5, 20); // Max 20 points from documents
-      score += documentScore;
-      factors.documents = {
-        count: business.documents.length,
-        score: documentScore,
-      };
-
-      // Score from verified payment methods
-      const paymentScore = Math.min(business.payments.length * 3, 15); // Max 15 points from payments
-      score += paymentScore;
-      factors.payments = {
-        count: business.payments.length,
-        score: paymentScore,
-      };
-
-      // Penalty for fraud reports
-      const fraudPenalty = Math.min(business.fraudReports.length * 5, 25); // Max 25 point penalty
-      score -= fraudPenalty;
-      factors.fraudReports = {
-        count: business.fraudReports.length,
-        penalty: fraudPenalty,
-      };
-
-      // Ensure score is between 0 and 100
-      score = Math.max(0, Math.min(100, score));
-
-      // Determine grade
-      let grade: string;
-      if (score >= 90) grade = 'A+';
-      else if (score >= 80) grade = 'A';
-      else if (score >= 70) grade = 'B';
-      else if (score >= 60) grade = 'C';
-      else if (score >= 50) grade = 'D';
-      else grade = 'F';
-
-      // Update or create trust score
-      await this.prisma.trustScore.upsert({
-        where: { businessId: businessId },
-        update: {
-          grade,
-          score: Math.round(score),
-          factors,
-        },
-        create: {
-          businessId: businessId,
-          grade,
-          score: Math.round(score),
-          factors,
-        },
-      });
-
-      this.logger.log(
-        `Trust score recalculated for business: ${businessId} - Grade: ${grade}, Score: ${Math.round(score)}`,
-      );
+      await this.businessService.calculateTrustScore(businessId);
     } catch (error) {
       this.logger.error(
         `Error recalculating trust score for business ${businessId}:`,

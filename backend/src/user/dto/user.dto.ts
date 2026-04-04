@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDateString, IsEnum, Matches, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, IsEnum, Matches, IsBoolean, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -187,6 +187,25 @@ export class CreateFraudReportDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({
+    description:
+      'Evidence summary — what supports this report (e.g. screenshots described, dates, order IDs)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  evidenceSummary?: string;
+
+  @ApiProperty({
+    description: 'Optional list of evidence URLs (images, posts, receipts hosted elsewhere)',
+    required: false,
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  evidenceLinks?: string[];
 }
 
 export class CreateReviewReplyDto {

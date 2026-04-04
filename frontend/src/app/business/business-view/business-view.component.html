@@ -1106,6 +1106,25 @@
           style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;"
         ></textarea>
         <div style="text-align:right;font-size:0.75rem;color:#94a3b8;">{{ fraudReportDescription.length }}/1000</div>
+        <label style="display:block;font-weight:600;font-size:0.875rem;margin:1rem 0 0.5rem;color:var(--text-primary,#1e293b);">
+          Evidence summary <span style="color:#94a3b8;font-weight:500;">(optional)</span>
+        </label>
+        <textarea
+          [(ngModel)]="fraudReportEvidenceSummary"
+          placeholder="Order IDs, dates, M-Pesa refs, or what screenshots show…"
+          rows="2"
+          maxlength="2000"
+          style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;"
+        ></textarea>
+        <label style="display:block;font-weight:600;font-size:0.875rem;margin:1rem 0 0.5rem;color:var(--text-primary,#1e293b);">
+          Evidence links <span style="color:#94a3b8;font-weight:500;">(optional, one https URL per line)</span>
+        </label>
+        <textarea
+          [(ngModel)]="fraudReportEvidenceLinksRaw"
+          placeholder="https://…"
+          rows="2"
+          style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:0.9rem;resize:vertical;"
+        ></textarea>
       </div>
       <div class="delete-confirm-actions">
         <button type="button" class="btn btn-secondary" (click)="closeFraudReportModal()">Cancel</button>

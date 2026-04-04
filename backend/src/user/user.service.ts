@@ -1698,7 +1698,15 @@ export class UserService {
 
       const report = await this.prisma.fraudReport.create({
         data: {
-          ...reportData,
+          businessId: reportData.businessId,
+          reason: reportData.reason,
+          description: reportData.description,
+          evidenceSummary: reportData.evidenceSummary,
+          evidenceLinks:
+            reportData.evidenceLinks &&
+            reportData.evidenceLinks.length > 0
+              ? reportData.evidenceLinks
+              : undefined,
           reporterId: userId,
         },
         include: {

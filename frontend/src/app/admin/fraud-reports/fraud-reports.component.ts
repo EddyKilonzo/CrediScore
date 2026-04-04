@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -8,7 +9,10 @@ import { AuthService } from '../../core/services/auth.service';
 interface FraudReport {
   id: string;
   reason: string;
-  description: string;
+  description: string | null;
+  evidenceSummary?: string | null;
+  evidenceLinks?: unknown;
+  adminNotes?: string | null;
   status: string;
   createdAt: string;
   reporter: {
@@ -28,7 +32,7 @@ interface FraudReport {
 @Component({
   selector: 'app-fraud-reports',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './fraud-reports.component.html',
   styleUrl: './fraud-reports.component.css'
 })
@@ -84,11 +88,6 @@ export class FraudReportsComponent implements OnInit {
           this.applyFilter();
           this.totalPages.set(response.pagination?.totalPages || 1);
           this.isLoading.set(false);
-          
-          // Show message if no reports found
-          if (reportsData.length === 0) {
-            this.toastService.info('No fraud reports found');
-          }
         },
         error: (error) => {
           console.error('Error loading fraud reports:', error);
@@ -125,19 +124,62 @@ export class FraudReportsComponent implements OnInit {
     this.toastService.success(`Showing ${this.reports().length} reports`);
   }
 
+  statusLabel(status: string): string {
+    const map: Record<string, string> = {
+      PENDING: 'Pending',
+      UNDER_REVIEW: 'Under review',
+      RESOLVED: 'Resolved',
+      DISMISSED: 'Dismissed',
+      UPHELD: 'Substantiated',
+    };
+    return map[status] || status;
+  }
+
+  evidenceLinkList(report: FraudReport): string[] {
+    const v = report.evidenceLinks;
+    if (!v) return [];
+    if (Array.isArray(v)) {
+      return v.filter((x): x is string => typeof x === 'string');
+    }
+    return [];
+  }
+
   async reviewReport(reportId: string): Promise<void> {
     try {
-      // Update report status to UNDER_REVIEW
-      await this.adminService.updateFraudReportStatus(reportId, {
-        status: 'UNDER_REVIEW',
-        adminNotes: 'Report under review'
-      }).toPromise();
-      
+      await firstValueFrom(
+        this.adminService.updateFraudReportStatus(reportId, {
+          status: 'UNDER_REVIEW',
+          adminNotes: 'Marked under review',
+        }),
+      );
       this.toastService.success('Report moved to under review');
       this.loadReports();
     } catch (error) {
       console.error('Error reviewing report:', error);
       this.toastService.error('Failed to update report status');
+    }
+  }
+
+  async substantiateReport(reportId: string): Promise<void> {
+    if (
+      !confirm(
+        'Substantiate this report? The business trust score will be penalized (admin-confirmed concern).',
+      )
+    ) {
+      return;
+    }
+    try {
+      await firstValueFrom(
+        this.adminService.updateFraudReportStatus(reportId, {
+          status: 'UPHELD',
+          adminNotes: 'Substantiated — trust score adjusted',
+        }),
+      );
+      this.toastService.success('Report substantiated; trust score recalculated');
+      this.loadReports();
+    } catch (error) {
+      console.error('Error substantiating report:', error);
+      this.toastService.error('Failed to substantiate report');
     }
   }
 
@@ -147,11 +189,12 @@ export class FraudReportsComponent implements OnInit {
     }
 
     try {
-      await this.adminService.updateFraudReportStatus(reportId, {
-        status: 'DISMISSED',
-        adminNotes: 'Report dismissed by admin'
-      }).toPromise();
-      
+      await firstValueFrom(
+        this.adminService.updateFraudReportStatus(reportId, {
+          status: 'DISMISSED',
+          adminNotes: 'Dismissed — no action',
+        }),
+      );
       this.toastService.success('Report dismissed');
       this.loadReports();
     } catch (error) {
@@ -179,11 +222,13 @@ export class FraudReportsComponent implements OnInit {
       }
 
       // Format data for CSV export
-      const headers = ['ID', 'Reason', 'Description', 'Status', 'Reporter Name', 'Reporter Email', 'Business Name', 'Created At'];
+      const headers = ['ID', 'Reason', 'Description', 'Evidence', 'Links', 'Status', 'Reporter Name', 'Reporter Email', 'Business Name', 'Created At'];
       const rows = reportsData.map(report => [
         report.id,
         report.reason,
-        report.description,
+        report.description ?? '',
+        report.evidenceSummary ?? '',
+        this.evidenceLinkList(report).join(' | '),
         report.status,
         report.reporter.name,
         report.reporter.email,

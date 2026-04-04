@@ -37,6 +37,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 
 // DTOs for admin operations
 export class UpdateUserRoleDto {
@@ -44,7 +45,11 @@ export class UpdateUserRoleDto {
 }
 
 export class UpdateFraudReportStatusDto {
+  @IsIn(['PENDING', 'UNDER_REVIEW', 'RESOLVED', 'DISMISSED', 'UPHELD'])
   status: string;
+
+  @IsOptional()
+  @IsString()
   adminNotes?: string;
 }
 

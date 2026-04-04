@@ -132,6 +132,8 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   showFraudReportModal = false;
   fraudReportReason = '';
   fraudReportDescription = '';
+  fraudReportEvidenceSummary = '';
+  fraudReportEvidenceLinksRaw = '';
   isSubmittingFraudReport = false;
 
   ngOnInit() {
@@ -1260,7 +1262,16 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   openFraudReportModal() {
     this.fraudReportReason = '';
     this.fraudReportDescription = '';
+    this.fraudReportEvidenceSummary = '';
+    this.fraudReportEvidenceLinksRaw = '';
     this.showFraudReportModal = true;
+  }
+
+  private parseFraudEvidenceLinks(): string[] {
+    return this.fraudReportEvidenceLinksRaw
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => /^https?:\/\/.+/i.test(s));
   }
 
   closeFraudReportModal() {
@@ -1271,12 +1282,15 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.fraudReportReason || !this.fraudReportDescription.trim() || !this.business?.id) return;
     this.isSubmittingFraudReport = true;
 
+    const links = this.parseFraudEvidenceLinks();
     this.http.post(
       `${this.API_URL}/user/fraud-reports`,
       {
         businessId: this.business.id,
         reason: this.fraudReportReason,
-        description: this.fraudReportDescription.trim()
+        description: this.fraudReportDescription.trim(),
+        evidenceSummary: this.fraudReportEvidenceSummary.trim() || undefined,
+        evidenceLinks: links.length ? links : undefined,
       },
       { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } }
     ).subscribe({

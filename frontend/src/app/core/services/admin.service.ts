@@ -30,6 +30,7 @@ export interface AdminDashboardStats {
     underReviewReports: number;
     resolvedReports: number;
     dismissedReports: number;
+    upheldReports: number;
     reportsThisMonth: number;
   };
 }
@@ -135,7 +136,10 @@ export interface Business {
 export interface FraudReport {
   id: string;
   reason: string;
-  description: string;
+  description: string | null;
+  evidenceSummary?: string | null;
+  evidenceLinks?: string[] | null;
+  adminNotes?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -502,9 +506,21 @@ export class AdminService {
     if (status) params = params.set('status', status);
     if (businessId) params = params.set('businessId', businessId);
 
-    return this.http.get<PaginatedResponse<FraudReport>>(`${this.API_URL}/admin/fraud-reports`, { params })
+    return this.http
+      .get<{
+        reports?: FraudReport[];
+        data?: FraudReport[];
+        pagination: PaginatedResponse<FraudReport>['pagination'];
+      }>(`${this.API_URL}/admin/fraud-reports`, { params })
       .pipe(
-        catchError(error => this.handleError(error))
+        map((res) => ({
+          data: res.reports ?? res.data ?? [],
+          pagination: {
+            ...res.pagination,
+            totalPages: Math.max(1, res.pagination?.totalPages ?? 1),
+          },
+        })),
+        catchError((error) => this.handleError(error)),
       );
   }
 
