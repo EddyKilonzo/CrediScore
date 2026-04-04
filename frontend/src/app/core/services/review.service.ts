@@ -169,7 +169,7 @@ export class ReviewService {
     }
     return this.http
       .post<{ url: string }>(
-        `${this.API_URL}/user/fraud-reports/upload-evidence`,
+        `${this.API_URL}/user/upload/fraud-report-evidence`,
         formData,
       )
       .pipe(map((res) => ({ url: res.url })));

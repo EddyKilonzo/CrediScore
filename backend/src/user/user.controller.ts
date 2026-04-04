@@ -21,6 +21,7 @@ import {
   DefaultValuePipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   ApiTags,
   ApiOperation,
@@ -509,9 +510,14 @@ export class UserController {
     return this.userService.removeBookmark(req.user.id, businessId);
   }
 
-  // Fraud Report Management
-  @Post('fraud-reports/upload-evidence')
-  @UseInterceptors(FileInterceptor('file'))
+  // Fraud Report Management — two paths: primary matches reviews/upload-receipt style; legacy kept for compatibility
+  @Post(['upload/fraud-report-evidence', 'fraud-reports/upload-evidence'])
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Upload image or document evidence for a fraud report (Cloudinary)',
