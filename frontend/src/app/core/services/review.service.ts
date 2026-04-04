@@ -148,5 +148,14 @@ export class ReviewService {
   removeBookmark(businessId: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.API_URL}/user/bookmarks/${businessId}`);
   }
+
+  /** Trust & safety: customer report → admin fraud-reports queue */
+  submitFraudReport(payload: {
+    businessId: string;
+    reason: string;
+    description: string;
+  }): Observable<unknown> {
+    return this.http.post(`${this.API_URL}/user/fraud-reports`, payload);
+  }
 }
 

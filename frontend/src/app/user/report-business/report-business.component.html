@@ -1,0 +1,84 @@
+<div class="report-page">
+  <div class="report-inner">
+    <a routerLink="/search" class="back-link">
+      <i class="uil uil-arrow-left"></i> Back to search
+    </a>
+
+    <header class="report-header">
+      <h1>Report a business</h1>
+      <p class="lead">
+        Tell us about scams, misleading listings, or other trust &amp; safety concerns.
+        Submissions go to <strong>admin review</strong> (same queue as “Report fraud” on a business profile).
+      </p>
+    </header>
+
+    <section class="report-card">
+      <h2>1. Which business?</h2>
+      <p class="hint" *ngIf="!businessId">
+        Search by name, then select the correct listing. Or open this page from search using “Report concern”.
+      </p>
+
+      <div *ngIf="loadingBusiness" class="muted">Loading business…</div>
+
+      <div *ngIf="businessId && !loadingBusiness" class="selected-biz">
+        <div>
+          <span class="label">Selected</span>
+          <strong>{{ businessName }}</strong>
+          <span class="biz-id muted">{{ businessId }}</span>
+        </div>
+        <button type="button" class="btn-text" (click)="clearBusiness()">Change</button>
+      </div>
+
+      <div *ngIf="!businessId && !loadingBusiness" class="search-block">
+        <input
+          type="text"
+          class="search-input"
+          [ngModel]="businessSearch"
+          (ngModelChange)="onSearchInput($event)"
+          placeholder="Type business name…"
+          autocomplete="off"
+        />
+        <div *ngIf="searching" class="muted small">Searching…</div>
+        <ul *ngIf="searchResults.length > 0" class="results-list">
+          <li *ngFor="let b of searchResults">
+            <button type="button" (click)="selectBusiness(b)">
+              {{ b.name }}
+            </button>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="report-card">
+      <h2>2. What’s the issue?</h2>
+      <label class="field-label" for="report-reason">Reason</label>
+      <select id="report-reason" class="select-input" [(ngModel)]="reason">
+        <option value="">Select a reason…</option>
+        <option *ngFor="let o of reasonOptions" [value]="o.value">{{ o.label }}</option>
+      </select>
+
+      <label class="field-label" for="report-desc">Details <span class="muted">(recommended; required if you chose “Other”)</span></label>
+      <textarea
+        id="report-desc"
+        class="textarea-input"
+        rows="6"
+        [(ngModel)]="description"
+        maxlength="1000"
+        placeholder="What happened? Include dates, amounts, or links if helpful."
+      ></textarea>
+      <div class="char-count muted small">{{ description.length }} / 1000</div>
+    </section>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="btn-submit"
+        (click)="submit()"
+        [disabled]="submitting || !businessId || !reason || (reason === 'OTHER' && !description.trim())"
+      >
+        <span *ngIf="!submitting">Submit report</span>
+        <span *ngIf="submitting">Submitting…</span>
+      </button>
+    </div>
+  </div>
+</div>

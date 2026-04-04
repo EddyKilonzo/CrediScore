@@ -1,0 +1,234 @@
+.report-page {
+  min-height: calc(100vh - 4rem);
+  padding: 5.5rem 1rem 3rem;
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.report-inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: #3e6a8a;
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.report-header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.5rem;
+}
+
+.lead {
+  color: #475569;
+  line-height: 1.55;
+  margin: 0 0 1.5rem;
+  font-size: 0.95rem;
+}
+
+.report-card {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.report-card h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.75rem;
+}
+
+.hint {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0 1rem;
+  line-height: 1.45;
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+.small {
+  font-size: 0.8rem;
+}
+
+.selected-biz {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 0.5rem;
+}
+
+.selected-biz .label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #166534;
+  margin-bottom: 0.25rem;
+}
+
+.selected-biz strong {
+  display: block;
+  color: #14532d;
+}
+
+.biz-id {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  word-break: break-all;
+}
+
+.btn-text {
+  background: none;
+  border: none;
+  color: #3e6a8a;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btn-text:hover {
+  text-decoration: underline;
+}
+
+.search-input,
+.select-input,
+.textarea-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.textarea-input {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin: 1rem 0 0.35rem;
+}
+
+.field-label:first-of-type {
+  margin-top: 0;
+}
+
+.results-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.results-list button {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+
+.results-list li:last-child button {
+  border-bottom: none;
+}
+
+.results-list button:hover {
+  background: #f8fafc;
+}
+
+.char-count {
+  text-align: right;
+  margin-top: 0.35rem;
+}
+
+.actions {
+  margin-top: 1.25rem;
+}
+
+.btn-submit {
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #3e6a8a, #5c8ba5);
+  color: #fff;
+}
+
+.btn-submit:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.btn-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+:host-context(html[data-theme='dark']) .report-page {
+  background: linear-gradient(180deg, #152028 0%, #0f172a 100%);
+}
+
+:host-context(html[data-theme='dark']) .report-header h1 {
+  color: #e2eaf2;
+}
+
+:host-context(html[data-theme='dark']) .lead {
+  color: #9bb3c8;
+}
+
+:host-context(html[data-theme='dark']) .report-card {
+  background: #1e2f3d;
+  border-color: #2d4255;
+}
+
+:host-context(html[data-theme='dark']) .report-card h2 {
+  color: #e2eaf2;
+}
+
+:host-context(html[data-theme='dark']) .search-input,
+:host-context(html[data-theme='dark']) .select-input,
+:host-context(html[data-theme='dark']) .textarea-input {
+  background: #152028;
+  border-color: #2d4255;
+  color: #e2eaf2;
+}

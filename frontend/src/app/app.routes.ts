@@ -97,6 +97,16 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
 
+  // Report a business (trust & safety → admin fraud queue)
+  {
+    path: 'report-business',
+    loadComponent: () =>
+      import('./user/report-business/report-business.component').then(
+        (m) => m.ReportBusinessComponent,
+      ),
+    canActivate: [AuthGuard],
+  },
+
   // Leaderboard (public)
   {
     path: 'leaderboard',

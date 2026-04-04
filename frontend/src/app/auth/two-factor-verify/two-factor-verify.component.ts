@@ -16,6 +16,7 @@ export class TwoFactorVerifyComponent implements OnInit {
   isLoading = signal(false);
   error = signal<string | null>(null);
   userId = signal<string | null>(null);
+  private returnUrl: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -36,6 +37,7 @@ export class TwoFactorVerifyComponent implements OnInit {
       return;
     }
     this.userId.set(userId);
+    this.returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
   }
 
   onSubmit(): void {
@@ -48,7 +50,11 @@ export class TwoFactorVerifyComponent implements OnInit {
       next: (response) => {
         this.isLoading.set(false);
         this.toastService.success(`Welcome back, ${response.user.name.split(' ')[0]}!`);
-        this.router.navigate(['/dashboard']);
+        if (this.returnUrl && TwoFactorVerifyComponent.isSafeReturnUrl(this.returnUrl)) {
+          this.router.navigateByUrl(this.returnUrl);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         this.isLoading.set(false);
@@ -57,5 +63,9 @@ export class TwoFactorVerifyComponent implements OnInit {
         this.toastService.error(msg);
       },
     });
+  }
+
+  private static isSafeReturnUrl(url: string): boolean {
+    return url.startsWith('/') && !url.startsWith('//') && !url.includes('://');
   }
 }

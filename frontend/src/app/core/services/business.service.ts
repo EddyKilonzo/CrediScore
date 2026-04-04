@@ -278,6 +278,25 @@ export class BusinessService {
       );
   }
 
+  /**
+   * Public search without toggling global loading signals (typeaheads, report picker, etc.).
+   */
+  searchPublicBusinessesLite(query: string, limit = 40): Observable<Business[]> {
+    const q = (query || '').trim();
+    const url = q
+      ? `${this.API_URL}/public/business/search?query=${encodeURIComponent(q)}&limit=${limit}`
+      : `${this.API_URL}/public/business/search?limit=${limit}`;
+    return this.http.get<any>(url).pipe(
+      map((response: any): Business[] => {
+        if (Array.isArray(response)) return response;
+        if (response?.businesses && Array.isArray(response.businesses)) {
+          return response.businesses;
+        }
+        return [];
+      }),
+    );
+  }
+
   searchBusinesses(query: string): Observable<Business[]> {
     this.isLoading.set(true);
     this.error.set(null);

@@ -388,6 +388,15 @@
                         <i class="uil uil-eye"></i>
                         View Details
                       </button>
+                      <a
+                        [routerLink]="['/report-business']"
+                        [queryParams]="{ businessId: business.id }"
+                        (click)="$event.stopPropagation()"
+                        class="map-report-link"
+                      >
+                        <i class="uil uil-shield-exclamation"></i>
+                        Report concern
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -554,6 +563,15 @@
               <i class="uil uil-eye"></i>
               View Profile
             </button>
+            <a
+              [routerLink]="['/report-business']"
+              [queryParams]="{ businessId: business.id }"
+              (click)="$event.stopPropagation()"
+              class="card-report-link"
+            >
+              <i class="uil uil-shield-exclamation"></i>
+              Report concern
+            </a>
           </div>
 
           <!-- Card Footer -->

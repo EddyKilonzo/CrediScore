@@ -1,7 +1,7 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService, LoginRequest } from '../../core/services/auth.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
@@ -13,6 +13,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
   styleUrl: './login.component.css'
 })
 export class LoginComponent implements OnInit {
+  private returnUrl: string | null = null;
   loginForm: FormGroup;
   isLoading = signal(false);
   isGoogleLoading = signal(false);
@@ -23,6 +24,7 @@ export class LoginComponent implements OnInit {
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private toastService: ToastService
   ) {
     this.loginForm = this.fb.group({
@@ -32,8 +34,8 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Scroll to top when component loads
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
   }
 
   onSubmit(): void {
@@ -50,12 +52,18 @@ export class LoginComponent implements OnInit {
         next: (response: any) => {
           this.isLoading.set(false);
           if (response.requires2FA) {
-            this.router.navigate(['/auth/2fa-verify'], { queryParams: { userId: response.userId } });
+            this.router.navigate(['/auth/2fa-verify'], {
+              queryParams: {
+                userId: response.userId,
+                ...(this.returnUrl && LoginComponent.isSafeReturnUrl(this.returnUrl)
+                  ? { returnUrl: this.returnUrl }
+                  : {}),
+              },
+            });
             return;
           }
           this.toastService.success(`Welcome back, ${response.user.name.split(' ')[0]}!`);
-          // Redirect based on user role
-          this.redirectBasedOnRole(response.user.role);
+          this.navigateAfterLogin(response.user.role);
         },
         error: (error) => {
           this.isLoading.set(false);
@@ -80,9 +88,16 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  private redirectBasedOnRole(role: string): void {
-    // Redirect all authenticated users to the main dashboard
+  private navigateAfterLogin(role: string): void {
+    if (this.returnUrl && LoginComponent.isSafeReturnUrl(this.returnUrl)) {
+      this.router.navigateByUrl(this.returnUrl);
+      return;
+    }
     this.router.navigate(['/dashboard']);
+  }
+
+  private static isSafeReturnUrl(url: string): boolean {
+    return url.startsWith('/') && !url.startsWith('//') && !url.includes('://');
   }
 
   private markFormGroupTouched(): void {
