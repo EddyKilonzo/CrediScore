@@ -22,7 +22,9 @@ import { environment } from '../../../environments/environment';
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 4.25rem 1rem 1rem;
+      box-sizing: border-box;
       background-color: #f5f5f5;
     }
     
@@ -120,7 +122,10 @@ export class AuthCallbackComponent implements OnInit {
   }
 
   private redirectBasedOnRole(role: string): void {
-    // Redirect all authenticated users to the main dashboard
-    this.router.navigate(['/dashboard']);
+    if (role === 'BUSINESS_OWNER') {
+      this.router.navigate(['/business/dashboard']);
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
   }
 }

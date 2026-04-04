@@ -557,6 +557,12 @@ export class AuthService {
           });
         }
       } else {
+        // Map frontend role string to UserRole enum
+        let userRole: UserRole = UserRole.CUSTOMER;
+        if (oauthUser.role === 'business') {
+          userRole = UserRole.BUSINESS_OWNER;
+        }
+
         // Create new user
         user = await this.prisma.user.create({
           data: {
@@ -567,6 +573,7 @@ export class AuthService {
             avatar: oauthUser.avatar,
             emailVerified: true,
             isActive: true,
+            role: userRole,
           },
         });
       }

@@ -6,6 +6,7 @@ import { AuthService } from '../auth.service';
 import { OAuthUser } from '../interfaces/user.interface';
 import { AuthProvider } from '../interfaces/user.interface';
 import { CloudinaryService } from '../../shared/cloudinary/cloudinary.service';
+import { Request } from 'express';
 
 interface GoogleProfile {
   id: string;
@@ -31,10 +32,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         configService.get<string>('GOOGLE_CALLBACK_URL') ||
         '/auth/google/callback',
       scope: ['email', 'profile'],
+      passReqToCallback: true,
     });
   }
 
+  // Pass the role query param as OAuth state so it survives the redirect round-trip
+  override authenticate(req: Request, options?: any): void {
+    const role = (req.query?.role as string) || 'user';
+    super.authenticate(req, { ...options, state: role });
+  }
+
   async validate(
+    req: Request,
     accessToken: string,
     refreshToken: string,
     profile: GoogleProfile,
@@ -42,6 +51,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   ): Promise<void> {
     try {
       const { name, emails, photos } = profile;
+      // state is returned by Google as-is — contains the role we sent
+      const role = (req.query?.state as string) || 'user';
 
       let cloudinaryAvatarUrl: string | undefined = undefined;
 
@@ -89,6 +100,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         avatar: cloudinaryAvatarUrl,
         provider: AuthProvider.GOOGLE,
         providerId: profile.id,
+        role,
       };
 
       const validatedUser = await this.authService.validateOAuthUser(oauthUser);

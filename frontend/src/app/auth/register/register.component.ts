@@ -60,7 +60,8 @@ export class RegisterComponent implements OnInit {
     this.error.set(null);
 
     try {
-      this.authService.signInWithGoogle();
+      const role = this.signupForm.get('role')?.value || 'user';
+      this.authService.signInWithGoogle(role);
     } catch (error) {
       this.isGoogleLoading.set(false);
       this.error.set('Google sign-in failed. Please try again.');

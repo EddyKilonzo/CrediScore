@@ -39,6 +39,7 @@ export interface OAuthUser {
   avatar?: string;
   provider: AuthProvider;
   providerId: string;
+  role?: string;
 }
 
 export interface CreateUserData {

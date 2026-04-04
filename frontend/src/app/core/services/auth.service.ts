@@ -89,10 +89,10 @@ export class AuthService {
     }
   }
 
-  signInWithGoogle(): void {
+  signInWithGoogle(role: string = 'user'): void {
     // Redirect to Google OAuth endpoint on backend
     try {
-      const googleAuthUrl = `${this.API_URL}/auth/google`;
+      const googleAuthUrl = `${this.API_URL}/auth/google?role=${encodeURIComponent(role)}`;
       window.location.href = googleAuthUrl;
     } catch (error) {
       console.error('Failed to redirect to Google OAuth:', error);
