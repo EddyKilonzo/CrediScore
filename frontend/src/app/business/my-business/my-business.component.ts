@@ -2000,6 +2000,10 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
   // Payment Methods Methods
   openAddPaymentModal() {
+    if (!this.currentBusiness) {
+      this.toastService.show('Please save your business profile first before adding payment methods.', 'warning');
+      return;
+    }
     this.showAddPaymentModal = true;
     this.newPaymentMethod = { type: PaymentType.TILL, number: '', accountNumber: '' };
   }
@@ -2185,8 +2189,8 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     
     switch (type) {
       case 'TILL':
-        // M-Pesa Till numbers are typically 6 digits
-        return /^\d{6}$/.test(trimmedNumber);
+        // M-Pesa Till numbers are 5-7 digits
+        return /^\d{5,7}$/.test(trimmedNumber);
       case 'PAYBILL':
         // Paybill numbers are typically 5-7 digits
         return /^\d{5,7}$/.test(trimmedNumber);
