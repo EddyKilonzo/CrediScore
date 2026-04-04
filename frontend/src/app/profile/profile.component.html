@@ -595,6 +595,7 @@
                     @if (isBusinessOwner() || isAdmin()) {
                       <app-review-reply 
                         [reviewId]="activity.id"
+                        [businessId]="activity.businessId || primaryBusinessIdForTemplates"
                         [replies]="getReviewReplies(activity.id)"
                         (replyAdded)="onReplyAdded($event)"
                         (replyUpdated)="onReplyUpdated($event)"

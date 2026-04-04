@@ -3120,8 +3120,19 @@ export class BusinessService {
         throw new ForbiddenException('Access denied');
       }
 
+      const patch: Prisma.ResponseTemplateUpdateInput = {};
+      if (data.name !== undefined) patch.name = data.name;
+      if (data.content !== undefined) patch.content = data.content;
+      if (data.isDefault !== undefined) patch.isDefault = data.isDefault;
+
+      if (Object.keys(patch).length === 0) {
+        throw new BadRequestException(
+          'At least one of name, content, or isDefault is required',
+        );
+      }
+
       // If setting as default, clear existing default first
-      if (data.isDefault) {
+      if (data.isDefault === true) {
         await this.prisma.responseTemplate.updateMany({
           where: { businessId: template.businessId, isDefault: true },
           data: { isDefault: false },
@@ -3130,7 +3141,7 @@ export class BusinessService {
 
       const updated = await this.prisma.responseTemplate.update({
         where: { id: templateId },
-        data,
+        data: patch,
       });
 
       this.logger.log(`Response template updated: ${templateId}`);

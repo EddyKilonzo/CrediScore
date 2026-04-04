@@ -284,6 +284,7 @@
                          class="px-3 pb-3 border-t border-gray-200 bg-gray-50">
                       <app-review-reply 
                         [reviewId]="activity.id"
+                        [businessId]="currentBusiness?.id ?? ''"
                         [replies]="getReviewReplies(activity.id)"
                         (replyAdded)="onReplyAdded($event)"
                         (replyUpdated)="onReplyUpdated($event)"
@@ -481,6 +482,7 @@
                 <div class="border-t border-gray-200 pt-4">
                   <app-review-reply 
                     [reviewId]="review.id"
+                    [businessId]="currentBusiness?.id ?? ''"
                     [replies]="getReviewReplies(review.id)"
                     (replyAdded)="onReplyAdded($event)"
                     (replyUpdated)="onReplyUpdated($event)"

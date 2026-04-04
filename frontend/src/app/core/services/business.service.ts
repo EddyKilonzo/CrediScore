@@ -127,16 +127,30 @@ export interface CreateBusinessRequest {
   location?: string;
   latitude?: number;
   longitude?: number;
+  logo?: string;
+  catchphrase?: string;
 }
 
-export interface UpdateBusinessRequest extends Partial<CreateBusinessRequest> {
+export type UpdateBusinessRequest = Partial<Omit<CreateBusinessRequest, 'logo'>> & {
   id: string;
-}
+  /** Pass `null` to clear logo in the API */
+  logo?: string | null;
+};
 
 export interface OCRHealthStatus {
   status: 'healthy' | 'warning' | 'error';
   message: string;
   configured: boolean;
+}
+
+export interface ResponseTemplate {
+  id: string;
+  businessId: string;
+  name: string;
+  content: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 @Injectable({
@@ -516,6 +530,40 @@ export class BusinessService {
           });
         })
       );
+  }
+
+  getResponseTemplates(businessId: string): Observable<ResponseTemplate[]> {
+    return this.http.get<ResponseTemplate[]>(
+      `${this.API_URL}/business/${businessId}/response-templates`,
+    );
+  }
+
+  createResponseTemplate(
+    businessId: string,
+    body: { name: string; content: string; isDefault?: boolean },
+  ): Observable<ResponseTemplate> {
+    return this.http.post<ResponseTemplate>(
+      `${this.API_URL}/business/${businessId}/response-templates`,
+      body,
+    );
+  }
+
+  updateResponseTemplate(
+    templateId: string,
+    body: Partial<{ name: string; content: string; isDefault: boolean }>,
+  ): Observable<ResponseTemplate> {
+    return this.http.patch<ResponseTemplate>(
+      `${this.API_URL}/business/response-templates/${templateId}`,
+      body,
+    );
+  }
+
+  deleteResponseTemplate(
+    templateId: string,
+  ): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.API_URL}/business/response-templates/${templateId}`,
+    );
   }
 }
 

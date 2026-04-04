@@ -303,11 +303,16 @@ export class SearchComponent implements OnInit, OnDestroy {
 
       const hoursNorm = this.normalizeBusinessHoursForCard(b.businessHours);
 
+      const logoRaw = b.logo ?? (business as any).logo;
+      const logoStr =
+        logoRaw != null && String(logoRaw).trim() ? String(logoRaw).trim() : undefined;
+
       return {
         ...business,
         name: nameStr,
         category,
         location,
+        logo: logoStr,
         latitude: Number.isFinite(latNum) ? latNum : undefined,
         longitude: Number.isFinite(lngNum) ? lngNum : undefined,
         averageRating,

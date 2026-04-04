@@ -800,8 +800,14 @@
 
 .map-businesses-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
   gap: 1rem;
+}
+
+@media (min-width: 1280px) {
+  .map-businesses-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
+  }
 }
 
 /* No-pins notice banner */
@@ -1207,23 +1213,23 @@
   box-sizing: border-box;
 }
 
-/* Responsive grid */
+/* Responsive grid — wider cards so location, contact, and blurb fit */
 @media (min-width: 640px) {
   .business-cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   }
 }
 
 @media (min-width: 1024px) {
   .business-cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Reduced from 320px */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
     gap: 1.5rem;
   }
 }
 
 @media (min-width: 1440px) {
   .business-cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Reduced from 350px */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
   }
 }
 

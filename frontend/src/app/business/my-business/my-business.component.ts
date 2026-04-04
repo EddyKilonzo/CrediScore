@@ -481,7 +481,14 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const locText = this.businessLocation?.trim() || '';
+      const locText =
+        this.businessLocation?.trim() ||
+        (this.businessLatitude != null &&
+        this.businessLongitude != null &&
+        Number.isFinite(Number(this.businessLatitude)) &&
+        Number.isFinite(Number(this.businessLongitude))
+          ? `${Number(this.businessLatitude).toFixed(6)}, ${Number(this.businessLongitude).toFixed(6)}`
+          : '');
       const businessData: CreateBusinessRequest = {
         name: this.businessProfile.name.trim(),
         description: this.businessProfile.description?.trim() || 'Business description will be updated soon.',
@@ -500,6 +507,11 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       ) {
         businessData.latitude = Number(this.businessLatitude);
         businessData.longitude = Number(this.businessLongitude);
+      }
+
+      const logoUrl = this.businessProfile.logo?.trim();
+      if (logoUrl) {
+        businessData.logo = logoUrl;
       }
 
       // Create the business
@@ -1350,6 +1362,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       (merged as any).latitude = p.latitude;
     if (!('longitude' in u) && p?.longitude != null && p?.longitude !== '')
       (merged as any).longitude = p.longitude;
+    if (!('logo' in u) && p?.logo) (merged as any).logo = p.logo;
     return merged;
   }
 
@@ -1460,14 +1473,20 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     console.log('Location selected:', location);
   }
 
+  /** True when a map pin exists (save uses coord fallback for label if address geocode failed). */
+  canSaveBusinessLocation(): boolean {
+    const lat = Number(this.businessLatitude);
+    const lng = Number(this.businessLongitude);
+    return (
+      this.businessLatitude != null &&
+      this.businessLongitude != null &&
+      Number.isFinite(lat) &&
+      Number.isFinite(lng)
+    );
+  }
+
   updateLocation() {
-    if (
-      !this.businessLocation.trim() ||
-      this.businessLatitude == null ||
-      this.businessLongitude == null ||
-      !Number.isFinite(Number(this.businessLatitude)) ||
-      !Number.isFinite(Number(this.businessLongitude))
-    ) {
+    if (!this.canSaveBusinessLocation()) {
       this.toastService.show('Please select a location on the map', 'warning');
       return;
     }
@@ -1477,12 +1496,18 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const lat = Number(this.businessLatitude);
+    const lng = Number(this.businessLongitude);
+    const locationText =
+      this.businessLocation?.trim() ||
+      `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
     // Update business location via API
     this.businessService.updateBusiness({
       id: this.currentBusiness.id,
-      location: this.businessLocation,
-      latitude: this.businessLatitude,
-      longitude: this.businessLongitude
+      location: locationText,
+      latitude: lat,
+      longitude: lng,
     }).subscribe({
       next: (business) => {
         this.currentBusiness = this.mergeBusinessUpdate(business);
@@ -1498,10 +1523,14 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   viewOnMap() {
-    if (this.businessLatitude && this.businessLongitude) {
-      // Open OpenStreetMap with coordinates
-      window.open(`https://www.openstreetmap.org/?mlat=${this.businessLatitude}&mlon=${this.businessLongitude}#map=16/${this.businessLatitude}/${this.businessLongitude}`, '_blank');
-    } else if (this.businessLocation.trim()) {
+    if (this.canSaveBusinessLocation()) {
+      const lat = Number(this.businessLatitude);
+      const lng = Number(this.businessLongitude);
+      window.open(
+        `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`,
+        '_blank',
+      );
+    } else if (this.businessLocation?.trim()) {
       // Fallback to search by address
       const encodedAddress = encodeURIComponent(this.businessLocation);
       window.open(`https://www.openstreetmap.org/search?query=${encodedAddress}`, '_blank');
@@ -1577,17 +1606,18 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   loadResponseTemplates() {
     if (!this.currentBusiness?.id) return;
     this.isLoadingTemplates = true;
-    const url = `${environment.apiUrl}/api/business/${this.currentBusiness.id}/response-templates`;
-    const token = localStorage.getItem('token') || '';
-    fetch(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).then(r => {
-      if (!r.ok) throw new Error('Failed to load templates');
-      return r.json();
-    }).then(data => {
-      this.responseTemplates = Array.isArray(data) ? data : (data.templates || []);
-      this.isLoadingTemplates = false;
-    }).catch(() => { this.isLoadingTemplates = false; });
+    this.businessService
+      .getResponseTemplates(this.currentBusiness.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.responseTemplates = Array.isArray(data) ? data : [];
+          this.isLoadingTemplates = false;
+        },
+        error: () => {
+          this.isLoadingTemplates = false;
+        },
+      });
   }
 
   openTemplateForm(template?: { id: string; name: string; content: string; isDefault: boolean }) {
@@ -1610,43 +1640,41 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   saveTemplate() {
     if (!this.currentBusiness?.id || !this.templateForm.name.trim() || !this.templateForm.content.trim()) return;
     this.isSavingTemplate = true;
-    const token = localStorage.getItem('token') || '';
     const isEdit = !!this.editingTemplateId;
-    const url = isEdit
-      ? `${environment.apiUrl}/api/business/response-templates/${this.editingTemplateId}`
-      : `${environment.apiUrl}/api/business/${this.currentBusiness.id}/response-templates`;
+    const body = {
+      name: this.templateForm.name.trim(),
+      content: this.templateForm.content.trim(),
+      isDefault: this.templateForm.isDefault,
+    };
+    const req$ = isEdit
+      ? this.businessService.updateResponseTemplate(this.editingTemplateId!, body)
+      : this.businessService.createResponseTemplate(this.currentBusiness.id, body);
 
-    fetch(url, {
-      method: isEdit ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify(this.templateForm)
-    }).then(r => {
-      if (!r.ok) throw new Error('Save failed');
-      return r.json();
-    }).then(() => {
-      this.isSavingTemplate = false;
-      this.closeTemplateForm();
-      this.loadResponseTemplates();
-      this.toastService.show('Template saved successfully', 'success');
-    }).catch(() => {
-      this.isSavingTemplate = false;
-      this.toastService.show('Failed to save template', 'error');
+    req$.pipe(takeUntil(this.destroy$)).subscribe({
+      next: () => {
+        this.isSavingTemplate = false;
+        this.closeTemplateForm();
+        this.loadResponseTemplates();
+        this.toastService.show('Template saved successfully', 'success');
+      },
+      error: () => {
+        this.isSavingTemplate = false;
+      },
     });
   }
 
   deleteTemplate(templateId: string) {
     if (!confirm('Delete this response template?')) return;
-    const token = localStorage.getItem('token') || '';
-    fetch(`${environment.apiUrl}/api/business/response-templates/${templateId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).then(r => {
-      if (!r.ok) throw new Error('Delete failed');
-      this.responseTemplates = this.responseTemplates.filter(t => t.id !== templateId);
-      this.toastService.show('Template deleted', 'success');
-    }).catch(() => {
-      this.toastService.show('Failed to delete template', 'error');
-    });
+    this.businessService
+      .deleteResponseTemplate(templateId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.responseTemplates = this.responseTemplates.filter((t) => t.id !== templateId);
+          this.toastService.show('Template deleted', 'success');
+        },
+        error: () => {},
+      });
   }
 
   // Business Hours Methods (Feature 12)
@@ -1918,8 +1946,6 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
             
             if (secureUrl) {
               this.businessProfile.logo = secureUrl;
-              this.toastService.show('Logo uploaded successfully', 'success');
-              
               // Clear preview
               if (this.logoPreview) {
                 URL.revokeObjectURL(this.logoPreview);
@@ -1927,10 +1953,13 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
               }
               this.selectedLogoFile = null;
               
-              // Update business profile with new logo (saves to backend)
-              if (this.currentBusiness) {
-                // Save logo to backend immediately
+              if (this.currentBusiness?.id) {
                 this.saveLogoToBackend(secureUrl);
+              } else {
+                this.toastService.show(
+                  'Logo uploaded. Save your business profile to create your listing and store it.',
+                  'success',
+                );
               }
             } else {
               this.toastService.show('Logo upload failed: Invalid response from server', 'error');

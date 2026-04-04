@@ -911,6 +911,7 @@
       <div *ngIf="isBusinessOwner() && selectedReview">
         <app-review-reply 
           [reviewId]="selectedReview.id"
+          [businessId]="business?.id ?? ''"
           [replies]="getReviewReplies(selectedReview.id)"
           (replyAdded)="onReplyAdded($event)"
           (replyUpdated)="onReplyUpdated($event)"

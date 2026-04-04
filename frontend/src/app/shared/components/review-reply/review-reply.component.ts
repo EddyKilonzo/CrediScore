@@ -1,7 +1,23 @@
-import { Component, Input, Output, EventEmitter, signal, inject } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  signal,
+  inject,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/auth.service';
+import {
+  BusinessService,
+  ResponseTemplate,
+} from '../../../core/services/business.service';
 import { ToastService } from '../toast/toast.service';
 
 interface ReviewReply {
@@ -27,6 +43,21 @@ interface ReviewReply {
       <!-- Reply Form (only for business owners) -->
       @if (canReply()) {
         <div class="reply-form">
+          @if (businessId && responseTemplates().length > 0) {
+            <div class="template-picker">
+              <label [attr.for]="'replyTemplateSelect-' + reviewId">Use a saved template</label>
+              <select
+                [id]="'replyTemplateSelect-' + reviewId"
+                class="template-select"
+                (change)="applyResponseTemplate($event)"
+              >
+                <option value="">Write a custom reply…</option>
+                @for (t of responseTemplates(); track t.id) {
+                  <option [value]="t.id">{{ t.name }}{{ t.isDefault ? ' (default)' : '' }}</option>
+                }
+              </select>
+            </div>
+          }
           <textarea 
             [(ngModel)]="replyContent"
             placeholder="Write a reply to this review..."
@@ -115,6 +146,28 @@ interface ReviewReply {
       padding: 1rem;
       border-radius: 8px;
       margin-bottom: 1rem;
+    }
+
+    .template-picker {
+      margin-bottom: 0.75rem;
+    }
+
+    .template-picker label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 0.35rem;
+    }
+
+    .template-select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: white;
+      color: #1e293b;
     }
 
     .reply-textarea {
@@ -293,8 +346,10 @@ interface ReviewReply {
     }
   `]
 })
-export class ReviewReplyComponent {
+export class ReviewReplyComponent implements OnChanges, OnDestroy {
   @Input() reviewId: string = '';
+  /** When set, saved response templates load for this business (My Business → Response templates). */
+  @Input() businessId: string = '';
   @Input() replies = signal<ReviewReply[]>([]);
   @Output() replyAdded = new EventEmitter<ReviewReply>();
   @Output() replyUpdated = new EventEmitter<ReviewReply>();
@@ -303,9 +358,49 @@ export class ReviewReplyComponent {
   replyContent = '';
   isSubmitting = signal(false);
   editingReply: ReviewReply | null = null;
+  responseTemplates = signal<ResponseTemplate[]>([]);
 
   private authService = inject(AuthService);
+  private businessService = inject(BusinessService);
   private toastService = inject(ToastService);
+  private destroy$ = new Subject<void>();
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['businessId'] || changes['reviewId']) {
+      this.loadResponseTemplates();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private loadResponseTemplates(): void {
+    const id = this.businessId?.trim();
+    if (!id || !this.canReply()) {
+      this.responseTemplates.set([]);
+      return;
+    }
+    this.businessService
+      .getResponseTemplates(id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (list) => this.responseTemplates.set(Array.isArray(list) ? list : []),
+        error: () => this.responseTemplates.set([]),
+      });
+  }
+
+  applyResponseTemplate(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const templateId = select.value;
+    select.selectedIndex = 0;
+    if (!templateId) return;
+    const t = this.responseTemplates().find((x) => x.id === templateId);
+    if (t) {
+      this.replyContent = t.content;
+    }
+  }
 
   canReply(): boolean {
     const user = this.authService.currentUser();

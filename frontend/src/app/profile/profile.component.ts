@@ -56,6 +56,8 @@ interface Activity {
   trustScore?: number;
   category?: string;
   status?: string;
+  /** When present, used to load the correct response templates for replies */
+  businessId?: string;
   replies?: any[];
 }
 
@@ -283,6 +285,12 @@ export class ProfileComponent implements OnInit {
   getRecentActivity(): Activity[] {
     if (!this.profileData?.recentActivity) return [];
     return this.profileData.recentActivity;
+  }
+
+  /** Fallback when activity has no businessId (templates from first owned business). */
+  get primaryBusinessIdForTemplates(): string {
+    const list = this.getUserBusinesses();
+    return list[0]?.id ?? '';
   }
 
   getUserStats(): any {

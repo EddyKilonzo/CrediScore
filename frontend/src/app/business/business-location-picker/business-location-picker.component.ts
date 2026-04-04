@@ -232,13 +232,27 @@ export class BusinessLocationPickerComponent implements OnInit, AfterViewInit, O
   }
 
   /**
+   * Human-readable line for DB + profile (reverse geocode can fail in-browser; coords still save).
+   */
+  private locationLineForEmit(lat: number, lng: number): string {
+    const trimmed = this.selectedAddress?.trim();
+    if (trimmed) return trimmed;
+    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
+
+  /**
    * Emit the selected location
    */
   private emitLocation(lat: number, lng: number) {
+    const location = this.locationLineForEmit(lat, lng);
+    if (!this.selectedAddress?.trim()) {
+      this.selectedAddress = location;
+      this.searchAddress = location;
+    }
     this.locationSelected.emit({
       latitude: lat,
       longitude: lng,
-      location: this.selectedAddress
+      location,
     });
   }
 

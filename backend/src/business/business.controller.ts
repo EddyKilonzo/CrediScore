@@ -187,6 +187,88 @@ export class BusinessController {
     return this.businessService.getUserBusinesses(req.user.id, page, limit);
   }
 
+  // ─── Response templates (must live on this controller: /api/business/...) ─
+
+  @Get(':id/response-templates')
+  @ApiOperation({ summary: 'Get response templates for a business' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiResponse({ status: 200, description: 'Response templates retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  async getResponseTemplates(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+  ) {
+    return this.businessService.getResponseTemplates(req.user.id, businessId);
+  }
+
+  @Post(':id/response-templates')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a response template for a business' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiBody({ type: CreateResponseTemplateDto })
+  @ApiResponse({ status: 201, description: 'Response template created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - Max 20 templates reached' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  async createResponseTemplate(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+    @Body(ValidationPipe) body: CreateResponseTemplateDto,
+  ) {
+    return this.businessService.createResponseTemplate(req.user.id, businessId, body);
+  }
+
+  @Patch('response-templates/:templateId')
+  @ApiOperation({ summary: 'Update a response template' })
+  @ApiParam({ name: 'templateId', description: 'Template ID' })
+  @ApiBody({ type: UpdateResponseTemplateDto })
+  @ApiResponse({ status: 200, description: 'Response template updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
+  @ApiResponse({ status: 404, description: 'Response template not found' })
+  async updateResponseTemplate(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('templateId') templateId: string,
+    @Body(ValidationPipe) body: UpdateResponseTemplateDto,
+  ) {
+    return this.businessService.updateResponseTemplate(req.user.id, templateId, body);
+  }
+
+  @Delete('response-templates/:templateId')
+  @ApiOperation({ summary: 'Delete a response template' })
+  @ApiParam({ name: 'templateId', description: 'Template ID' })
+  @ApiResponse({ status: 200, description: 'Response template deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
+  @ApiResponse({ status: 404, description: 'Response template not found' })
+  async deleteResponseTemplate(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('templateId') templateId: string,
+  ) {
+    return this.businessService.deleteResponseTemplate(req.user.id, templateId);
+  }
+
+  @Get(':id/export/analytics')
+  @ApiOperation({ summary: 'Export business analytics as CSV' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiResponse({ status: 200, description: 'CSV file with analytics data' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
+  @ApiResponse({ status: 404, description: 'Business not found' })
+  async exportAnalytics(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') businessId: string,
+    @Res() res: Response,
+  ) {
+    const csv = await this.businessService.exportBusinessAnalyticsCSV(
+      req.user.id,
+      businessId,
+    );
+    res.set({
+      'Content-Type': 'text/csv',
+      'Content-Disposition': `attachment; filename="analytics-${businessId}.csv"`,
+    });
+    res.send(csv);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get business by ID' })
   @ApiParam({ name: 'id', description: 'Business ID' })
@@ -1066,86 +1148,5 @@ export class BusinessCategoryController {
   })
   async deleteBusinessCategory(@Param('id') categoryId: string) {
     return this.businessService.deleteBusinessCategory(categoryId);
-  }
-
-  // ─── Response Templates ─────────────────────────────────────────────────
-
-  @Get(':id/response-templates')
-  @ApiOperation({ summary: 'Get response templates for a business' })
-  @ApiParam({ name: 'id', description: 'Business ID' })
-  @ApiResponse({ status: 200, description: 'Response templates retrieved successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
-  @ApiResponse({ status: 404, description: 'Business not found' })
-  async getResponseTemplates(
-    @Request() req: { user: UserWithoutPassword },
-    @Param('id') businessId: string,
-  ) {
-    return this.businessService.getResponseTemplates(req.user.id, businessId);
-  }
-
-  @Post(':id/response-templates')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a response template for a business' })
-  @ApiParam({ name: 'id', description: 'Business ID' })
-  @ApiBody({ type: CreateResponseTemplateDto })
-  @ApiResponse({ status: 201, description: 'Response template created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - Max 20 templates reached' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
-  @ApiResponse({ status: 404, description: 'Business not found' })
-  async createResponseTemplate(
-    @Request() req: { user: UserWithoutPassword },
-    @Param('id') businessId: string,
-    @Body(ValidationPipe) body: CreateResponseTemplateDto,
-  ) {
-    return this.businessService.createResponseTemplate(req.user.id, businessId, body);
-  }
-
-  @Patch('response-templates/:templateId')
-  @ApiOperation({ summary: 'Update a response template' })
-  @ApiParam({ name: 'templateId', description: 'Template ID' })
-  @ApiBody({ type: UpdateResponseTemplateDto })
-  @ApiResponse({ status: 200, description: 'Response template updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
-  @ApiResponse({ status: 404, description: 'Response template not found' })
-  async updateResponseTemplate(
-    @Request() req: { user: UserWithoutPassword },
-    @Param('templateId') templateId: string,
-    @Body(ValidationPipe) body: UpdateResponseTemplateDto,
-  ) {
-    return this.businessService.updateResponseTemplate(req.user.id, templateId, body);
-  }
-
-  @Delete('response-templates/:templateId')
-  @ApiOperation({ summary: 'Delete a response template' })
-  @ApiParam({ name: 'templateId', description: 'Template ID' })
-  @ApiResponse({ status: 200, description: 'Response template deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
-  @ApiResponse({ status: 404, description: 'Response template not found' })
-  async deleteResponseTemplate(
-    @Request() req: { user: UserWithoutPassword },
-    @Param('templateId') templateId: string,
-  ) {
-    return this.businessService.deleteResponseTemplate(req.user.id, templateId);
-  }
-
-  // ─── CSV Export ──────────────────────────────────────────────────────────
-
-  @Get(':id/export/analytics')
-  @ApiOperation({ summary: 'Export business analytics as CSV' })
-  @ApiParam({ name: 'id', description: 'Business ID' })
-  @ApiResponse({ status: 200, description: 'CSV file with analytics data' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Not the business owner' })
-  @ApiResponse({ status: 404, description: 'Business not found' })
-  async exportAnalytics(
-    @Request() req: { user: UserWithoutPassword },
-    @Param('id') businessId: string,
-    @Res() res: Response,
-  ) {
-    const csv = await this.businessService.exportBusinessAnalyticsCSV(req.user.id, businessId);
-    res.set({
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="analytics-${businessId}.csv"`,
-    });
-    res.send(csv);
   }
 }
