@@ -36,8 +36,13 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy compiled output (nest build includes .ejs templates via nest-cli.json assets)
 COPY --from=builder /app/dist ./dist
 
+# Schema + migrations so `prisma migrate deploy` can run at container start (Neon/Postgres)
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
+
 ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+# Apply pending DB migrations before boot (fixes 500 when FraudReport columns are missing)
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

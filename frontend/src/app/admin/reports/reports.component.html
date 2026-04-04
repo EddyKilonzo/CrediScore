@@ -200,7 +200,14 @@
               <h3 class="report-reason">{{ report.reason }}</h3>
               <p class="report-date">{{ formatDateTime(report.createdAt) }}</p>
             </div>
-            <div class="status-indicator" [class]="getStatusIndicatorClass(report.status)"></div>
+            <div class="card-status-cluster">
+              <span class="status-indicator" [class]="getStatusIndicatorClass(report.status)"></span>
+              <span class="status-tag" [ngClass]="statusTagClass(report.status)" [attr.title]="report.status">
+                <i class="status-tag-icon" [class]="statusTagIcon(report.status)" aria-hidden="true"></i>
+                <span class="status-tag-code">{{ report.status }}</span>
+                <span class="status-tag-label">{{ getStatusText(report.status) }}</span>
+              </span>
+            </div>
           </div>
 
           <!-- Card Body -->
@@ -356,10 +363,16 @@
               <label>Reason:</label>
               <span>{{ getSelectedReport()?.reason }}</span>
             </div>
-            <div class="detail-item">
+            <div class="detail-item detail-item--status">
               <label>Status:</label>
-              <span [class]="getStatusBadgeClass(getSelectedReport()?.status || '')">
-                {{ getStatusText(getSelectedReport()?.status || '') }}
+              <span
+                class="status-tag"
+                [ngClass]="statusTagClass(getSelectedReport()?.status || '')"
+                [attr.title]="getSelectedReport()?.status"
+              >
+                <i class="status-tag-icon" [class]="statusTagIcon(getSelectedReport()?.status || '')" aria-hidden="true"></i>
+                <span class="status-tag-code">{{ getSelectedReport()?.status }}</span>
+                <span class="status-tag-label">{{ getStatusText(getSelectedReport()?.status || '') }}</span>
               </span>
             </div>
             <div class="detail-item">
@@ -378,6 +391,67 @@
           <div class="description-content">
             {{ getSelectedReport()?.description }}
           </div>
+        </div>
+
+        <div class="report-detail-section evidence-detail-section">
+          <h4>Evidence</h4>
+          @if (getSelectedReport()?.evidenceSummary) {
+            <p class="evidence-summary-text">{{ getSelectedReport()?.evidenceSummary }}</p>
+          } @else {
+            <p class="evidence-empty-note">No evidence summary.</p>
+          }
+          @if (evidenceLinkList(getSelectedReport()).length > 0) {
+            <div class="evidence-previews" role="list">
+              @for (url of evidenceLinkList(getSelectedReport()); track url) {
+                @if (isImageUrl(url)) {
+                  <a
+                    [href]="url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="evidence-thumb-wrap"
+                    role="listitem"
+                  >
+                    <img
+                      [src]="url"
+                      alt="Evidence"
+                      class="evidence-thumb"
+                      loading="lazy"
+                      referrerpolicy="no-referrer"
+                      (error)="onEvidenceImageError($event)"
+                    />
+                    <span class="evidence-fallback-open">Open image</span>
+                  </a>
+                } @else {
+                  <a
+                    [href]="url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="evidence-doc-card"
+                    [class.evidence-doc-card--pdf]="evidenceKind(url) === 'pdf'"
+                    [class.evidence-doc-card--word]="evidenceKind(url) === 'word'"
+                    [class.evidence-doc-card--raw]="evidenceKind(url) === 'raw'"
+                    role="listitem"
+                  >
+                    <i
+                      class="evidence-doc-icon fas"
+                      [class.fa-file-pdf]="evidenceKind(url) === 'pdf'"
+                      [class.fa-file-alt]="evidenceKind(url) === 'word' || evidenceKind(url) === 'raw' || evidenceKind(url) === 'other'"
+                      aria-hidden="true"
+                    ></i>
+                    <span class="evidence-doc-type">{{ docKindLabel(evidenceKind(url)) }}</span>
+                    <span class="evidence-doc-hint">Open</span>
+                  </a>
+                }
+              }
+            </div>
+            <ul class="evidence-url-list">
+              @for (url of evidenceLinkList(getSelectedReport()); track url) {
+                <li><a [href]="url" target="_blank" rel="noopener noreferrer">{{ url }}</a></li>
+              }
+            </ul>
+          } @else {
+            <p class="evidence-empty-note">No attached links or files.</p>
+          }
         </div>
 
         <div class="report-detail-section">

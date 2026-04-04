@@ -6,6 +6,7 @@ import {
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { UserRole } from '../auth/dto/user-role.enum';
@@ -1696,17 +1697,18 @@ export class UserService {
         );
       }
 
+      const evidenceLinksJson: Prisma.InputJsonValue | undefined =
+        reportData.evidenceLinks && reportData.evidenceLinks.length > 0
+          ? (reportData.evidenceLinks as Prisma.InputJsonValue)
+          : undefined;
+
       const report = await this.prisma.fraudReport.create({
         data: {
           businessId: reportData.businessId,
           reason: reportData.reason,
           description: reportData.description,
           evidenceSummary: reportData.evidenceSummary,
-          evidenceLinks:
-            reportData.evidenceLinks &&
-            reportData.evidenceLinks.length > 0
-              ? reportData.evidenceLinks
-              : undefined,
+          evidenceLinks: evidenceLinksJson,
           reporterId: userId,
         },
         include: {
@@ -1736,6 +1738,20 @@ export class UserService {
         error instanceof BadRequestException
       ) {
         throw error;
+      }
+      const errMsg =
+        error instanceof Error ? error.message : String(error);
+      const looksLikeMissingMigration =
+        /evidenceLinks|evidenceSummary|adminNotes|Unknown column|does not exist|column .* of relation/i.test(
+          errMsg,
+        );
+      if (looksLikeMissingMigration) {
+        this.logger.error(
+          'FraudReport table likely missing columns — run prisma migrate deploy on this environment.',
+        );
+        throw new InternalServerErrorException(
+          'Report could not be saved because the database is missing required updates. Ask the operator to run: npx prisma migrate deploy',
+        );
       }
       throw new InternalServerErrorException('Failed to create fraud report');
     }

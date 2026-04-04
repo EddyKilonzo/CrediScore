@@ -5,6 +5,12 @@ import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { AdminService, FraudReport, PaginatedResponse } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import {
+  parseEvidenceLinks,
+  evidenceAssetKind,
+  isImageEvidenceUrl,
+  type EvidenceAssetKind,
+} from '../utils/fraud-report-evidence';
 
 // Component for managing reports - Admin Reports Management
 @Component({
@@ -303,6 +309,55 @@ export class ReportsComponent implements OnInit {
       console.error('Error clearing filters:', error);
       this.toastService.error('Failed to clear filters');
     }
+  }
+
+  statusTagClass(status: string): string {
+    const s = (status || '').toLowerCase().replace(/-/g, '_');
+    return `status-tag status-tag--${s}`;
+  }
+
+  statusTagIcon(status: string): string {
+    const icons: Record<string, string> = {
+      PENDING: 'fas fa-clock',
+      UNDER_REVIEW: 'fas fa-search',
+      RESOLVED: 'fas fa-check-circle',
+      DISMISSED: 'fas fa-ban',
+      UPHELD: 'fas fa-gavel',
+    };
+    return icons[status] || 'fas fa-flag';
+  }
+
+  evidenceLinkList(report: FraudReport | null): string[] {
+    if (!report) return [];
+    return parseEvidenceLinks(report.evidenceLinks);
+  }
+
+  evidenceKind(url: string): EvidenceAssetKind {
+    return evidenceAssetKind(url);
+  }
+
+  isImageUrl(url: string): boolean {
+    return isImageEvidenceUrl(url);
+  }
+
+  docKindLabel(kind: EvidenceAssetKind): string {
+    switch (kind) {
+      case 'pdf':
+        return 'PDF';
+      case 'word':
+        return 'Word';
+      case 'raw':
+        return 'File';
+      default:
+        return 'Link';
+    }
+  }
+
+  onEvidenceImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.style.visibility = 'hidden';
+    const wrap = img.closest('.evidence-thumb-wrap');
+    wrap?.classList.add('evidence-thumb-wrap--failed');
   }
 
   // Status indicator class

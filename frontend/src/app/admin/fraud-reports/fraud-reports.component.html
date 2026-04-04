@@ -67,8 +67,10 @@
             <div class="report-card-top">
               <div class="report-card-title-row">
                 <h3 class="report-reason">{{ report.reason }}</h3>
-                <span class="priority-badge" [ngClass]="'status-' + report.status.toLowerCase()">
-                  {{ statusLabel(report.status) }}
+                <span class="status-tag" [ngClass]="statusTagClass(report.status)" [attr.title]="report.status">
+                  <i class="status-tag-icon" [class]="statusTagIcon(report.status)" aria-hidden="true"></i>
+                  <span class="status-tag-code">{{ report.status }}</span>
+                  <span class="status-tag-label">{{ statusLabel(report.status) }}</span>
                 </span>
               </div>
               <p class="report-meta">
@@ -96,7 +98,51 @@
                 <p class="evidence-empty">No evidence summary provided.</p>
               }
               @if (evidenceLinkList(report).length > 0) {
-                <ul class="evidence-links">
+                <div class="evidence-previews" role="list">
+                  @for (url of evidenceLinkList(report); track url) {
+                    @if (isImageUrl(url)) {
+                      <a
+                        [href]="url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="evidence-thumb-wrap"
+                        role="listitem"
+                        [title]="'Open image: ' + url"
+                      >
+                        <img
+                          [src]="url"
+                          alt="Evidence image"
+                          class="evidence-thumb"
+                          loading="lazy"
+                          referrerpolicy="no-referrer"
+                          (error)="onEvidenceImageError($event)"
+                        />
+                        <span class="evidence-fallback-open">Open image</span>
+                      </a>
+                    } @else {
+                      <a
+                        [href]="url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="evidence-doc-card"
+                        [class.evidence-doc-card--pdf]="evidenceKind(url) === 'pdf'"
+                        [class.evidence-doc-card--word]="evidenceKind(url) === 'word'"
+                        [class.evidence-doc-card--raw]="evidenceKind(url) === 'raw'"
+                        role="listitem"
+                      >
+                        <i
+                          class="evidence-doc-icon fas"
+                          [class.fa-file-pdf]="evidenceKind(url) === 'pdf'"
+                          [class.fa-file-alt]="evidenceKind(url) === 'word' || evidenceKind(url) === 'raw' || evidenceKind(url) === 'other'"
+                          aria-hidden="true"
+                        ></i>
+                        <span class="evidence-doc-type">{{ docKindLabel(evidenceKind(url)) }}</span>
+                        <span class="evidence-doc-hint">Open</span>
+                      </a>
+                    }
+                  }
+                </div>
+                <ul class="evidence-url-list">
                   @for (url of evidenceLinkList(report); track url) {
                     <li>
                       <a [href]="url" target="_blank" rel="noopener noreferrer">{{ url }}</a>

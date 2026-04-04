@@ -5,6 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import { AdminService } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { AuthService } from '../../core/services/auth.service';
+import {
+  parseEvidenceLinks,
+  evidenceAssetKind,
+  isImageEvidenceUrl,
+  type EvidenceAssetKind,
+} from '../utils/fraud-report-evidence';
 
 interface FraudReport {
   id: string;
@@ -135,13 +141,52 @@ export class FraudReportsComponent implements OnInit {
     return map[status] || status;
   }
 
+  statusTagIcon(status: string): string {
+    const icons: Record<string, string> = {
+      PENDING: 'fas fa-clock',
+      UNDER_REVIEW: 'fas fa-search',
+      RESOLVED: 'fas fa-check-circle',
+      DISMISSED: 'fas fa-ban',
+      UPHELD: 'fas fa-gavel',
+    };
+    return icons[status] || 'fas fa-flag';
+  }
+
+  statusTagClass(status: string): string {
+    const s = (status || '').toLowerCase().replace(/-/g, '_');
+    return `status-tag status-tag--${s}`;
+  }
+
   evidenceLinkList(report: FraudReport): string[] {
-    const v = report.evidenceLinks;
-    if (!v) return [];
-    if (Array.isArray(v)) {
-      return v.filter((x): x is string => typeof x === 'string');
+    return parseEvidenceLinks(report.evidenceLinks);
+  }
+
+  evidenceKind(url: string): EvidenceAssetKind {
+    return evidenceAssetKind(url);
+  }
+
+  isImageUrl(url: string): boolean {
+    return isImageEvidenceUrl(url);
+  }
+
+  docKindLabel(kind: EvidenceAssetKind): string {
+    switch (kind) {
+      case 'pdf':
+        return 'PDF';
+      case 'word':
+        return 'Word';
+      case 'raw':
+        return 'File';
+      default:
+        return 'Link';
     }
-    return [];
+  }
+
+  onEvidenceImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.style.visibility = 'hidden';
+    const wrap = img.closest('.evidence-thumb-wrap');
+    wrap?.classList.add('evidence-thumb-wrap--failed');
   }
 
   async reviewReport(reportId: string): Promise<void> {
