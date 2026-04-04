@@ -6,6 +6,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { BusinessService, Business } from '../core/services/business.service';
+import { BusinessLocation } from '../core/services/map.service';
 import { BusinessMapViewComponent } from '../shared/components/business-map-view/business-map-view.component';
 
 interface Review {
@@ -73,6 +74,11 @@ export class SearchComponent implements OnInit, OnDestroy {
   gradeOptions = ['A+', 'A', 'B', 'C', 'D', 'F'];
   availableCategories: string[] = [];
 
+  /** Same field owners set in My Business onboarding (`location` + lat/lng) — filter by area/address text */
+  locationFilter = '';
+  /** Markers for embedded map — always matches sidebar filters + search */
+  mapLocationsForChild: BusinessLocation[] = [];
+
   ngOnInit() {
     // Load all businesses first
     this.loadAllBusinesses();
@@ -80,7 +86,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     // Get search query from route params
     this.route.queryParams.subscribe(params => {
       this.searchQuery = params['q'] || '';
-      // Apply search filter on loaded businesses
+      this.locationFilter = params['loc'] || '';
       this.applySearchAndFilters();
     });
 
@@ -133,6 +139,7 @@ export class SearchComponent implements OnInit, OnDestroy {
   loadAllBusinesses() {
     this.isLoading = true;
     this.error = null;
+    this.mapLocationsForChild = [];
 
     // Use the 500-limit public endpoint so filters and map have full data
     this.businessService.getAllPublicBusinesses().subscribe({
@@ -140,12 +147,15 @@ export class SearchComponent implements OnInit, OnDestroy {
         const raw: any[] = Array.isArray(response) ? response : (response?.businesses || []);
         this.allBusinesses = this.enrichBusinesses(raw as Business[]);
         this.extractCategories();
+        this.error = null;
         this.applySearchAndFilters();
         this.isLoading = false;
       },
       error: () => {
         this.allBusinesses = [];
         this.filteredBusinesses = [];
+        this.mapLocationsForChild = [];
+        this.error = 'We could not load businesses. Check your connection and try again.';
         this.isLoading = false;
       }
     });
@@ -200,7 +210,7 @@ export class SearchComponent implements OnInit, OnDestroy {
       const location =
         (business.location && String(business.location).trim()) ||
         (business.address && String(business.address).trim()) ||
-        business.location;
+        '';
 
       const latNum =
         b.latitude != null && b.latitude !== '' ? Number(b.latitude) : NaN;
@@ -241,12 +251,24 @@ export class SearchComponent implements OnInit, OnDestroy {
       });
     }
 
+    // Area / location text (matches onboarding "Business location" string stored in `location` / `address`)
+    if (this.locationFilter && this.locationFilter.trim()) {
+      const locQ = this.locationFilter.toLowerCase().trim();
+      filtered = filtered.filter((b) => {
+        const loc = (b.location || '').toLowerCase();
+        const addr = (b.address || '').toLowerCase();
+        return loc.includes(locQ) || addr.includes(locQ);
+      });
+    }
+
     // Store search-filtered results
     this.businesses = filtered;
 
-    // Apply star rating filter ("X stars & up")
+    // Apply star rating filter ("X stars & up") — only considers businesses that have at least one review
     if (this.selectedStars !== null) {
       filtered = filtered.filter(business => {
+        const reviews = business.totalReviews || 0;
+        if (reviews === 0) return false; // unrated businesses don't match any star filter
         const rating = business.averageRating || 0;
         return rating >= this.selectedStars!;
       });
@@ -261,9 +283,13 @@ export class SearchComponent implements OnInit, OnDestroy {
       });
     }
 
-    // Apply category filter
+    // Apply category filter — match by name (case-insensitive)
     if (this.selectedCategory) {
-      filtered = filtered.filter(b => b.category?.toLowerCase() === this.selectedCategory?.toLowerCase());
+      const catQ = this.selectedCategory.toLowerCase().trim();
+      filtered = filtered.filter(b => {
+        const cat = (b.category || '').toLowerCase().trim();
+        return cat === catQ;
+      });
     }
 
     // Apply verified-only filter
@@ -288,6 +314,26 @@ export class SearchComponent implements OnInit, OnDestroy {
     });
 
     this.filteredBusinesses = filtered;
+    this.mapLocationsForChild = this.buildMapLocations(filtered);
+  }
+
+  private buildMapLocations(list: BusinessWithRating[]): BusinessLocation[] {
+    return list
+      .filter((b) => {
+        const lat = Number(b.latitude);
+        const lng = Number(b.longitude);
+        return Number.isFinite(lat) && Number.isFinite(lng);
+      })
+      .map((b) => ({
+        id: b.id,
+        name: b.name || 'Business',
+        location: this.getCardLocationLine(b) || b.name || '',
+        latitude: Number(b.latitude),
+        longitude: Number(b.longitude),
+        category: b.category || undefined,
+        logo: b.logo,
+        description: b.description || undefined,
+      }));
   }
 
   extractCategories() {
@@ -380,7 +426,16 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.selectedGrade = null;
     this.selectedCategory = null;
     this.verifiedOnly = false;
+    this.locationFilter = '';
     this.sortBy = 'trust';
+    this.applySearchAndFilters();
+    this.router.navigate(['/search'], {
+      queryParams: { loc: null },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  onLocationFilterInput() {
     this.applySearchAndFilters();
   }
 
@@ -447,13 +502,12 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   onSearch() {
-    // Update URL with search query
-    if (this.searchQuery.trim()) {
-      this.router.navigate(['/search'], { queryParams: { q: this.searchQuery } });
-    } else {
-      this.router.navigate(['/search']);
-    }
-    // Apply search and filters
+    this.router.navigate(['/search'], {
+      queryParams: {
+        q: this.searchQuery.trim() || null,
+        loc: this.locationFilter.trim() || null,
+      },
+    });
     this.applySearchAndFilters();
   }
 

@@ -1,4 +1,14 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  OnDestroy,
+  OnChanges,
+  SimpleChanges,
+  Input,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MapService, BusinessLocation, Location } from '../../../core/services/map.service';
@@ -12,8 +22,13 @@ import * as L from 'leaflet';
   templateUrl: './business-map-view.component.html',
   styleUrls: ['./business-map-view.component.css']
 })
-export class BusinessMapViewComponent implements OnInit, AfterViewInit, OnDestroy {
+export class BusinessMapViewComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   @ViewChild('mapContainer', { static: false }) mapContainer!: ElementRef;
+
+  /** When true (e.g. on /search map tab): no duplicate header/filters; markers come from parent */
+  @Input() embedded = false;
+  /** Filtered businesses with coordinates — must stay in sync with search page filters */
+  @Input() externalLocations?: BusinessLocation[];
 
   private map!: L.Map;
   private markers: Map<string, L.Marker> = new Map();
@@ -43,8 +58,35 @@ export class BusinessMapViewComponent implements OnInit, AfterViewInit, OnDestro
   ) {}
 
   ngOnInit() {
-    this.loadBusinesses();
-    this.getUserLocation();
+    if (this.embedded) {
+      this.applyExternalLocations(this.externalLocations ?? []);
+    } else {
+      this.loadBusinesses();
+      this.getUserLocation();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.embedded || !changes['externalLocations'] || changes['externalLocations'].firstChange) {
+      return;
+    }
+    this.applyExternalLocations(this.externalLocations ?? []);
+    if (this.map) {
+      this.updateMarkers();
+      if (this.filteredBusinesses.length > 0) {
+        this.centerMapOnBusinesses();
+      } else {
+        this.map.setView(this.center as L.LatLngExpression, this.zoom);
+      }
+    }
+  }
+
+  private applyExternalLocations(list: BusinessLocation[]): void {
+    this.businesses = [...list];
+    this.filteredBusinesses = [...list];
+    this.categories = [...new Set(list.map((b) => b.category).filter((c): c is string => !!c))];
+    this.isLoading = false;
+    this.errorMessage = '';
   }
 
   ngAfterViewInit() {
@@ -182,9 +224,13 @@ export class BusinessMapViewComponent implements OnInit, AfterViewInit, OnDestro
       // Handle different response formats
       const businessList = Array.isArray(response) ? response : (response?.businesses || []);
       
-      // Filter businesses that have valid locations
+      // Filter businesses that have valid locations (onboarding saves lat/lng here)
       this.businesses = businessList
-        .filter((b: any) => b.latitude && b.longitude)
+        .filter((b: any) => {
+          const lat = Number(b.latitude);
+          const lng = Number(b.longitude);
+          return Number.isFinite(lat) && Number.isFinite(lng);
+        })
         .map((b: any) => ({
           id: b.id,
           name: b.name,
@@ -245,6 +291,12 @@ export class BusinessMapViewComponent implements OnInit, AfterViewInit, OnDestro
    */
   centerMapOnBusinesses() {
     if (!this.map || this.filteredBusinesses.length === 0) return;
+
+    if (this.filteredBusinesses.length === 1) {
+      const b = this.filteredBusinesses[0];
+      this.map.setView([b.latitude, b.longitude], 14);
+      return;
+    }
 
     const bounds = L.latLngBounds(
       this.filteredBusinesses.map(b => [b.latitude, b.longitude] as L.LatLngExpression)

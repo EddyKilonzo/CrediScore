@@ -24,6 +24,23 @@
               </button>
             </div>
 
+            <!-- Area / location (same text as business onboarding location) -->
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-map-marker"></i>
+                Business location
+              </h3>
+              <p class="filter-hint">Match the address or area owners set when signing up (e.g. city, estate).</p>
+              <input
+                type="text"
+                [(ngModel)]="locationFilter"
+                (ngModelChange)="onLocationFilterInput()"
+                class="location-filter-input"
+                placeholder="e.g. Westlands, JVC, Mombasa…"
+                autocomplete="off"
+              />
+            </div>
+
             <!-- Star Rating Filter -->
             <div class="filter-section">
               <h3 class="filter-section-title">
@@ -32,6 +49,7 @@
               </h3>
               <div class="star-filter-options">
                 <button
+                  type="button"
                   *ngFor="let stars of starOptions"
                   (click)="onStarFilterChange(stars)"
                   class="star-filter-btn"
@@ -56,6 +74,7 @@
               </h3>
               <div class="grade-filter-options">
                 <button
+                  type="button"
                   *ngFor="let grade of gradeOptions"
                   (click)="onGradeFilterChange(grade)"
                   class="grade-filter-btn"
@@ -76,6 +95,7 @@
               </h3>
               <div class="grade-filter-options" style="flex-wrap:wrap;gap:6px;">
                 <button
+                  type="button"
                   *ngFor="let cat of availableCategories"
                   (click)="onCategoryFilterChange(cat)"
                   class="grade-filter-btn"
@@ -104,24 +124,24 @@
                 Sort By
               </h3>
               <div class="grade-filter-options" style="flex-direction:column;gap:4px;">
-                <button (click)="onSortChange('trust')" class="grade-filter-btn" [class.active]="sortBy === 'trust'" style="justify-content:flex-start;gap:6px;width:100%;">
+                <button type="button" (click)="onSortChange('trust')" class="grade-filter-btn" [class.active]="sortBy === 'trust'" style="justify-content:flex-start;gap:6px;width:100%;">
                   <i class="uil uil-shield-check"></i> Trust Score
                 </button>
-                <button (click)="onSortChange('rating')" class="grade-filter-btn" [class.active]="sortBy === 'rating'" style="justify-content:flex-start;gap:6px;width:100%;">
+                <button type="button" (click)="onSortChange('rating')" class="grade-filter-btn" [class.active]="sortBy === 'rating'" style="justify-content:flex-start;gap:6px;width:100%;">
                   <i class="uil uil-star"></i> Avg Rating
                 </button>
-                <button (click)="onSortChange('reviews')" class="grade-filter-btn" [class.active]="sortBy === 'reviews'" style="justify-content:flex-start;gap:6px;width:100%;">
+                <button type="button" (click)="onSortChange('reviews')" class="grade-filter-btn" [class.active]="sortBy === 'reviews'" style="justify-content:flex-start;gap:6px;width:100%;">
                   <i class="uil uil-comment-dots"></i> Most Reviews
                 </button>
-                <button (click)="onSortChange('name')" class="grade-filter-btn" [class.active]="sortBy === 'name'" style="justify-content:flex-start;gap:6px;width:100%;">
+                <button type="button" (click)="onSortChange('name')" class="grade-filter-btn" [class.active]="sortBy === 'name'" style="justify-content:flex-start;gap:6px;width:100%;">
                   <i class="uil uil-sort-amount-down"></i> Name A-Z
                 </button>
               </div>
             </div>
 
             <!-- Clear Filters -->
-            <div class="filter-actions" *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly">
-              <button (click)="clearFilters()" class="clear-filters-btn">
+            <div class="filter-actions" *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())">
+              <button type="button" (click)="clearFilters()" class="clear-filters-btn">
                 <i class="uil uil-times-circle"></i>
                 Clear All Filters
               </button>
@@ -174,7 +194,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
                 <span>Filters</span>
-                <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly" class="filter-badge">{{ (selectedStars ? 1 : 0) + (selectedGrade ? 1 : 0) + (selectedCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) }}</span>
+                <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())" class="filter-badge">{{ (selectedStars ? 1 : 0) + (selectedGrade ? 1 : 0) + (selectedCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) + ((locationFilter && locationFilter.trim()) ? 1 : 0) }}</span>
               </button>
             </div>
           </div>
@@ -198,9 +218,9 @@
       <div *ngIf="!isLoading && !error" class="results-header">
         <h2 class="results-count">
           {{ filteredBusinesses.length }} {{ filteredBusinesses.length === 1 ? 'business' : 'businesses' }} found
-          <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly" class="filtered-badge">(filtered)</span>
+          <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())" class="filtered-badge">(filtered)</span>
           <span *ngIf="viewMode === 'map'" class="map-count-badge">
-            ({{ getBusinessesWithLocation().length }} with location)
+            ({{ mapLocationsForChild.length }} on map)
           </span>
         </h2>
         <div class="view-toggle">
@@ -232,7 +252,10 @@
         <div *ngIf="getBusinessesWithLocation().length > 0; else noLocationData" class="map-view-wrapper">
           <!-- Main Map — Interactive Leaflet Map -->
           <div class="businesses-map">
-            <app-business-map-view></app-business-map-view>
+            <app-business-map-view
+              [embedded]="true"
+              [externalLocations]="mapLocationsForChild"
+            ></app-business-map-view>
           </div>
           
           <!-- Businesses List with Map Links -->
@@ -307,7 +330,7 @@
         </ng-template>
       </div>
 
-      <!-- Business Cards Grid (List View) -->
+        <!-- Business Cards Grid (List View) -->
       <div *ngIf="!isLoading && !error && viewMode === 'list'" class="business-cards-grid">
         <div
           *ngFor="let business of filteredBusinesses"
@@ -321,6 +344,21 @@
         >
           <!-- Card Header with Logo -->
           <div class="card-header">
+            <!-- Trust Grade Badge (top-left) -->
+            <div class="card-grade-chip"
+                 *ngIf="getBusinessGrade(business) !== 'N/A'"
+                 [style.background-color]="getGradeColor(getBusinessGrade(business)) + '25'"
+                 [style.color]="getGradeColor(getBusinessGrade(business))"
+                 [style.border-color]="getGradeColor(getBusinessGrade(business)) + '60'">
+              {{ getBusinessGrade(business) }}
+            </div>
+
+            <!-- Open/Closed status (top-right) -->
+            <div class="card-status-chip" [class.open]="isBusinessOpen(business)" [class.closed]="!isBusinessOpen(business)">
+              <span class="status-dot"></span>
+              {{ isBusinessOpen(business) ? 'Open' : 'Closed' }}
+            </div>
+
             <div class="logo-wrapper">
               <div class="logo-container">
                 <img
@@ -350,73 +388,25 @@
           <div class="card-body">
             <h3 class="business-name">{{ business.name || 'Business' }}</h3>
 
-            <div class="flex items-center justify-between mb-2 mt-1 flex-wrap gap-2">
-              <p class="business-category">
-                <i class="uil uil-tag"></i>
-                {{ getCardCategoryLabel(business) }}
-              </p>
-              <div class="status-badge" [class.open]="isBusinessOpen(business)" [class.closed]="!isBusinessOpen(business)">
-                <span class="status-dot"></span>
-                {{ isBusinessOpen(business) ? 'Open Now' : 'Closed' }}
-              </div>
-            </div>
+            <!-- Category -->
+            <p class="business-category">
+              <i class="uil uil-tag"></i>
+              {{ getCardCategoryLabel(business) }}
+            </p>
 
+            <!-- Location -->
             <p class="business-location-inline" *ngIf="getCardLocationLine(business)">
               <i class="uil uil-map-marker"></i>
               {{ getCardLocationLine(business) }}
             </p>
-            
+
+            <!-- Description / Blurb -->
             <p class="business-description" *ngIf="getListCardBlurb(business)">
               {{ getListCardBlurb(business) }}
             </p>
 
-            <!-- Business Hours Summary -->
-            <div class="business-hours-summary" *ngIf="business.businessHours && business.businessHours.length > 0">
-              <i class="uil uil-clock"></i>
-              <span>Hours Today: </span>
-              <ng-container *ngFor="let h of business.businessHours">
-                <span *ngIf="h.day.toLowerCase() === getTodayDay()">
-                  <span *ngIf="!h.isClosed">{{ h.open }} - {{ h.close }}</span>
-                  <span *ngIf="h.isClosed" class="text-red-500">Closed</span>
-                </span>
-              </ng-container>
-            </div>
-
-            <!-- Contact and Socials -->
-            <div class="card-contact-info mt-3 pt-3 border-t border-gray-100">
-              <div class="flex flex-wrap gap-3">
-                <a *ngIf="business.phone" [href]="'tel:' + business.phone" (click)="$event.stopPropagation()" class="contact-item" title="Call Business">
-                  <i class="uil uil-phone"></i>
-                  <span>Call</span>
-                </a>
-                <a *ngIf="business.email" [href]="'mailto:' + business.email" (click)="$event.stopPropagation()" class="contact-item" title="Email Business">
-                  <i class="uil uil-envelope"></i>
-                  <span>Email</span>
-                </a>
-                <a *ngIf="business.website" [href]="business.website" target="_blank" (click)="$event.stopPropagation()" class="contact-item" title="Visit Website">
-                  <i class="uil uil-globe"></i>
-                  <span>Web</span>
-                </a>
-              </div>
-              
-              <!-- Social Links -->
-              <div class="social-links-row mt-2 flex gap-2" *ngIf="getSocialLinksArray(business.socialLinks).length > 0">
-                <a *ngFor="let social of getSocialLinksArray(business.socialLinks)" 
-                   [href]="social.url" 
-                   target="_blank" 
-                   (click)="$event.stopPropagation()"
-                   class="social-icon-btn"
-                   [style.color]="social.color">
-                  <i [class]="'uil ' + social.icon"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card Footer with Stats -->
-          <div class="card-footer">
-            <!-- Rating -->
-            <div class="stat-item">
+            <!-- Rating row -->
+            <div class="card-rating-row">
               <div class="star-rating">
                 <i
                   *ngFor="let i of [1,2,3,4,5]"
@@ -425,30 +415,77 @@
                   [class.star-empty]="i > (business.averageRating || 0)"
                 ></i>
               </div>
-              <span class="rating-value">{{ business.averageRating || 0 }}/5</span>
-              <span class="review-count">({{ business.totalReviews || 0 }})</span>
+              <span class="rating-value">{{ business.averageRating || 0 }}</span>
+              <span class="review-count">({{ business.totalReviews || 0 }} review{{ (business.totalReviews || 0) !== 1 ? 's' : '' }})</span>
+              <span class="trust-score-inline" *ngIf="getBusinessScore(business) > 0">
+                · Trust {{ getBusinessScore(business) }}%
+              </span>
             </div>
 
-            <!-- Trust Score -->
-            <div class="stat-item trust-score">
-              <div class="grade-badge-wrapper">
-                <div class="grade-badge" [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'" [style.color]="getGradeColor(getBusinessGrade(business))">
-                  <span class="grade-text">{{ getBusinessGrade(business) }}</span>
-                </div>
-                <!-- Verified Badge next to grade -->
-                <div class="verified-badge-grade" *ngIf="business.isVerified">
-                  <img src="/images/verfied.png" alt="Verified" class="verified-badge-image" 
-                       (error)="$event.target.style.display='none'" />
-                </div>
-              </div>
-              <span class="score-value">{{ getBusinessScore(business) }}%</span>
+            <!-- Business Hours Summary -->
+            <div class="business-hours-summary" *ngIf="business.businessHours && business.businessHours.length > 0">
+              <i class="uil uil-clock"></i>
+              <span>Today: </span>
+              <ng-container *ngFor="let h of business.businessHours">
+                <span *ngIf="h.day.toLowerCase() === getTodayDay()">
+                  <span *ngIf="!h.isClosed">{{ h.open }} – {{ h.close }}</span>
+                  <span *ngIf="h.isClosed" class="text-red-500">Closed today</span>
+                </span>
+              </ng-container>
+            </div>
+
+            <!-- Contact row -->
+            <div class="card-contact-row" *ngIf="business.phone || business.email || business.website">
+              <a *ngIf="business.phone" [href]="'tel:' + business.phone" (click)="$event.stopPropagation()" class="contact-item" title="Call Business">
+                <i class="uil uil-phone"></i>
+                <span>{{ business.phone }}</span>
+              </a>
+              <a *ngIf="business.email && !business.phone" [href]="'mailto:' + business.email" (click)="$event.stopPropagation()" class="contact-item" title="Email Business">
+                <i class="uil uil-envelope"></i>
+                <span>Email</span>
+              </a>
+              <a *ngIf="business.website" [href]="business.website" target="_blank" (click)="$event.stopPropagation()" class="contact-item" title="Visit Website">
+                <i class="uil uil-globe"></i>
+                <span>Website</span>
+              </a>
+            </div>
+
+            <!-- Social Links -->
+            <div class="social-links-row" *ngIf="getSocialLinksArray(business.socialLinks).length > 0">
+              <a *ngFor="let social of getSocialLinksArray(business.socialLinks)"
+                 [href]="social.url"
+                 target="_blank"
+                 (click)="$event.stopPropagation()"
+                 class="social-icon-btn"
+                 [style.color]="social.color">
+                <i [class]="'uil ' + social.icon"></i>
+              </a>
             </div>
           </div>
 
-          <!-- Response Rate Badge -->
-          <div *ngIf="business.responseRate && business.responseRate > 0" style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:0.75rem;color:#166534;">
-            <i class="uil uil-comment-alt-check" style="font-size:0.85rem;"></i>
-            <span>{{ business.responseRate }}% response rate</span>
+          <!-- Card Footer -->
+          <div class="card-footer">
+            <div class="footer-left">
+              <div class="grade-badge-wrapper">
+                <div class="grade-badge"
+                     [style.background-color]="getGradeColor(getBusinessGrade(business)) + '20'"
+                     [style.color]="getGradeColor(getBusinessGrade(business))">
+                  {{ getBusinessGrade(business) }}
+                </div>
+                <div class="verified-badge-grade" *ngIf="business.isVerified">
+                  <img src="/images/verfied.png" alt="Verified" class="verified-badge-image"
+                       (error)="$event.target.style.display='none'" />
+                </div>
+              </div>
+              <span class="score-value" *ngIf="getBusinessScore(business) > 0">{{ getBusinessScore(business) }}% trust</span>
+            </div>
+
+            <div class="footer-right">
+              <span *ngIf="business.responseRate && business.responseRate > 0" class="response-rate-chip">
+                <i class="uil uil-comment-alt-check"></i>
+                {{ business.responseRate }}% response
+              </span>
+            </div>
           </div>
 
           <!-- Location footer strip -->

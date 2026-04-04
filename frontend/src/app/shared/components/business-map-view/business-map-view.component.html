@@ -1,17 +1,20 @@
-<div class="business-map-view">
+<div class="business-map-view" [class.embedded]="embedded">
   <!-- Header -->
+  @if (!embedded) {
   <div class="map-header">
     <div class="header-content">
       <h2 class="map-title">Find Businesses Near You</h2>
       <p class="map-description">Explore businesses on the map and get directions</p>
     </div>
-    <button (click)="toggleListView()" class="toggle-view-button">
+    <button type="button" (click)="toggleListView()" class="toggle-view-button">
       <i [class]="showList ? 'uil uil-map' : 'uil uil-list-ul'"></i>
       {{ showList ? 'Map View' : 'List View' }}
     </button>
   </div>
+  }
 
   <!-- Filters -->
+  @if (!embedded) {
   <div class="filters-container">
     <div class="search-filter">
       <i class="uil uil-search"></i>
@@ -45,6 +48,7 @@
       {{ filteredBusinesses.length }} business{{ filteredBusinesses.length !== 1 ? 'es' : '' }} found
     </div>
   </div>
+  }
 
   <!-- Loading Indicator -->
   @if (isLoading) {
@@ -63,14 +67,14 @@
   }
 
   <!-- Map and List Container -->
-  <div class="content-container">
+  <div class="content-container" [class.embedded-only]="embedded">
     <!-- Map View -->
-    <div class="map-section" [class.full-width]="!showList">
+    <div class="map-section" [class.full-width]="embedded || !showList">
       <div #mapContainer class="leaflet-map"></div>
     </div>
 
     <!-- List View -->
-    @if (showList) {
+    @if (!embedded && showList) {
       <div class="list-section">
         <div class="business-list">
           @for (business of filteredBusinesses; track business.id) {

@@ -525,3 +525,28 @@
     height: 300px;
   }
 }
+
+/* Embedded on /search — avoid full-viewport takeover; match results panel height */
+.business-map-view.embedded {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  background: transparent;
+}
+
+.business-map-view.embedded .content-container.embedded-only {
+  padding: 0;
+  flex: none;
+  min-height: 0;
+}
+
+.business-map-view.embedded .map-section.full-width {
+  flex: 1;
+  height: min(480px, 58vh);
+  min-height: 320px;
+}
+
+.business-map-view.embedded .leaflet-map {
+  min-height: 320px;
+  height: 100%;
+}
