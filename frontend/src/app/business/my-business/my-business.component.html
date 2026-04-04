@@ -378,12 +378,12 @@
                       <span class="required-indicator">*</span>
                     </label>
                     <div class="relative">
-                      <input type="text" 
-                             [(ngModel)]="businessProfile['name']" 
+                      <input type="text"
+                             [(ngModel)]="businessProfile['name']"
                              placeholder="Enter your business name"
-                             class="form-input bg-gray-50 cursor-not-allowed"
+                             [class]="businessProfile['name'] ? 'form-input bg-gray-50 cursor-not-allowed' : 'form-input'"
                              [class.error]="!businessProfile['name'] && fieldTouched['name']"
-                             readonly
+                             [readonly]="!!originalBusinessProfile?.name"
                              required>
                       <div class="form-input-icon">
                         <i class="fas fa-building text-gray-400"></i>
