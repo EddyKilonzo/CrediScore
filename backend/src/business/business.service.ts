@@ -480,11 +480,16 @@ export class BusinessService {
         query,
         category,
         location,
-        minRating,
-        isVerified,
-        page = 1,
-        limit = 10,
       } = searchParams;
+
+      // Query params arrive as strings; coerce to correct types
+      const page = Number(searchParams.page) || 1;
+      const limit = Math.min(Number(searchParams.limit) || 10, 500);
+      const minRating = searchParams.minRating != null ? Number(searchParams.minRating) : undefined;
+      const isVerified =
+        searchParams.isVerified != null
+          ? searchParams.isVerified === true || (searchParams.isVerified as unknown) === 'true'
+          : undefined;
 
       const skip = (page - 1) * limit;
 

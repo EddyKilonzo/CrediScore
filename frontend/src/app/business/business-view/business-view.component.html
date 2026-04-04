@@ -445,24 +445,24 @@
               <div class="form-actions">
                 <button
                   type="submit"
-                  [disabled]="!isFormValid() || isSubmitting"
+                  [disabled]="!isFormValid() || isSubmittingReview"
                   class="submit-review-btn"
-                  [class.loading]="isSubmitting"
+                  [class.loading]="isSubmittingReview"
                 >
-                  <span *ngIf="!isSubmitting">
+                  <span *ngIf="!isSubmittingReview">
                     <i class="uil uil-check"></i>
                     Submit Review
                   </span>
-                  <span *ngIf="isSubmitting">
-                    <i class="uil uil-spinner-alt"></i>
-                    Submitting...
+                  <span *ngIf="isSubmittingReview" class="flex items-center gap-2">
+                    <i class="uil uil-spinner-alt animate-spin"></i>
+                    Uploading Review...
                   </span>
                 </button>
                 <button
                   type="button"
                   (click)="resetForm()"
                   class="cancel-review-btn"
-                  [disabled]="isSubmitting"
+                  [disabled]="isSubmittingReview"
                 >
                   Cancel
                 </button>

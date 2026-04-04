@@ -109,6 +109,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   uploadedImages: UploadedImage[] = [];
   isDragOver: boolean = false;
   isSubmitting: boolean = false;
+  isSubmittingReview: boolean = false;
   reviewSubmitted: boolean = false;
   
   private readonly API_URL = `${environment.apiUrl}/api`;
@@ -466,11 +467,12 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async submitReview() {
-    if (!this.isFormValid() || !this.business || this.isSubmitting) {
+    if (!this.isFormValid() || !this.business || this.isSubmittingReview) {
       return;
     }
 
-    this.isSubmitting = true;
+    this.isSubmittingReview = true;
+    this.toastService.info('Uploading your review...');
 
     try {
       // First upload images if any
@@ -498,7 +500,8 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       this.http.post(`${this.API_URL}/user/reviews`, reviewData).subscribe({
         next: (response: any) => {
           this.reviewSubmitted = true;
-          this.isSubmitting = false;
+          this.isSubmittingReview = false;
+          this.toastService.success('Review submitted successfully!');
           
           // Reload business to get updated reviews
           if (this.business) {
@@ -507,16 +510,15 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error submitting review:', error);
-          this.error = error.error?.message || 'Failed to submit review. Please try again.';
-          this.isSubmitting = false;
-          alert(this.error);
+          const errorMsg = error.error?.message || 'Failed to submit review. Please try again.';
+          this.isSubmittingReview = false;
+          this.toastService.error(errorMsg);
         }
       });
     } catch (error) {
       console.error('Error in submitReview:', error);
-      this.error = 'Failed to submit review. Please try again.';
-      this.isSubmitting = false;
-      alert(this.error);
+      this.isSubmittingReview = false;
+      this.toastService.error('Failed to submit review. Please try again.');
     }
   }
 
@@ -535,9 +537,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       // Upload to review receipt endpoint
-      // Note: Don't set Content-Type header - browser will set it with boundary for multipart/form-data
       const response: any = await this.http.post(`${this.API_URL}/user/reviews/upload-receipt`, formData).toPromise().catch((error) => {
-        // Log error but don't throw - allow review to be submitted without image
         console.warn('Receipt upload failed, continuing without receipt:', error);
         return null;
       });
@@ -549,8 +549,6 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       return null;
     } catch (error: any) {
       console.warn('Error uploading receipt image:', error);
-      // Return null to continue with review submission without image
-      // The review can still be submitted, just without receipt verification
       return null;
     }
   }
@@ -572,10 +570,10 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   getOsmDirectionsUrl(): string {
     if (!this.business) return 'https://www.openstreetmap.org';
     if (this.business.latitude && this.business.longitude) {
-      return `https://www.openstreetmap.org/directions?to=${this.business.latitude}%2C${this.business.longitude}`;
+      return `https://www.google.com/maps/dir/?api=1&destination=${this.business.latitude},${this.business.longitude}`;
     }
     const q = encodeURIComponent(this.business.location || this.business.name || '');
-    return `https://www.openstreetmap.org/search?query=${q}`;
+    return `https://www.google.com/maps/search/?api=1&query=${q}`;
   }
 
   initLeafletMap() {
@@ -608,9 +606,22 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       shadowSize: [41, 41]
     });
 
+    const directionsUrl = this.getOsmDirectionsUrl();
+    const popupContent = `
+      <div style="min-width: 150px; padding: 5px;">
+        <strong style="display: block; margin-bottom: 5px; font-size: 1.1rem;">${name}</strong>
+        ${this.business.location ? '<p style="margin: 5px 0; font-size: 0.9rem; color: #666;"><i class="uil uil-map-marker"></i> ' + this.business.location + '</p>' : ''}
+        <a href="${directionsUrl}" target="_blank" 
+           style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 8px 12px; margin-top: 10px; background-color: #3E6A8A; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;">
+          <i class="uil uil-directions" style="margin-right: 6px; font-size: 1.1rem;"></i>
+          Get Directions
+        </a>
+      </div>
+    `;
+
     L.marker([lat, lng], { icon })
       .addTo(this.leafletMap)
-      .bindPopup(`<strong>${name}</strong>${this.business.location ? '<br>' + this.business.location : ''}`)
+      .bindPopup(popupContent)
       .openPopup();
   }
 

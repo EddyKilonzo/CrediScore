@@ -228,24 +228,9 @@
       <!-- Map View -->
       <div *ngIf="!isLoading && !error && viewMode === 'map'" class="map-view-container">
         <div *ngIf="getBusinessesWithLocation().length > 0; else noLocationData" class="map-view-wrapper">
-          <!-- Main Map -->
+          <!-- Main Map — Interactive Leaflet Map -->
           <div class="businesses-map">
-            <iframe
-              *ngIf="getMapUrl()"
-              [src]="sanitizeMapUrl(getMapUrl())"
-              width="100%"
-              height="600"
-              style="border:0; border-radius: 0.75rem;"
-              allowfullscreen=""
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              class="businesses-map-iframe"
-              title="Business locations on Google Maps"
-            ></iframe>
-            <div *ngIf="!getMapUrl()" class="map-loading-placeholder">
-              <i class="uil uil-map"></i>
-              <p>Loading map...</p>
-            </div>
+            <app-business-map-view></app-business-map-view>
           </div>
           
           <!-- Businesses List with Map Links -->

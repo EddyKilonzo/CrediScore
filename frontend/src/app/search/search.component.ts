@@ -6,6 +6,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { BusinessService, Business } from '../core/services/business.service';
+import { BusinessMapViewComponent } from '../shared/components/business-map-view/business-map-view.component';
 
 interface Review {
   id: string;

@@ -19,7 +19,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(xargs grep:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(node -e \"const s = require\\('/c/Users/Admin/Documents/Projects/CrediScore/backend/node_modules/passport-oauth2/lib/strategy.js'\\); console.log\\(s.toString\\(\\).substring\\(0, 500\\)\\)\")"
     ]
   }
 }
