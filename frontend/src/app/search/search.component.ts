@@ -36,7 +36,7 @@ interface BusinessWithRating extends Omit<Business, 'trustScore'> {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, BusinessMapViewComponent],
   templateUrl: './search.component.html',
   styleUrl: './search.component.css'
 })

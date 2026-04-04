@@ -57,7 +57,8 @@ export class MapService {
         },
         (error) => {
           reject(error);
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );
     });
   }

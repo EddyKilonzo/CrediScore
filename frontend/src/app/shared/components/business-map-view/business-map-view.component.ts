@@ -227,8 +227,12 @@ export class BusinessMapViewComponent implements OnInit, AfterViewInit, OnDestro
   async getUserLocation() {
     try {
       this.userLocation = await this.mapService.getCurrentLocation();
-      // Optionally center on user location if no businesses
-      if (this.businesses.length === 0) {
+      // Center map on user location; businesses markers are already shown
+      if (this.map) {
+        this.map.setView([this.userLocation.lat, this.userLocation.lng], this.zoom);
+        this.updateMarkers();
+      } else {
+        // map not yet ready — store for initMap to pick up
         this.center = [this.userLocation.lat, this.userLocation.lng];
       }
     } catch (error) {

@@ -566,23 +566,22 @@ export class BusinessService {
         this.prisma.business.count({ where }),
       ]);
 
-      // Calculate average ratings
-      const businessesWithRatings = await Promise.all(
-        businesses.map(async (business) => {
-          const avgRating = await this.prisma.review.aggregate({
-            where: {
-              businessId: business.id,
-              isActive: true,
-            },
+      // Batch average ratings in one grouped query instead of N+1 queries
+      const businessIds = businesses.map((b) => b.id);
+      const ratingGroups = businessIds.length
+        ? await this.prisma.review.groupBy({
+            by: ['businessId'],
+            where: { businessId: { in: businessIds }, isActive: true },
             _avg: { rating: true },
-          });
-
-          return {
-            ...business,
-            averageRating: avgRating._avg.rating || 0,
-          };
-        }),
+          })
+        : [];
+      const ratingMap = new Map(
+        ratingGroups.map((r) => [r.businessId, r._avg.rating ?? 0]),
       );
+      const businessesWithRatings = businesses.map((business) => ({
+        ...business,
+        averageRating: ratingMap.get(business.id) ?? 0,
+      }));
 
       return {
         businesses: businessesWithRatings,
@@ -619,23 +618,22 @@ export class BusinessService {
         orderBy: [{ trustScore: { score: 'desc' } }, { createdAt: 'desc' }],
       });
 
-      // Calculate average ratings
-      const businessesWithRatings = await Promise.all(
-        businesses.map(async (business) => {
-          const avgRating = await this.prisma.review.aggregate({
-            where: {
-              businessId: business.id,
-              isActive: true,
-            },
+      // Batch average ratings in one grouped query instead of N+1 queries
+      const featuredIds = businesses.map((b) => b.id);
+      const featuredRatingGroups = featuredIds.length
+        ? await this.prisma.review.groupBy({
+            by: ['businessId'],
+            where: { businessId: { in: featuredIds }, isActive: true },
             _avg: { rating: true },
-          });
-
-          return {
-            ...business,
-            averageRating: avgRating._avg.rating || 0,
-          };
-        }),
+          })
+        : [];
+      const featuredRatingMap = new Map(
+        featuredRatingGroups.map((r) => [r.businessId, r._avg.rating ?? 0]),
       );
+      const businessesWithRatings = businesses.map((business) => ({
+        ...business,
+        averageRating: featuredRatingMap.get(business.id) ?? 0,
+      }));
 
       return businessesWithRatings;
     } catch (error) {

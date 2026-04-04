@@ -255,36 +255,54 @@
          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       <a *ngFor="let business of trendingBusinesses; let i = index"
          [routerLink]="['/business', business.id]"
-         class="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-sm hover:shadow-md border border-gray-100 hover:border-[#2C5270]/20 transition-all duration-200 flex items-center gap-4 group">
-        <!-- Rank badge -->
-        <div class="flex-shrink-0 flex flex-col items-center gap-2">
-          <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+         class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-100 hover:border-[#2C5270]/20 transition-all duration-300 hover:-translate-y-1 flex flex-col cursor-pointer">
+
+        <!-- Card Header (gradient banner matching search cards) -->
+        <div class="relative bg-gradient-to-r from-[#3E6A8A] to-[#5C8BA5] px-5 pt-5 pb-8 flex items-start justify-between">
+          <!-- Rank badge -->
+          <span class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold z-10"
                 [class.bg-yellow-400]="i === 0" [class.text-yellow-900]="i === 0"
                 [class.bg-gray-300]="i === 1" [class.text-gray-700]="i === 1"
                 [class.bg-orange-300]="i === 2" [class.text-orange-900]="i === 2"
-                [class.bg-gray-100]="i > 2" [class.text-gray-500]="i > 2">
-            {{ i + 1 }}
+                [class.bg-white]="i > 2" [class.text-[#2C5270]]="i > 2"
+                [class.font-bold]="i > 2">
+            #{{ i + 1 }}
           </span>
-          <!-- Logo or initials -->
-          <div class="w-12 h-12 rounded-xl overflow-hidden bg-[#2C5270]/10 flex items-center justify-center text-[#2C5270] font-bold text-sm">
-            <img *ngIf="business.logo" [src]="business.logo" [alt]="business.name" class="w-full h-full object-cover">
-            <span *ngIf="!business.logo">{{ getTrendingInitials(business.name) }}</span>
+          <!-- Verified badge -->
+          <div *ngIf="business.isVerified"
+               class="flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded-full">
+            <i class="uil uil-shield-check text-emerald-300"></i>
+            <span>Verified</span>
           </div>
         </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
-            <h3 class="font-semibold text-gray-900 truncate group-hover:text-[#2C5270] transition-colors">{{ business.name }}</h3>
-            <i *ngIf="business.isVerified" class="uil uil-shield-check text-green-500 flex-shrink-0" title="Verified"></i>
+
+        <!-- Logo pulled up over header -->
+        <div class="relative px-5 -mt-6 mb-3">
+          <div class="relative w-14 h-14 rounded-xl overflow-hidden bg-white shadow-md border-2 border-white flex items-center justify-center">
+            <img *ngIf="business.logo" [src]="business.logo" [alt]="business.name" class="w-full h-full object-cover">
+            <span *ngIf="!business.logo" class="text-[#3E6A8A] font-bold text-base">{{ getTrendingInitials(business.name) }}</span>
           </div>
-          <p *ngIf="business.category" class="text-gray-500 text-xs mt-0.5">{{ business.category }}</p>
-          <div class="flex items-center gap-3 mt-2">
-            <span *ngIf="business.trustScore" class="text-xs font-bold px-2 py-0.5 rounded"
-                  [style.background-color]="getTrendingGradeColor(business.trustScore.grade) + '20'"
+        </div>
+
+        <!-- Card body -->
+        <div class="px-5 pb-4 flex-1 flex flex-col">
+          <p *ngIf="business.category" class="text-[#3E6A8A] text-xs font-medium mb-1 flex items-center gap-1">
+            <i class="uil uil-tag"></i> {{ business.category }}
+          </p>
+          <h3 class="font-bold text-gray-900 text-base leading-snug group-hover:text-[#2C5270] transition-colors mb-3">
+            {{ business.name }}
+          </h3>
+
+          <!-- Stats row -->
+          <div class="flex items-center gap-3 mt-auto pt-3 border-t border-gray-100">
+            <span *ngIf="business.trustScore"
+                  class="text-xs font-bold px-2.5 py-1 rounded-lg"
+                  [style.background-color]="getTrendingGradeColor(business.trustScore.grade) + '18'"
                   [style.color]="getTrendingGradeColor(business.trustScore.grade)">
-              {{ business.trustScore.grade }}
+              {{ business.trustScore.grade }} &nbsp;{{ business.trustScore.score }}%
             </span>
-            <span class="text-xs text-orange-600 font-medium flex items-center gap-1">
-              <i class="uil uil-fire"></i> {{ business.weeklyReviewCount }} reviews this week
+            <span class="text-xs text-orange-600 font-medium flex items-center gap-1 ml-auto">
+              <i class="uil uil-fire"></i> {{ business.weeklyReviewCount }} this week
             </span>
           </div>
         </div>
