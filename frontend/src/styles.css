@@ -497,10 +497,11 @@ body {
     font-size: 1rem !important;
   }
   
-  /* Larger cards */
+  /* Larger cards — scope .business-card so /search and map list layouts are not broken */
   .card,
   .dashboard-card,
-  .business-card {
+  .profile-dashboard .business-card,
+  app-manage-businesses .business-card {
     padding: 2rem !important;
   }
   

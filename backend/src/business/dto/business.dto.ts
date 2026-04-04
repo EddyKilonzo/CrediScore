@@ -103,11 +103,13 @@ export class CreateBusinessDto {
 
   @ApiProperty({ description: 'Business latitude', required: false })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   latitude?: number;
 
   @ApiProperty({ description: 'Business longitude', required: false })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   longitude?: number;
 
@@ -175,11 +177,13 @@ export class UpdateBusinessDto {
 
   @ApiProperty({ description: 'Business latitude', required: false })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   latitude?: number;
 
   @ApiProperty({ description: 'Business longitude', required: false })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   longitude?: number;
 

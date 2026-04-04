@@ -1,6 +1,7 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, Output, EventEmitter, Input, ElementRef, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MapService, Location } from '../../core/services/map.service';
+import { inferNominatimCountryCodes } from '../../core/utils/geo-coords';
 import * as L from 'leaflet';
 
 @Component({
@@ -32,10 +33,14 @@ export class BusinessLocationPickerComponent implements OnInit, AfterViewInit, O
 
   ngOnInit() {
     // If initial location is provided, set it
-    if (this.initialLocation && this.initialLocation.latitude && this.initialLocation.longitude) {
-      this.center = [this.initialLocation.latitude, this.initialLocation.longitude];
-      this.selectedAddress = this.initialLocation.location || '';
-      this.searchAddress = this.selectedAddress;
+    if (this.initialLocation) {
+      const lat = Number(this.initialLocation.latitude);
+      const lng = Number(this.initialLocation.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        this.center = [lat, lng];
+        this.selectedAddress = this.initialLocation.location || '';
+        this.searchAddress = this.selectedAddress;
+      }
     }
   }
 
@@ -71,9 +76,18 @@ export class BusinessLocationPickerComponent implements OnInit, AfterViewInit, O
     }).addTo(this.map);
 
     // Add marker if initial location exists
-    if (this.initialLocation && this.initialLocation.latitude && this.initialLocation.longitude) {
-      this.addMarker([this.initialLocation.latitude, this.initialLocation.longitude]);
-    } else {
+    if (this.initialLocation) {
+      const lat = Number(this.initialLocation.latitude);
+      const lng = Number(this.initialLocation.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        this.addMarker([lat, lng]);
+      }
+    }
+    if (
+      !this.initialLocation ||
+      !Number.isFinite(Number(this.initialLocation.latitude)) ||
+      !Number.isFinite(Number(this.initialLocation.longitude))
+    ) {
       // Try to get user's current location
       this.getUserLocation();
     }
@@ -155,7 +169,10 @@ export class BusinessLocationPickerComponent implements OnInit, AfterViewInit, O
     this.errorMessage = '';
 
     try {
-      const location = await this.mapService.geocodeAddress(this.searchAddress);
+      const location = await this.mapService.geocodeAddress(
+        this.searchAddress,
+        inferNominatimCountryCodes(this.searchAddress),
+      );
       const latlng: L.LatLngExpression = [location.lat, location.lng];
       
       this.map.setView(latlng, this.zoom);

@@ -973,10 +973,11 @@
 .map-card-rating {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.35rem;
   font-size: 0.75rem;
   color: #64748b;
-  margin-bottom: 0.4rem;
+  margin: 0.15rem 0 0.25rem;
 }
 
 .map-card-rating .star-filled { color: #fbbf24; }
@@ -1014,7 +1015,76 @@
 .map-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.45rem;
+}
+
+.map-card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.map-business-category {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #3e6a8a;
+  margin: 0;
+}
+
+.map-card-meta-row .map-business-category {
+  margin: 0;
+}
+
+.map-card-status-badge {
+  flex-shrink: 0;
+}
+
+.map-business-blurb {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.map-rating-value {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.75rem;
+}
+
+.map-review-count {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.map-trust-inline {
+  font-size: 0.72rem;
+  color: #3e6a8a;
+  font-weight: 600;
+}
+
+.map-business-hours-summary.business-hours-summary {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.map-card-contact-row {
+  margin-top: 0.15rem;
+}
+
+.map-social-links {
+  margin-top: 0.1rem;
 }
 
 .map-business-location {
@@ -1158,7 +1228,8 @@
 }
 
 .business-card {
-  background: white;
+  background: #ffffff;
+  color: #1e293b;
   border-radius: 1rem;
   overflow: hidden;
   box-shadow: var(--shadow-primary);
@@ -1167,6 +1238,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
+  isolation: isolate;
   border: 1px solid rgba(226, 232, 240, 0.8);
   user-select: none;
   -webkit-user-select: none;
@@ -1181,6 +1253,7 @@
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 0;
   border-radius: 1rem;
   padding: 1px;
   background: linear-gradient(135deg, rgba(62, 106, 138, 0.1), rgba(92, 139, 165, 0.05));
@@ -1219,6 +1292,7 @@
 /* Card Header */
 .card-header {
   position: relative;
+  z-index: 1;
   background: linear-gradient(135deg, #3E6A8A 0%, #5C8BA5 50%, #79A4BF 100%);
   padding: 2.5rem 2rem 1.5rem 2rem;
   display: flex;
@@ -1452,11 +1526,15 @@
 
 /* Card Body */
 .card-body {
+  position: relative;
+  z-index: 1;
   padding: 1.25rem 1.5rem 1rem;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: #ffffff;
+  color: #1e293b;
 }
 
 /* Category + status row */
@@ -1532,6 +1610,24 @@
   color: #64748b;
   line-height: 1.5;
   margin-bottom: 0.75rem;
+}
+
+.card-data-placeholder {
+  color: #94a3b8 !important;
+  font-style: italic;
+}
+
+.card-contact-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  margin: 0.25rem 0 0;
+}
+
+.card-contact-placeholder i {
+  font-size: 1rem;
+  color: #94a3b8;
 }
 
 .business-location-inline {
@@ -1693,12 +1789,15 @@
 
 /* Card Footer */
 .card-footer {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1.5rem;
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
+  color: #1e293b;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
@@ -1746,6 +1845,10 @@
 
 .star-rating i {
   font-size: 1rem;
+  color: #fbbf24;
+}
+
+.star-rating .star-filled {
   color: #fbbf24;
 }
 
@@ -2068,3 +2171,134 @@
   }
 }
 
+/* Dark theme: body text is light — force readable contrast on search result cards */
+:host-context(html[data-theme="dark"]) .business-card {
+  background: var(--bg-card, #1e2f3d) !important;
+  border-color: var(--border-color, #2d4255) !important;
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .card-body,
+:host-context(html[data-theme="dark"]) .business-card .card-footer {
+  background: var(--bg-card, #1e2f3d) !important;
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .card-footer {
+  border-top-color: var(--border-color, #2d4255) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .business-name {
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .business-description,
+:host-context(html[data-theme="dark"]) .business-card .review-count {
+  color: var(--text-secondary, #9bb3c8) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .business-location-inline {
+  color: var(--text-secondary, #9bb3c8) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .rating-value {
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .business-category {
+  color: #8eb4d4 !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .logo-container {
+  background: #253d4e !important;
+  border-color: rgba(45, 66, 85, 0.9) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .business-logo-placeholder {
+  background: linear-gradient(135deg, #253d4e 0%, #1e2f3d 100%) !important;
+  color: #8eb4d4 !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .contact-item {
+  background: #253d4e !important;
+  border-color: var(--border-color, #2d4255) !important;
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .business-hours-summary {
+  background: #253d4e !important;
+  border-color: var(--border-color, #2d4255) !important;
+  color: var(--text-secondary, #9bb3c8) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .social-icon-btn {
+  background: #253d4e !important;
+  border-color: var(--border-color, #2d4255) !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .star-rating .star-empty {
+  color: #3d5566 !important;
+}
+
+:host-context(html[data-theme="dark"]) .business-card .card-data-placeholder,
+:host-context(html[data-theme="dark"]) .business-card .card-contact-placeholder {
+  color: var(--text-muted, #6b8aaa) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-card {
+  background: var(--bg-card, #1e2f3d) !important;
+  border-color: var(--border-color, #2d4255) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-card:hover {
+  background: #243a4a !important;
+  border-color: #3e6a8a !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-name {
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-category {
+  color: #8eb4d4 !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-location,
+:host-context(html[data-theme="dark"]) .map-business-blurb,
+:host-context(html[data-theme="dark"]) .map-review-count {
+  color: var(--text-secondary, #9bb3c8) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-rating-value {
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-trust-inline {
+  color: #8eb4d4 !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-card .card-data-placeholder,
+:host-context(html[data-theme="dark"]) .map-business-card .card-contact-placeholder {
+  color: var(--text-muted, #6b8aaa) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-card .contact-item {
+  background: #253d4e !important;
+  border-color: var(--border-color, #2d4255) !important;
+  color: var(--text-primary, #e2eaf2) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-card .business-hours-summary {
+  background: #253d4e !important;
+  border-color: var(--border-color, #2d4255) !important;
+  color: var(--text-secondary, #9bb3c8) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-business-card .social-icon-btn {
+  background: #253d4e !important;
+  border-color: var(--border-color, #2d4255) !important;
+}
+
+:host-context(html[data-theme="dark"]) .map-card-rating .star-empty {
+  color: #3d5566 !important;
+}

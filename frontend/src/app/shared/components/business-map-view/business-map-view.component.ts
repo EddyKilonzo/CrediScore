@@ -12,6 +12,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MapService, BusinessLocation, Location } from '../../../core/services/map.service';
+import { correctLikelyEastAfricaLatLngSwap } from '../../../core/utils/geo-coords';
 import { BusinessService } from '../../../core/services/business.service';
 import * as L from 'leaflet';
 
@@ -231,16 +232,25 @@ export class BusinessMapViewComponent implements OnInit, OnChanges, AfterViewIni
           const lng = Number(b.longitude);
           return Number.isFinite(lat) && Number.isFinite(lng);
         })
-        .map((b: any) => ({
-          id: b.id,
-          name: b.name,
-          location: b.location || 'Location not specified',
-          latitude: b.latitude,
-          longitude: b.longitude,
-          category: b.businessCategory?.name || b.category || null,
-          logo: b.logo,
-          description: b.description
-        }));
+        .map((b: any) => {
+          let lat = Number(b.latitude);
+          let lng = Number(b.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            const fixed = correctLikelyEastAfricaLatLngSwap(lat, lng);
+            lat = fixed.lat;
+            lng = fixed.lng;
+          }
+          return {
+            id: b.id,
+            name: b.name,
+            location: b.location || 'Location not specified',
+            latitude: lat,
+            longitude: lng,
+            category: b.businessCategory?.name || b.category || null,
+            logo: b.logo,
+            description: b.description,
+          };
+        });
 
       this.filteredBusinesses = [...this.businesses];
 

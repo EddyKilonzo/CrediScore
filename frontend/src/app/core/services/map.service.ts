@@ -66,9 +66,16 @@ export class MapService {
   /**
    * Geocode an address to coordinates using Nominatim (OpenStreetMap)
    */
-  async geocodeAddress(address: string): Promise<Location> {
+  /**
+   * @param countryCodes Optional ISO 3166-1alpha2 list (e.g. "ke" or "ke,tz") — narrows Nominatim so
+   * generic place names do not resolve to the wrong country (e.g. a chain name → UAE).
+   */
+  async geocodeAddress(address: string, countryCodes?: string): Promise<Location> {
     try {
-      const url = `${this.NOMINATIM_URL}/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+      let url = `${this.NOMINATIM_URL}/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+      if (countryCodes?.trim()) {
+        url += `&countrycodes=${encodeURIComponent(countryCodes.trim().toLowerCase())}`;
+      }
       const results = await firstValueFrom(
         this.http.get<NominatimResponse[]>(url, {
           headers: {

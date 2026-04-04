@@ -3,7 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../core/services/auth.service';
-import { BusinessService, Business, DocumentType as BusinessDocumentType, OCRHealthStatus } from '../../core/services/business.service';
+import {
+  BusinessService,
+  Business,
+  CreateBusinessRequest,
+  DocumentType as BusinessDocumentType,
+  OCRHealthStatus,
+} from '../../core/services/business.service';
 import { CloudinaryService } from '../../core/services/cloudinary.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { BusinessLocationPickerComponent } from '../business-location-picker/business-location-picker.component';
@@ -428,8 +434,16 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
     
     // Load location from business data if available
     this.businessLocation = (this.currentBusiness as any).location || '';
-    this.businessLatitude = (this.currentBusiness as any).latitude || null;
-    this.businessLongitude = (this.currentBusiness as any).longitude || null;
+    const rawLat = (this.currentBusiness as any).latitude;
+    const rawLng = (this.currentBusiness as any).longitude;
+    this.businessLatitude =
+      rawLat != null && rawLat !== '' && Number.isFinite(Number(rawLat))
+        ? Number(rawLat)
+        : null;
+    this.businessLongitude =
+      rawLng != null && rawLng !== '' && Number.isFinite(Number(rawLng))
+        ? Number(rawLng)
+        : null;
     this.updateSocialsAndLocationCompletion();
   }
 
@@ -467,15 +481,26 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const businessData = {
+      const locText = this.businessLocation?.trim() || '';
+      const businessData: CreateBusinessRequest = {
         name: this.businessProfile.name.trim(),
         description: this.businessProfile.description?.trim() || 'Business description will be updated soon.',
-        address: this.businessLocation?.trim() || 'Address will be updated soon.',
+        address: locText || 'Address will be updated soon.',
+        location: locText || undefined,
         phone: phoneValue,
         email: emailValue,
         website: this.businessProfile.website?.trim() || undefined,
-        category: 'General' // Default category - can be updated later
+        category: 'General',
       };
+      if (
+        this.businessLatitude != null &&
+        this.businessLongitude != null &&
+        Number.isFinite(Number(this.businessLatitude)) &&
+        Number.isFinite(Number(this.businessLongitude))
+      ) {
+        businessData.latitude = Number(this.businessLatitude);
+        businessData.longitude = Number(this.businessLongitude);
+      }
 
       // Create the business
       this.businessService.createBusiness(businessData)
@@ -1315,8 +1340,16 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   private mergeBusinessUpdate(updated: Business): Business {
     const prev = this.currentBusiness;
     const merged = { ...prev, ...updated } as Business;
+    const u = updated as any;
+    const p = prev as any;
     if (!updated.payments && prev?.payments) merged.payments = prev.payments;
     if (!(updated as any).documents && (prev as any)?.documents) (merged as any).documents = (prev as any).documents;
+    // Onboarding location + pin — keep prior values if PATCH body omitted them (JSON has no key)
+    if (!('location' in u) && p?.location != null) merged.location = p.location;
+    if (!('latitude' in u) && p?.latitude != null && p?.latitude !== '')
+      (merged as any).latitude = p.latitude;
+    if (!('longitude' in u) && p?.longitude != null && p?.longitude !== '')
+      (merged as any).longitude = p.longitude;
     return merged;
   }
 
@@ -1428,7 +1461,13 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
   }
 
   updateLocation() {
-    if (!this.businessLocation.trim() || !this.businessLatitude || !this.businessLongitude) {
+    if (
+      !this.businessLocation.trim() ||
+      this.businessLatitude == null ||
+      this.businessLongitude == null ||
+      !Number.isFinite(Number(this.businessLatitude)) ||
+      !Number.isFinite(Number(this.businessLongitude))
+    ) {
       this.toastService.show('Please select a location on the map', 'warning');
       return;
     }
@@ -1681,9 +1720,20 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
       email: this.businessProfile.email?.trim() || undefined,
       logo: this.businessProfile.logo?.trim() || undefined,
       catchphrase: this.businessProfile.catchphrase?.trim() || undefined,
-      // location is mapped from businessLocation if needed
-      // category can be added if needed
     };
+    // Keep public/search map in sync with onboarding "Business location" + map pin
+    if (this.businessLocation?.trim()) {
+      updateData.location = this.businessLocation.trim();
+    }
+    if (
+      this.businessLatitude != null &&
+      this.businessLongitude != null &&
+      Number.isFinite(Number(this.businessLatitude)) &&
+      Number.isFinite(Number(this.businessLongitude))
+    ) {
+      updateData.latitude = Number(this.businessLatitude);
+      updateData.longitude = Number(this.businessLongitude);
+    }
 
     // Remove undefined values to avoid sending them
     // Note: Empty strings are kept to allow clearing fields

@@ -360,6 +360,15 @@ export class BusinessService {
         business.payments = business.payments.filter((p) => p.verified);
       }
 
+      const reviewAgg = await this.prisma.review.aggregate({
+        where: { businessId: business.id, isActive: true },
+        _avg: { rating: true },
+      });
+      const avgR =
+        reviewAgg._avg.rating != null ? Number(reviewAgg._avg.rating) : 0;
+      (business as { averageRating?: number }).averageRating =
+        Math.round(avgR * 10) / 10;
+
       return business;
     } catch (error) {
       this.logger.error(`Error fetching business with ID: ${businessId}${userId ? ` (requested by user: ${userId})` : ''}:`, error);
@@ -576,12 +585,18 @@ export class BusinessService {
           })
         : [];
       const ratingMap = new Map(
-        ratingGroups.map((r) => [r.businessId, r._avg.rating ?? 0]),
+        ratingGroups.map((r) => [
+          r.businessId,
+          r._avg.rating != null ? Number(r._avg.rating) : 0,
+        ]),
       );
-      const businessesWithRatings = businesses.map((business) => ({
-        ...business,
-        averageRating: ratingMap.get(business.id) ?? 0,
-      }));
+      const businessesWithRatings = businesses.map((business) => {
+        const avg = ratingMap.get(business.id) ?? 0;
+        return {
+          ...business,
+          averageRating: Math.round(avg * 10) / 10,
+        };
+      });
 
       return {
         businesses: businessesWithRatings,
@@ -628,12 +643,18 @@ export class BusinessService {
           })
         : [];
       const featuredRatingMap = new Map(
-        featuredRatingGroups.map((r) => [r.businessId, r._avg.rating ?? 0]),
+        featuredRatingGroups.map((r) => [
+          r.businessId,
+          r._avg.rating != null ? Number(r._avg.rating) : 0,
+        ]),
       );
-      const businessesWithRatings = businesses.map((business) => ({
-        ...business,
-        averageRating: featuredRatingMap.get(business.id) ?? 0,
-      }));
+      const businessesWithRatings = businesses.map((business) => {
+        const avg = featuredRatingMap.get(business.id) ?? 0;
+        return {
+          ...business,
+          averageRating: Math.round(avg * 10) / 10,
+        };
+      });
 
       return businessesWithRatings;
     } catch (error) {

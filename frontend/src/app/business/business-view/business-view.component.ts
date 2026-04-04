@@ -9,6 +9,10 @@ import { AuthService } from '../../core/services/auth.service';
 import { ReviewService } from '../../core/services/review.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { MapService } from '../../core/services/map.service';
+import {
+  correctLikelyEastAfricaLatLngSwap,
+  inferNominatimCountryCodes,
+} from '../../core/utils/geo-coords';
 import { environment } from '../../../environments/environment';
 import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
 import { ImageLightboxComponent } from '../../shared/components/image-lightbox/image-lightbox.component';
@@ -192,9 +196,20 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     this.businessService.getBusinessById(id).subscribe({
       next: (business) => {
         this.geocodedCoords = null;
-        this.business = this.normalizeBusinessFromApi(business as BusinessWithDetails);
+        this.reviews = [];
+        this.averageRating = 0;
+        this.totalReviews = 0;
 
-        // Process reviews if available
+        this.business = this.normalizeBusinessFromApi(business as BusinessWithDetails);
+        const raw = business as any;
+        const countFromApi =
+          raw._count?.reviews != null ? Number(raw._count.reviews) : NaN;
+        const apiAvgRaw = raw.averageRating;
+        const apiAvg =
+          apiAvgRaw != null && apiAvgRaw !== ''
+            ? Number(apiAvgRaw)
+            : NaN;
+
         if (this.business.reviews && Array.isArray(this.business.reviews)) {
           const currentUserId = this.authService.currentUser()?.id;
           this.reviews = this.business.reviews
@@ -207,7 +222,22 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
                 ? (r.votes?.find((v: any) => v.userId === currentUserId)?.vote ?? null)
                 : null,
             }));
-          this.calculateRatingStats();
+        }
+
+        if (Number.isFinite(countFromApi) && countFromApi >= 0) {
+          this.totalReviews = countFromApi;
+        } else {
+          this.totalReviews = this.reviews.length;
+        }
+
+        if (Number.isFinite(apiAvg)) {
+          this.averageRating = Math.round(apiAvg * 10) / 10;
+        } else if (this.reviews.length > 0) {
+          const sum = this.reviews.reduce((acc, review) => acc + review.rating, 0);
+          this.averageRating = Math.round((sum / this.reviews.length) * 10) / 10;
+          if (!Number.isFinite(countFromApi) || countFromApi < 0) {
+            this.totalReviews = this.reviews.length;
+          }
         }
 
         this.loading = false;
@@ -586,8 +616,13 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     const anyB = raw as any;
     const latRaw = anyB.latitude;
     const lngRaw = anyB.longitude;
-    const lat = latRaw != null && latRaw !== '' ? Number(latRaw) : NaN;
-    const lng = lngRaw != null && lngRaw !== '' ? Number(lngRaw) : NaN;
+    let lat = latRaw != null && latRaw !== '' ? Number(latRaw) : NaN;
+    let lng = lngRaw != null && lngRaw !== '' ? Number(lngRaw) : NaN;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const fixed = correctLikelyEastAfricaLatLngSwap(lat, lng);
+      lat = fixed.lat;
+      lng = fixed.lng;
+    }
     const category =
       raw.category ||
       anyB.businessCategory?.name ||
@@ -611,13 +646,13 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.business.category || anyB.businessCategory?.name || '';
   }
 
+  /** Owner onboarding location text only (not business name — name is shown in the title). */
   getDisplayLocation(): string {
     if (!this.business) return '';
-    return (
-      (this.business.location && String(this.business.location).trim()) ||
-      (this.business.address && String(this.business.address).trim()) ||
-      this.business.name
-    );
+    const loc = this.business.location && String(this.business.location).trim();
+    if (loc) return loc;
+    const addr = (this.business as any).address && String((this.business as any).address).trim();
+    return addr || '';
   }
 
   // Map Methods — Leaflet / OpenStreetMap
@@ -625,10 +660,11 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.geocodedCoords) return this.geocodedCoords;
     const b = this.business;
     if (!b) return null;
-    const lat = b.latitude != null ? Number(b.latitude) : NaN;
-    const lng = b.longitude != null ? Number(b.longitude) : NaN;
+    let lat = b.latitude != null ? Number(b.latitude) : NaN;
+    let lng = b.longitude != null ? Number(b.longitude) : NaN;
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      return { lat, lng };
+      const fixed = correctLikelyEastAfricaLatLngSwap(lat, lng);
+      return { lat: fixed.lat, lng: fixed.lng };
     }
     return null;
   }
@@ -637,14 +673,13 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.getMapCoords() !== null;
   }
 
+  /** Only onboarding / owner-set address text — never the business name (avoids wrong global HQs in maps). */
   private getGeocodeQuery(): string {
     if (!this.business) return '';
-    const parts = [
-      this.business.location,
-      this.business.address,
-      this.business.name,
-    ].filter((p) => p && String(p).trim());
-    return parts.join(', ');
+    const loc = this.business.location && String(this.business.location).trim();
+    if (loc) return loc;
+    const addr = (this.business as any).address && String((this.business as any).address).trim();
+    return addr || '';
   }
 
   private resolveMapAndInit(): void {
@@ -657,8 +692,9 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
     this.mapGeocodeLoading = true;
+    const countryCodes = inferNominatimCountryCodes(q);
     this.mapService
-      .geocodeAddress(q)
+      .geocodeAddress(q, countryCodes)
       .then((loc) => {
         this.geocodedCoords = { lat: loc.lat, lng: loc.lng };
         this.mapGeocodeLoading = false;
@@ -734,12 +770,15 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
-    // Distance string (if user location known)
+    const ROUTE_MAX_KM = 800;
     let distanceHtml = '';
     if (user) {
       const dist = this.mapService.calculateDistance(user, { lat: destLat, lng: destLng });
-      const distStr = dist < 1 ? `${Math.round(dist * 1000)} m away` : `${dist.toFixed(1)} km away`;
-      distanceHtml = `<p style="margin:4px 0;font-size:0.82rem;color:#3E6A8A;font-weight:600;">📍 ${distStr} from you</p>`;
+      if (dist <= ROUTE_MAX_KM) {
+        const distStr =
+          dist < 1 ? `${Math.round(dist * 1000)} m away` : `${dist.toFixed(1)} km away`;
+        distanceHtml = `<p style="margin:4px 0;font-size:0.82rem;color:#3E6A8A;font-weight:600;">📍 ${distStr} from you</p>`;
+      }
     }
 
     const popupContent = `
@@ -759,37 +798,46 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       .bindPopup(popupContent)
       .openPopup();
 
-    // User location marker — blue dot + dashed route line
+    // User location + route only when reasonably nearby (avoids ocean-spanning lines when coords/geocode disagree)
     if (user) {
-      const userIcon = L.divIcon({
-        className: '',
-        html: `<div style="
+      const distKm = this.mapService.calculateDistance(user, {
+        lat: destLat,
+        lng: destLng,
+      });
+      if (distKm <= ROUTE_MAX_KM) {
+        const userIcon = L.divIcon({
+          className: '',
+          html: `<div style="
           width:18px;height:18px;
           background:#3b82f6;
           border:3px solid white;
           border-radius:50%;
           box-shadow:0 0 0 3px rgba(59,130,246,0.35),0 2px 6px rgba(0,0,0,0.3);
         "></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
-      });
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
 
-      L.marker([user.lat, user.lng], { icon: userIcon })
-        .addTo(this.leafletMap)
-        .bindPopup('<div style="padding:4px 2px;font-size:0.9rem;font-weight:600;color:#1e293b;">📍 Your location</div>');
+        L.marker([user.lat, user.lng], { icon: userIcon })
+          .addTo(this.leafletMap)
+          .bindPopup(
+            '<div style="padding:4px 2px;font-size:0.9rem;font-weight:600;color:#1e293b;">📍 Your location</div>',
+          );
 
-      // Dashed polyline from user → business
-      L.polyline(
-        [[user.lat, user.lng], [destLat, destLng]],
-        { color: '#3E6A8A', weight: 3, dashArray: '8 6', opacity: 0.75 }
-      ).addTo(this.leafletMap);
+        L.polyline(
+          [
+            [user.lat, user.lng],
+            [destLat, destLng],
+          ],
+          { color: '#3E6A8A', weight: 3, dashArray: '8 6', opacity: 0.75 },
+        ).addTo(this.leafletMap);
 
-      // Fit map to show both points with padding
-      const bounds = L.latLngBounds(
-        [user.lat, user.lng],
-        [destLat, destLng]
-      );
-      this.leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        const bounds = L.latLngBounds(
+          [user.lat, user.lng],
+          [destLat, destLng],
+        );
+        this.leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+      }
     }
 
     setTimeout(() => this.leafletMap?.invalidateSize(), 150);

@@ -7,6 +7,7 @@ import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { BusinessService, Business } from '../core/services/business.service';
 import { BusinessLocation } from '../core/services/map.service';
+import { correctLikelyEastAfricaLatLngSwap } from '../core/utils/geo-coords';
 import { BusinessMapViewComponent } from '../shared/components/business-map-view/business-map-view.component';
 
 interface Review {
@@ -162,22 +163,80 @@ export class SearchComponent implements OnInit, OnDestroy {
     });
   }
 
-  trackByBusinessId(_index: number, business: BusinessWithRating): string {
-    return business.id;
+  trackByBusinessId(index: number, business: BusinessWithRating): string {
+    return business?.id || `row-${index}`;
+  }
+
+  /**
+   * API stores hours as JSON object `{ monday: { open, close, closed } }` (My Business)
+   * or array `{ day, open, close, isClosed }[]`. Normalise so cards + isBusinessOpen work.
+   */
+  private normalizeBusinessHoursForCard(raw: unknown): Array<{
+    day: string;
+    open: string;
+    close: string;
+    isClosed: boolean;
+  }> {
+    if (raw == null) return [];
+    if (Array.isArray(raw)) {
+      return raw
+        .filter((h: any) => h && h.day != null)
+        .map((h: any) => ({
+          day: String(h.day).toLowerCase(),
+          open: String(h.open ?? '09:00'),
+          close: String(h.close ?? '17:00'),
+          isClosed: !!(h.isClosed ?? h.closed),
+        }));
+    }
+    if (typeof raw === 'object') {
+      const o = raw as Record<
+        string,
+        { open?: string; close?: string; closed?: boolean; isClosed?: boolean }
+      >;
+      const order = [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ];
+      const out: Array<{
+        day: string;
+        open: string;
+        close: string;
+        isClosed: boolean;
+      }> = [];
+      for (const day of order) {
+        const block = o[day];
+        if (!block || typeof block !== 'object') continue;
+        out.push({
+          day,
+          open: String(block.open ?? '09:00'),
+          close: String(block.close ?? '17:00'),
+          isClosed: !!(block.closed ?? block.isClosed),
+        });
+      }
+      return out;
+    }
+    return [];
   }
 
   enrichBusinesses(businesses: Business[]): BusinessWithRating[] {
     return businesses.map((business): BusinessWithRating => {
-      // Calculate average rating from reviews if available
       let averageRating = 0;
       let totalReviews = 0;
 
-      // Type cast for internal count and reviews
       const b = business as any;
 
-      // Prefer API-returned averageRating (pre-calculated by backend aggregation)
-      if (typeof b.averageRating === 'number' && b.averageRating > 0) {
-        averageRating = Math.round(b.averageRating * 10) / 10;
+      // Prefer API averageRating (coerce string/Decimal-like JSON so star filters match list data)
+      const rawAvg = b.averageRating;
+      if (rawAvg != null && rawAvg !== '') {
+        const n = Number(rawAvg);
+        if (Number.isFinite(n)) {
+          averageRating = Math.round(n * 10) / 10;
+        }
       } else if (b.reviews && Array.isArray(b.reviews) && b.reviews.length > 0) {
         const activeReviews = b.reviews.filter((r: any) => r.isActive);
         if (activeReviews.length > 0) {
@@ -186,21 +245,30 @@ export class SearchComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Prefer _count.reviews from Prisma, then reviews array length
-      totalReviews = b._count?.reviews
-        ?? b.reviews?.filter((r: any) => r.isActive).length
-        ?? 0;
+      const countRaw = b._count?.reviews;
+      totalReviews =
+        countRaw != null && countRaw !== ''
+          ? Number(countRaw)
+          : b.reviews?.filter((r: any) => r.isActive).length ?? 0;
+      if (!Number.isFinite(totalReviews)) {
+        totalReviews = 0;
+      }
 
       // Handle trustScore
       let scoreNum = 0;
       let gradeStr = 'F';
       
       if (typeof business.trustScore === 'number') {
-        scoreNum = business.trustScore;
+        scoreNum = Number(business.trustScore);
+        if (!Number.isFinite(scoreNum)) scoreNum = 0;
         gradeStr = this.getGradeFromScore(scoreNum);
       } else if (b.trustScore && typeof b.trustScore === 'object') {
-        scoreNum = b.trustScore.score || 0;
-        gradeStr = b.trustScore.grade || this.getGradeFromScore(scoreNum);
+        const rawScore = b.trustScore.score;
+        scoreNum =
+          rawScore != null && rawScore !== '' ? Number(rawScore) : 0;
+        if (!Number.isFinite(scoreNum)) scoreNum = 0;
+        gradeStr =
+          b.trustScore.grade || this.getGradeFromScore(scoreNum);
       }
 
       const finalTrustScore: TrustScore = {
@@ -212,18 +280,32 @@ export class SearchComponent implements OnInit, OnDestroy {
       
       // Normalise category — prefer flat string, fall back to relation name
       const category = b.category || b.businessCategory?.name || '';
+      // `location` is the My Business onboarding field (map + address text)
       const location =
         (business.location && String(business.location).trim()) ||
         (business.address && String(business.address).trim()) ||
         '';
 
-      const latNum =
+      let latNum =
         b.latitude != null && b.latitude !== '' ? Number(b.latitude) : NaN;
-      const lngNum =
+      let lngNum =
         b.longitude != null && b.longitude !== '' ? Number(b.longitude) : NaN;
+      if (Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        const fixed = correctLikelyEastAfricaLatLngSwap(latNum, lngNum);
+        latNum = fixed.lat;
+        lngNum = fixed.lng;
+      }
+
+      const nameStr =
+        business.name != null && String(business.name).trim()
+          ? String(business.name).trim()
+          : 'Business';
+
+      const hoursNorm = this.normalizeBusinessHoursForCard(b.businessHours);
 
       return {
         ...business,
+        name: nameStr,
         category,
         location,
         latitude: Number.isFinite(latNum) ? latNum : undefined,
@@ -231,7 +313,11 @@ export class SearchComponent implements OnInit, OnDestroy {
         averageRating,
         totalReviews,
         trustScore: finalTrustScore,
-        businessHours: business.businessHours || []
+        businessHours: hoursNorm,
+        socialLinks:
+          b.socialLinks && typeof b.socialLinks === 'object'
+            ? b.socialLinks
+            : business.socialLinks,
       } as BusinessWithRating;
     });
   }
@@ -403,6 +489,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     return c || 'General';
   }
 
+  /** Onboarding `location` string from owner; `address` only for legacy shapes */
   getCardLocationLine(business: BusinessWithRating): string {
     const loc = (business.location || '').trim();
     if (loc) return loc;
@@ -486,24 +573,46 @@ export class SearchComponent implements OnInit, OnDestroy {
       return business.trustScore.grade.toUpperCase();
     }
     if (typeof business.trustScore === 'object' && business.trustScore?.score !== undefined) {
-      return this.getGradeFromScore(business.trustScore.score);
+      const s = Number(business.trustScore.score);
+      return this.getGradeFromScore(Number.isFinite(s) ? s : 0);
     }
-    // Fallback to trustScore as number if it exists
     if (typeof business.trustScore === 'number') {
-      return this.getGradeFromScore(business.trustScore);
+      const s = Number(business.trustScore);
+      return this.getGradeFromScore(Number.isFinite(s) ? s : 0);
     }
-    return 'N/A';
+    return 'F';
   }
 
   getBusinessScore(business: BusinessWithRating): number {
     if (typeof business.trustScore === 'object' && business.trustScore?.score !== undefined) {
-      return business.trustScore.score;
+      const s = Number(business.trustScore.score);
+      return Number.isFinite(s) ? s : 0;
     }
-    // Fallback to trustScore as number if it exists
     if (typeof business.trustScore === 'number') {
-      return business.trustScore;
+      const s = Number(business.trustScore);
+      return Number.isFinite(s) ? s : 0;
     }
     return 0;
+  }
+
+  /** Location line or placeholder so the card always shows an address row */
+  getCardLocationDisplay(business: BusinessWithRating): string {
+    const line = this.getCardLocationLine(business);
+    return line || 'Location not listed';
+  }
+
+  hasCardLocation(business: BusinessWithRating): boolean {
+    return !!this.getCardLocationLine(business);
+  }
+
+  /** Blurb or placeholder so the card always shows a summary line */
+  getCardBlurbDisplay(business: BusinessWithRating): string {
+    const b = this.getListCardBlurb(business);
+    return b || 'No description added yet.';
+  }
+
+  hasCardBlurb(business: BusinessWithRating): boolean {
+    return !!this.getListCardBlurb(business);
   }
 
   onSearch() {
