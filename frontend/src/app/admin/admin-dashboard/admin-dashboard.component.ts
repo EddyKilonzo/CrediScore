@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { AuthService, User } from '../../core/services/auth.service';
 import { AdminService, AdminDashboardStats, HistoricalData, MonthlyData } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -19,6 +20,7 @@ export class AdminDashboardComponent implements OnInit {
   
   currentUser = this.authService.currentUser;
   isAuthenticated = this.authService.isAuthenticated;
+  readonly apiUrl = environment.apiUrl;
   
   // Component state
   dashboardStats = signal<AdminDashboardStats | null>(null);

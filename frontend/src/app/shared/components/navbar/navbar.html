@@ -226,10 +226,10 @@
 
             <!-- Footer -->
             <div *ngIf="!notifLoading && notifications.length > 0" class="notif-panel-footer">
-              <a routerLink="/notifications" (click)="showNotifPanel = false" class="notif-view-all">
+              <button (click)="showNotifPanel = false" class="notif-view-all">
                 View all notifications
                 <i class="uil uil-arrow-right ml-1"></i>
-              </a>
+              </button>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { BusinessService, Business } from '../../core/services/business.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { environment } from '../../../environments/environment';
 import { Subject, takeUntil } from 'rxjs';
 
 interface AnalyticsSummary {
@@ -47,6 +48,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
     // Business data
     currentBusiness: Business | null = null;
+    readonly apiUrl = environment.apiUrl;
 
     // Analytics data
     summary: AnalyticsSummary = {

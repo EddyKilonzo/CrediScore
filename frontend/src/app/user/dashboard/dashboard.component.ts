@@ -107,17 +107,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (user?.role === 'business' || user?.role === 'BUSINESS_OWNER') {
       this.quickActions = [
         {
-          title: 'Add Business',
-          description: 'Register a new business',
+          title: 'My Business',
+          description: 'Manage your business profile',
           icon: 'uil uil-plus-circle',
-          route: '/business/create',
+          route: '/business/my-business',
           color: 'bg-blue-500'
         },
         {
           title: 'Upload Documents',
           description: 'Verify your business',
           icon: 'uil uil-file-upload-alt',
-          route: '/business/documents',
+          route: '/business/my-business',
           color: 'bg-green-500'
         },
         {
@@ -131,7 +131,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           title: 'Manage Reviews',
           description: 'Respond to feedback',
           icon: 'uil uil-comment-dots',
-          route: '/business/reviews',
+          route: '/business/dashboard',
           color: 'bg-orange-500'
         }
       ];
@@ -155,7 +155,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           title: 'Report Fraud',
           description: 'Flag suspicious activity',
           icon: 'uil uil-shield-exclamation',
-          route: '/fraud/report',
+          route: '/search',
           color: 'bg-red-500'
         },
         {

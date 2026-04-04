@@ -90,7 +90,7 @@
                   <i class="fas fa-user mr-2"></i>
                   Profile
                 </a>
-                <a routerLink="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <a routerLink="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <i class="fas fa-cog mr-2"></i>
                   Settings
                 </a>
@@ -647,7 +647,7 @@
         <div
           *ngFor="let biz of topBusinesses"
           class="trusted-card group"
-          [routerLink]="['/businesses', biz.id]"
+          [routerLink]="['/business', biz.id]"
           style="cursor:pointer">
 
           <!-- Logo / initials -->
@@ -696,7 +696,7 @@
 
   <!-- View All -->
   <div class="text-center mt-10">
-    <a routerLink="/businesses" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
+    <a routerLink="/search" class="inline-flex items-center px-8 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
       View All Businesses
       <i class="uil uil-arrow-right text-lg ml-2"></i>
     </a>
