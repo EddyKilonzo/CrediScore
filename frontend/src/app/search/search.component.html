@@ -346,8 +346,8 @@
 
             <h3 class="business-name">{{ business.name }}</h3>
             
-            <p class="business-description" *ngIf="business.description">
-              {{ business.description.length > 80 ? (business.description | slice:0:80) + '...' : business.description }}
+            <p class="business-description" *ngIf="getListCardBlurb(business) as blurb">
+              {{ blurb }}
             </p>
 
             <!-- Business Hours Summary -->

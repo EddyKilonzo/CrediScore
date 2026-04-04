@@ -8,8 +8,10 @@ interface CategoryBusiness {
   id: string;
   name: string;
   description?: string;
+  catchphrase?: string;
   logo?: string;
   category?: string;
+  address?: string;
   isVerified: boolean;
   location?: string;
   trustScore?: { grade: string; score: number };
@@ -55,7 +57,15 @@ export class CategoryBrowseComponent implements OnInit {
       params: { category: this.categoryName, page: this.page, limit: this.limit }
     }).subscribe({
       next: (res) => {
-        this.businesses = res.businesses || [];
+        const raw = res.businesses || [];
+        this.businesses = raw.map((b: any) => ({
+          ...b,
+          category: b.category || b.businessCategory?.name || '',
+          location:
+            (b.location && String(b.location).trim()) ||
+            (b.address && String(b.address).trim()) ||
+            b.location,
+        }));
         this.total = res.pagination?.total || 0;
         this.totalPages = res.pagination?.totalPages || 1;
         this.isLoading = false;

@@ -73,7 +73,9 @@
                   <i class="uil uil-shield-check"></i> Verified
                 </span>
               </div>
-              <p *ngIf="business.description" class="text-gray-500 text-sm mt-1 line-clamp-2">{{ business.description }}</p>
+              <p *ngIf="business.description || business.catchphrase" class="text-gray-500 text-sm mt-1 line-clamp-2">
+                {{ business.description || business.catchphrase }}
+              </p>
               <p *ngIf="business.location" class="text-gray-400 text-xs mt-2 flex items-center gap-1">
                 <i class="uil uil-map-marker"></i> {{ business.location }}
               </p>

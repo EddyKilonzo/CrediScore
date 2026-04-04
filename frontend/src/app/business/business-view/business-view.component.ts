@@ -8,6 +8,7 @@ import { BusinessService, Business, BusinessStatus } from '../../core/services/b
 import { AuthService } from '../../core/services/auth.service';
 import { ReviewService } from '../../core/services/review.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { MapService } from '../../core/services/map.service';
 import { environment } from '../../../environments/environment';
 import { ReviewReplyComponent } from '../../shared/components/review-reply/review-reply.component';
 import { ImageLightboxComponent } from '../../shared/components/image-lightbox/image-lightbox.component';
@@ -92,7 +93,11 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   private authService = inject(AuthService);
   private reviewService = inject(ReviewService);
   private toastService = inject(ToastService);
+  private mapService = inject(MapService);
   private leafletMap: L.Map | null = null;
+  /** When the API has no lat/lng, geocode from address/name for the embedded map */
+  private geocodedCoords: { lat: number; lng: number } | null = null;
+  mapGeocodeLoading = false;
   
   business: BusinessWithDetails | null = null;
   loading = true;
@@ -151,6 +156,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       this.leafletMap.remove();
       this.leafletMap = null;
     }
+    this.geocodedCoords = null;
   }
 
   get currentUser() {
@@ -163,7 +169,8 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.businessService.getBusinessById(id).subscribe({
       next: (business) => {
-        this.business = business as BusinessWithDetails;
+        this.geocodedCoords = null;
+        this.business = this.normalizeBusinessFromApi(business as BusinessWithDetails);
 
         // Process reviews if available
         if (this.business.reviews && Array.isArray(this.business.reviews)) {
@@ -182,8 +189,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
         }
 
         this.loading = false;
-        // Initialize Leaflet map after Angular renders the map container
-        setTimeout(() => this.initLeafletMap(), 200);
+        this.resolveMapAndInit();
       },
       error: (err) => {
         console.error('Error loading business:', err);
@@ -553,31 +559,117 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  /** Merge Prisma/API shape into fields the template expects */
+  private normalizeBusinessFromApi(raw: BusinessWithDetails): BusinessWithDetails {
+    const anyB = raw as any;
+    const latRaw = anyB.latitude;
+    const lngRaw = anyB.longitude;
+    const lat = latRaw != null && latRaw !== '' ? Number(latRaw) : NaN;
+    const lng = lngRaw != null && lngRaw !== '' ? Number(lngRaw) : NaN;
+    const category =
+      raw.category ||
+      anyB.businessCategory?.name ||
+      '';
+    const loc =
+      (raw.location && String(raw.location).trim()) ||
+      (raw.address && String(raw.address).trim()) ||
+      '';
+    return {
+      ...raw,
+      category,
+      location: loc || raw.location,
+      latitude: Number.isFinite(lat) ? lat : undefined,
+      longitude: Number.isFinite(lng) ? lng : undefined,
+    };
+  }
+
+  getBusinessCategoryLabel(): string {
+    if (!this.business) return '';
+    const anyB = this.business as any;
+    return this.business.category || anyB.businessCategory?.name || '';
+  }
+
+  getDisplayLocation(): string {
+    if (!this.business) return '';
+    return (
+      (this.business.location && String(this.business.location).trim()) ||
+      (this.business.address && String(this.business.address).trim()) ||
+      this.business.name
+    );
+  }
+
   // Map Methods — Leaflet / OpenStreetMap
+  getMapCoords(): { lat: number; lng: number } | null {
+    if (this.geocodedCoords) return this.geocodedCoords;
+    const b = this.business;
+    if (!b) return null;
+    const lat = b.latitude != null ? Number(b.latitude) : NaN;
+    const lng = b.longitude != null ? Number(b.longitude) : NaN;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return { lat, lng };
+    }
+    return null;
+  }
+
   hasMapCoordinates(): boolean {
-    return !!(this.business?.latitude && this.business?.longitude);
+    return this.getMapCoords() !== null;
+  }
+
+  private getGeocodeQuery(): string {
+    if (!this.business) return '';
+    const parts = [
+      this.business.location,
+      this.business.address,
+      this.business.name,
+    ].filter((p) => p && String(p).trim());
+    return parts.join(', ');
+  }
+
+  private resolveMapAndInit(): void {
+    if (this.getMapCoords()) {
+      setTimeout(() => this.initLeafletMap(), 200);
+      return;
+    }
+    const q = this.getGeocodeQuery();
+    if (!q || q.length < 3) {
+      return;
+    }
+    this.mapGeocodeLoading = true;
+    this.mapService
+      .geocodeAddress(q)
+      .then((loc) => {
+        this.geocodedCoords = { lat: loc.lat, lng: loc.lng };
+        this.mapGeocodeLoading = false;
+        setTimeout(() => this.initLeafletMap(), 250);
+      })
+      .catch(() => {
+        this.mapGeocodeLoading = false;
+      });
   }
 
   getOsmSearchUrl(): string {
     if (!this.business) return 'https://www.openstreetmap.org';
-    if (this.business.latitude && this.business.longitude) {
-      return `https://www.openstreetmap.org/?mlat=${this.business.latitude}&mlon=${this.business.longitude}&zoom=15`;
+    const c = this.getMapCoords();
+    if (c) {
+      return `https://www.openstreetmap.org/?mlat=${c.lat}&mlon=${c.lng}&zoom=15`;
     }
-    const q = encodeURIComponent(this.business.location || this.business.name || '');
+    const q = encodeURIComponent(this.getGeocodeQuery() || this.business.name || '');
     return `https://www.openstreetmap.org/search?query=${q}`;
   }
 
   getOsmDirectionsUrl(): string {
     if (!this.business) return 'https://www.openstreetmap.org';
-    if (this.business.latitude && this.business.longitude) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${this.business.latitude},${this.business.longitude}`;
+    const c = this.getMapCoords();
+    if (c) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;
     }
-    const q = encodeURIComponent(this.business.location || this.business.name || '');
+    const q = encodeURIComponent(this.getGeocodeQuery() || this.business.name || '');
     return `https://www.google.com/maps/search/?api=1&query=${q}`;
   }
 
   initLeafletMap() {
-    if (!this.business?.latitude || !this.business?.longitude) return;
+    const coords = this.getMapCoords();
+    if (!coords || !this.business) return;
     const container = document.getElementById('business-leaflet-map');
     if (!container) return;
 
@@ -587,8 +679,8 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       this.leafletMap = null;
     }
 
-    const lat = this.business.latitude;
-    const lng = this.business.longitude;
+    const lat = coords.lat;
+    const lng = coords.lng;
     const name = this.business.name || 'Business Location';
 
     this.leafletMap = L.map(container).setView([lat, lng], 15);
@@ -607,10 +699,13 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     const directionsUrl = this.getOsmDirectionsUrl();
+    const locLine = this.getDisplayLocation();
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
     const popupContent = `
       <div style="min-width: 150px; padding: 5px;">
-        <strong style="display: block; margin-bottom: 5px; font-size: 1.1rem;">${name}</strong>
-        ${this.business.location ? '<p style="margin: 5px 0; font-size: 0.9rem; color: #666;"><i class="uil uil-map-marker"></i> ' + this.business.location + '</p>' : ''}
+        <strong style="display: block; margin-bottom: 5px; font-size: 1.1rem;">${esc(name)}</strong>
+        ${locLine ? '<p style="margin: 5px 0; font-size: 0.9rem; color: #666;"><i class="uil uil-map-marker"></i> ' + esc(locLine) + '</p>' : ''}
         <a href="${directionsUrl}" target="_blank" 
            style="display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 8px 12px; margin-top: 10px; background-color: #3E6A8A; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: background 0.2s;">
           <i class="uil uil-directions" style="margin-right: 6px; font-size: 1.1rem;"></i>
@@ -623,6 +718,8 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       .addTo(this.leafletMap)
       .bindPopup(popupContent)
       .openPopup();
+
+    setTimeout(() => this.leafletMap?.invalidateSize(), 150);
   }
 
   // Lightbox

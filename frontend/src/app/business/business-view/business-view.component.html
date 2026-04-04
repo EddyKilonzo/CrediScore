@@ -74,9 +74,9 @@
             <p class="catchphrase" *ngIf="business.catchphrase">{{ business.catchphrase }}</p>
             
             <div class="business-meta">
-              <div class="category-badge" *ngIf="business.category">
+              <div class="category-badge" *ngIf="getBusinessCategoryLabel()">
                 <i class="uil uil-tag"></i>
-                <span>{{ business.category }}</span>
+                <span>{{ getBusinessCategoryLabel() }}</span>
               </div>
               
               <div class="location-info" *ngIf="business.location || business.address">
@@ -133,13 +133,13 @@
           Business Information
         </h2>
         <div class="business-info-grid">
-          <div class="business-info-item" *ngIf="business.category">
+          <div class="business-info-item" *ngIf="getBusinessCategoryLabel()">
             <div class="info-item-icon">
               <i class="uil uil-tag"></i>
             </div>
             <div class="info-item-content">
               <span class="info-item-label">Category</span>
-              <span class="info-item-value">{{ business.category }}</span>
+              <span class="info-item-value">{{ getBusinessCategoryLabel() }}</span>
             </div>
           </div>
           
@@ -247,12 +247,12 @@
       <!-- Left Column -->
       <div class="content-main">
         <!-- Description Section -->
-        <section class="info-section" *ngIf="business.description">
+        <section class="info-section" *ngIf="business.description || business.catchphrase">
           <h2 class="section-title">
             <i class="uil uil-file-info-alt"></i>
             About
           </h2>
-          <p class="description-text">{{ business.description }}</p>
+          <p class="description-text">{{ business.description || business.catchphrase }}</p>
         </section>
 
         <!-- Payment Methods Section -->
@@ -287,9 +287,13 @@
           <div class="map-container">
             <div class="map-wrapper">
               <div id="business-leaflet-map" class="leaflet-map-view" *ngIf="hasMapCoordinates()"></div>
-              <div *ngIf="!hasMapCoordinates()" class="map-placeholder">
+              <div *ngIf="!hasMapCoordinates() && mapGeocodeLoading" class="map-placeholder map-placeholder-loading">
+                <div class="map-geocode-spinner"></div>
+                <p>Locating on map…</p>
+              </div>
+              <div *ngIf="!hasMapCoordinates() && !mapGeocodeLoading" class="map-placeholder">
                 <i class="uil uil-map-marker"></i>
-                <p>{{ business.location || business.name }}</p>
+                <p>{{ getDisplayLocation() }}</p>
                 <a
                   [href]="getOsmSearchUrl()"
                   target="_blank"
@@ -303,7 +307,7 @@
             </div>
             <div class="map-info">
               <i class="uil uil-map-marker"></i>
-              <span>{{ business.location || (business.latitude && business.longitude ? (business.latitude + ', ' + business.longitude) : business.name) }}</span>
+              <span>{{ getDisplayLocation() }}</span>
               <a
                 [href]="getOsmDirectionsUrl()"
                 target="_blank"

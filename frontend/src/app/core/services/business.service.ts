@@ -14,7 +14,12 @@ export interface Business {
   website?: string;
   logo?: string;
   catchphrase?: string;
+  /** Flat category label when API denormalizes it */
   category: string;
+  /** Prisma relation from list/detail endpoints — use for display when `category` is empty */
+  businessCategory?: { id?: string; name: string };
+  latitude?: number;
+  longitude?: number;
   trustScore: number;
   isVerified: boolean;
   ownerId: string;
