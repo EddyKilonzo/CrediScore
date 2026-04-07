@@ -7,10 +7,10 @@
     <!-- Welcome Section -->
     <div class="welcome-section mb-8">
       <h1 class="welcome-title">
-        Business Dashboard
+        {{ 'dash.business.title' | t }}
       </h1>
       <p class="welcome-subtitle">
-        Welcome back, {{ currentUser()?.name }}! Here's your business performance overview.
+        {{ 'dash.user.welcome' | t }} {{ currentUser()?.name }}! {{ 'dash.business.overview' | t }}
       </p>
       <!-- Business Reputation Level -->
       <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="mt-4">
@@ -25,7 +25,7 @@
     <!-- Loading State -->
     <div *ngIf="isLoading" class="flex items-center justify-center py-12">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <span class="ml-2 text-gray-600">Loading your business dashboard...</span>
+      <span class="ml-2 text-gray-600">{{ 'dash.business.loading' | t }}</span>
     </div>
 
     <!-- Dashboard Content -->
@@ -44,10 +44,10 @@
             
             <!-- Business Grade -->
             <div>
-              <h2 class="text-3xl font-bold text-gray-900 mb-2">Business Grade: {{ dashboardStats.businessGrade }}</h2>
+              <h2 class="text-3xl font-bold text-gray-900 mb-2">{{ 'dash.business.grade' | t }}: {{ dashboardStats.businessGrade }}</h2>
               <p class="text-lg text-gray-600 mb-1">{{ getBusinessReputationLevel() }}</p>
               <p class="text-sm text-gray-500">
-                Trust Score: <span class="font-semibold" [class]="getTrustScoreColor(dashboardStats.trustScore)">{{ dashboardStats.trustScore }}</span>
+                {{ 'dash.business.trustScore' | t }}: <span class="font-semibold" [class]="getTrustScoreColor(dashboardStats.trustScore)">{{ dashboardStats.trustScore }}</span>
               </p>
             </div>
           </div>
@@ -71,7 +71,7 @@
               <i class="fas fa-star text-2xl" style="color: #3E6A8A;"></i>
             </div>
             <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Total Reviews</p>
+              <p class="text-sm font-medium text-gray-600">{{ 'dash.user.totalReviews' | t }}</p>
               <p class="text-2xl font-bold text-gray-900">{{ dashboardStats.totalReviews }}</p>
               <p class="text-xs" style="color: #3E6A8A;">+{{ dashboardStats.monthlyGrowth }}% this month</p>
             </div>
@@ -84,7 +84,7 @@
               <i class="fas fa-comment-dots text-2xl" style="color: #3E6A8A;"></i>
             </div>
             <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Pending Reviews</p>
+              <p class="text-sm font-medium text-gray-600">{{ 'dash.business.pendingReviews' | t }}</p>
               <p class="text-2xl font-bold text-gray-900">{{ dashboardStats.pendingReviews }}</p>
               <p class="text-xs" style="color: #3E6A8A;">Need response</p>
             </div>
@@ -97,7 +97,7 @@
               <i class="fas fa-chart-line text-2xl" style="color: #3E6A8A;"></i>
             </div>
             <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Response Rate</p>
+              <p class="text-sm font-medium text-gray-600">{{ 'dash.business.responseRate' | t }}</p>
               <p class="text-2xl font-bold text-gray-900">{{ dashboardStats.responseRate }}%</p>
               <p class="text-xs" style="color: #3E6A8A;">Customer engagement</p>
             </div>
@@ -237,7 +237,7 @@
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="dashboard-card fade-in-card">
               <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                <h2 class="text-lg font-semibold text-gray-900">{{ 'dash.user.recentActivity' | t }}</h2>
                 <p class="text-sm text-gray-600">Latest business activities & reviews</p>
               </div>
               <div class="p-6">
@@ -356,7 +356,7 @@
         <aside class="order-1 xl:order-none xl:self-start xl:sticky xl:top-24 space-y-6">
           <div class="dashboard-card fade-in-card quick-actions-sticky">
             <div class="px-6 py-4 border-b border-gray-200">
-              <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+              <h2 class="text-lg font-semibold text-gray-900">{{ 'common.quickActions' | t }}</h2>
               <p class="text-sm text-gray-600">Manage your business</p>
             </div>
             <div class="p-6">

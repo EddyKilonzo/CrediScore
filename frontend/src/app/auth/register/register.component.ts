@@ -5,12 +5,13 @@ import { Router, RouterModule } from '@angular/router';
 import { AuthService, RegisterRequest } from '../../core/services/auth.service';
 import { HttpClient } from '@angular/common/http';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { TPipe } from '../../shared/pipes/t.pipe';
 
 // Register component for user signup
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TPipe],
   templateUrl: './register.component.html',
   styleUrl: './register.component.css'
 })

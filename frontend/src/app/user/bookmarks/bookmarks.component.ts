@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ReviewService } from '../../core/services/review.service';
+import { TPipe } from '../../shared/pipes/t.pipe';
 
 interface BookmarkedBusiness {
   id: string;
@@ -22,7 +23,7 @@ interface BookmarkedBusiness {
 @Component({
   selector: 'app-bookmarks',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TPipe],
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.css'
 })

@@ -5,11 +5,12 @@ import { AuthService, User } from '../../core/services/auth.service';
 import { AdminService, AdminDashboardStats, HistoricalData, MonthlyData } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { environment } from '../../../environments/environment';
+import { TPipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TPipe],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.css']
 })

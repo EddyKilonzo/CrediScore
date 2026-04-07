@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService, User } from '../../core/services/auth.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { firstValueFrom } from 'rxjs';
+import { TPipe } from '../../shared/pipes/t.pipe';
 import {
   UserDashboardService,
   UserDashboardResponse,
@@ -27,6 +28,7 @@ interface RecentActivity {
   status?: 'verified' | 'pending' | 'rejected';
   businessName?: string;
   rating?: number;
+  credibility?: number;
 }
 
 interface BusinessCard {
@@ -51,7 +53,7 @@ interface QuickAction {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TPipe],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
@@ -155,15 +157,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
           title: 'Report Fraud',
           description: 'Flag suspicious activity',
           icon: 'uil uil-shield-exclamation',
-          route: '/search',
+          route: '/report-business',
           color: 'bg-red-500'
         },
         {
-          title: 'View Profile',
-          description: 'Manage your account',
-          icon: 'uil uil-user-circle',
-          route: '/profile',
+          title: 'Business Map',
+          description: 'Browse nearby businesses',
+          icon: 'uil uil-map-marker',
+          route: '/map',
           color: 'bg-blue-500'
+        },
+        {
+          title: 'Bookmarks',
+          description: 'Open saved businesses',
+          icon: 'uil uil-bookmark',
+          route: '/bookmarks',
+          color: 'bg-yellow-500'
         }
       ];
     }
@@ -217,6 +226,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       status: this.mapActivityStatus(activity.status ?? undefined),
       businessName: activity.businessName ?? undefined,
       rating: activity.rating ?? undefined,
+      credibility: activity.credibility ?? undefined,
     }));
   }
 
@@ -234,17 +244,112 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private buildReviewTrendData() {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const counts: Record<string, number> = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
-    for (const activity of this.recentActivities) {
-      if (activity.type === 'review') {
-        const dayName = days[activity.timestamp.getDay()];
-        counts[dayName] = (counts[dayName] ?? 0) + 1;
+    const reviewActivities = this.recentActivities.filter(
+      (activity) => activity.type === 'review'
+    );
+
+    if (this.selectedTimeframe === 'week') {
+      const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const counts: Record<string, number> = {
+        Mon: 0,
+        Tue: 0,
+        Wed: 0,
+        Thu: 0,
+        Fri: 0,
+        Sat: 0,
+        Sun: 0,
+      };
+
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      const day = now.getDay(); // Sun=0, Mon=1 ... Sat=6
+      const daysSinceMonday = day === 0 ? 6 : day - 1;
+      startOfWeek.setHours(0, 0, 0, 0);
+      startOfWeek.setDate(now.getDate() - daysSinceMonday);
+
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+      for (const activity of reviewActivities) {
+        const ts = new Date(activity.timestamp);
+        if (ts >= startOfWeek && ts < endOfWeek) {
+          const idx = ts.getDay(); // Sun=0..Sat=6
+          const label = idx === 0 ? 'Sun' : dayLabels[idx - 1];
+          counts[label] = (counts[label] ?? 0) + 1;
+        }
       }
+
+      this.reviewTrendData = dayLabels.map((label) => ({
+        day: label,
+        reviews: counts[label] ?? 0,
+      }));
+      return;
     }
-    // Order Mon–Sun
-    const ordered = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    this.reviewTrendData = ordered.map(day => ({ day, reviews: counts[day] ?? 0 }));
+
+    if (this.selectedTimeframe === 'month') {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const weeks = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
+      const counts: Record<string, number> = {
+        W1: 0,
+        W2: 0,
+        W3: 0,
+        W4: 0,
+        W5: 0,
+        W6: 0,
+      };
+
+      for (const activity of reviewActivities) {
+        const ts = new Date(activity.timestamp);
+        if (ts.getFullYear() !== year || ts.getMonth() !== month) continue;
+
+        const weekIndex = Math.min(5, Math.floor((ts.getDate() - 1) / 7));
+        const key = weeks[weekIndex];
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+
+      this.reviewTrendData = weeks.map((label) => ({
+        day: label,
+        reviews: counts[label] ?? 0,
+      }));
+      return;
+    }
+
+    // year
+    const now = new Date();
+    const year = now.getFullYear();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const counts: Record<string, number> = {
+      Jan: 0,
+      Feb: 0,
+      Mar: 0,
+      Apr: 0,
+      May: 0,
+      Jun: 0,
+      Jul: 0,
+      Aug: 0,
+      Sep: 0,
+      Oct: 0,
+      Nov: 0,
+      Dec: 0,
+    };
+
+    for (const activity of reviewActivities) {
+      const ts = new Date(activity.timestamp);
+      if (ts.getFullYear() !== year) continue;
+      const key = months[ts.getMonth()];
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    this.reviewTrendData = months.map((label) => ({
+      day: label,
+      reviews: counts[label] ?? 0,
+    }));
+  }
+
+  onTimeframeChange() {
+    this.buildReviewTrendData();
   }
 
   getMaxReviews(): number {
@@ -340,24 +445,60 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getCustomerReputationLevel(): string {
     const user = this.currentUser();
-    if (!user || user.role !== 'user') return '';
-    const rep = user.reputation ?? 0;
-    if (rep >= 90) return 'Elite Reviewer';
-    if (rep >= 75) return 'Trusted Member';
-    if (rep >= 60) return 'Active User';
-    if (rep >= 40) return 'Regular User';
-    return 'New Member';
+    if (!user || (user.role !== 'user' && user.role !== 'CUSTOMER')) return '';
+    const effectiveRep = this.getEffectiveReviewerScore();
+    if (effectiveRep >= 300) return 'Legendary Reviewer';
+    if (effectiveRep >= 200) return 'Elite Reviewer';
+    if (effectiveRep >= 120) return 'Trusted Reviewer';
+    if (effectiveRep >= 60) return 'Rising Reviewer';
+    return 'New Reviewer';
+  }
+
+  getReviewedBusinessesCount(): number {
+    const reviewed = new Set(
+      this.recentActivities
+        .filter(activity => activity.type === 'review' && !!activity.businessName)
+        .map(activity => activity.businessName as string)
+    );
+    return reviewed.size;
+  }
+
+  getVerifiedActivityCount(): number {
+    return this.recentActivities.filter(activity => activity.status === 'verified').length;
+  }
+
+  getPendingActivityCount(): number {
+    return this.recentActivities.filter(activity => activity.status === 'pending').length;
   }
 
   getReputationColor(): string {
     const user = this.currentUser();
-    if (!user || user.role !== 'user') return '';
-    const rep = user.reputation ?? 0;
-    if (rep >= 90) return 'text-blue-600';
-    if (rep >= 75) return 'text-blue-600';
-    if (rep >= 60) return 'text-green-600';
-    if (rep >= 40) return 'text-yellow-600';
+    if (!user || (user.role !== 'user' && user.role !== 'CUSTOMER')) return '';
+    const effectiveRep = this.getEffectiveReviewerScore();
+    if (effectiveRep >= 200) return 'text-blue-600';
+    if (effectiveRep >= 120) return 'text-green-600';
+    if (effectiveRep >= 60) return 'text-yellow-600';
     return 'text-gray-600';
+  }
+
+  private getEffectiveReviewerScore(): number {
+    const user = this.currentUser();
+    const baseReputation = user?.reputation ?? 0;
+    const reviewCount = this.dashboardStats.totalReviews ?? 0;
+    const avgCredibility = this.getAverageReviewCredibility();
+    const score = Math.round(
+      baseReputation + reviewCount * 4 + avgCredibility * 0.2,
+    );
+    return Math.max(0, score);
+  }
+
+  private getAverageReviewCredibility(): number {
+    const credibilityValues = this.recentActivities
+      .filter((activity) => activity.type === 'review')
+      .map((activity) => activity.credibility ?? 0);
+    if (credibilityValues.length === 0) return 0;
+    const sum = credibilityValues.reduce((acc, val) => acc + val, 0);
+    return sum / credibilityValues.length;
   }
 
   private mapActivityType(type: string): RecentActivity['type'] {

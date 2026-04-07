@@ -59,11 +59,9 @@
               <h1 class="text-lg lg:text-base font-bold text-gray-900">CrediScore</h1>
             </div>
             
-            <h2 class="text-base lg:text-[15px] font-bold text-gray-800 mb-0.5">
-              Welcome Back
-            </h2>
+            <h2 class="text-base lg:text-[15px] font-bold text-gray-800 mb-0.5">{{ 'auth.login.title' | t }}</h2>
             <p class="text-gray-600 text-xs lg:text-[11px]">
-              Sign in to your account to continue
+              {{ 'auth.login.subtitle' | t }}
             </p>
           </div>
 
@@ -73,7 +71,7 @@
             <form [formGroup]="loginForm" class="space-y-2 sm:space-y-3">
               <!-- Email -->
               <div>
-                <label for="email" class="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5">Email Address</label>
+                <label for="email" class="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5">{{ 'auth.login.email' | t }}</label>
       <input 
                   formControlName="email"
         type="email" 
@@ -89,7 +87,7 @@
 
               <!-- Password -->
               <div>
-                <label for="password" class="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5">Password</label>
+                <label for="password" class="block text-xs sm:text-sm font-medium text-gray-700 mb-0.5">{{ 'auth.login.password' | t }}</label>
                 <div class="relative">
                   <input 
                     formControlName="password"
@@ -115,7 +113,7 @@
               <!-- Forgot Password Link -->
               <div class="text-right">
                 <a routerLink="/auth/forgot-password" class="text-xs font-medium hover:underline" style="color: #2C5270;">
-                  Forgot password?
+                  {{ 'auth.login.forgotPassword' | t }}
                 </a>
               </div>
 
@@ -135,12 +133,12 @@
                 <!-- Loading State -->
                 <div *ngIf="isLoading()" class="flex items-center justify-center">
                   <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
+                  {{ 'auth.login.signingIn' | t }}
                 </div>
                 
                 <!-- Default State -->
                 <div *ngIf="!isLoading()" class="flex items-center justify-center">
-                  Sign In
+                  {{ 'auth.login.signIn' | t }}
                   <i class="fas fa-arrow-right ml-2"></i>
                 </div>
     </button>
@@ -154,7 +152,7 @@
                 <div class="w-full border-t border-gray-300"></div>
               </div>
               <div class="relative flex justify-center text-xs">
-                <span class="px-2 bg-white text-gray-500">Or continue with Google</span>
+                <span class="px-2 bg-white text-gray-500">{{ 'auth.login.googleDivider' | t }}</span>
               </div>
             </div>
             
@@ -182,15 +180,15 @@
                 class="animate-spin rounded-full h-4 w-4 border-b-2 mr-2"
                 style="border-color: #2C5270;"></div>
               
-              <span class="text-xs">{{ isGoogleLoading() ? 'Signing in...' : 'Continue with Google' }}</span>
+              <span class="text-xs">{{ isGoogleLoading() ? ('auth.login.signingIn' | t) : ('auth.login.continueWithGoogle' | t) }}</span>
             </button>
           </div>
 
           <!-- Sign Up Link -->
           <div class="text-xs sm:text-sm text-gray-600 text-center pt-0.5">
-            Don't have an account? 
+            {{ 'auth.login.noAccount' | t }}
             <a routerLink="/auth/register" class="text-gray-700 font-medium hover:text-gray-900 underline">
-              Sign up here
+              {{ 'auth.login.signUpHere' | t }}
             </a>
           </div>
         </div>

@@ -5,10 +5,10 @@
     <!-- Welcome Section -->
     <div class="welcome-section">
       <h1 class="welcome-title">
-        Dashboard
+        {{ 'dash.user.title' | t }}
       </h1>
       <p class="welcome-subtitle">
-        Welcome back, {{ currentUser()?.name }}! Here's your CrediScore overview.
+        {{ 'dash.user.welcome' | t }} {{ currentUser()?.name }}! {{ 'dash.user.overview' | t }}
       </p>
       <!-- Customer Reputation Level -->
       <div *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'" class="mt-4">
@@ -25,7 +25,7 @@
       <div class="dashboard-card stats-card hover-lift">
         <div class="flex items-center justify-between">
           <div>
-            <p class="card-label">Total Reviews</p>
+            <p class="card-label">{{ 'dash.user.totalReviews' | t }}</p>
             <p class="card-number">{{ dashboardStats.totalReviews }}</p>
             <p class="card-growth">
               <i class="uil uil-arrow-up text-xs"></i>
@@ -42,7 +42,7 @@
       <div class="dashboard-card stats-card hover-lift">
         <div class="flex items-center justify-between">
           <div>
-            <p class="card-label">Average Rating</p>
+            <p class="card-label">{{ 'dash.user.avgRating' | t }}</p>
             <p class="card-number">{{ dashboardStats.averageRating }}</p>
             <p class="card-subtitle">Based on {{ dashboardStats.totalReviews }} reviews</p>
           </div>
@@ -52,18 +52,18 @@
         </div>
       </div>
 
-      <!-- Total Businesses Card -->
+      <!-- Reviewed Businesses Card -->
       <div class="dashboard-card stats-card hover-lift">
         <div class="flex items-center justify-between">
           <div>
-            <p class="card-label">Your Businesses</p>
-            <p class="card-number">{{ dashboardStats.totalBusinesses }}</p>
+            <p class="card-label">{{ 'dash.user.businessesReviewed' | t }}</p>
+            <p class="card-number">{{ getReviewedBusinessesCount() }}</p>
             <p class="card-growth">
-              {{ dashboardStats.verifiedBusinesses }} verified
+              {{ dashboardStats.verifiedBusinesses }} {{ 'dash.user.verifiedOnPlatform' | t }}
             </p>
           </div>
           <div class="card-icon">
-            <i class="uil uil-building text-xl"></i>
+            <i class="uil uil-store text-xl"></i>
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@
       <div *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'" class="dashboard-card stats-card hover-lift">
         <div class="flex items-center justify-between">
           <div>
-            <p class="card-label">Reputation Level</p>
+            <p class="card-label">{{ 'dash.user.reputationLevel' | t }}</p>
             <p class="card-number" [class]="getReputationColor()">
               {{ getCustomerReputationLevel() }}
             </p>
@@ -94,9 +94,10 @@
         <!-- Review Activity Chart -->
         <div class="dashboard-card content-card smooth-fade-in">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="section-title">Review Activity</h3>
+            <h3 class="section-title">{{ 'dash.user.reviewActivity' | t }}</h3>
             <select 
-              [(ngModel)]="selectedTimeframe" 
+              [(ngModel)]="selectedTimeframe"
+              (ngModelChange)="onTimeframeChange()"
               class="select-dropdown text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
               <option value="week">This Week</option>
               <option value="month">This Month</option>
@@ -134,9 +135,9 @@
         <!-- Recent Activities -->
         <div class="dashboard-card content-card smooth-fade-in">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="section-title">Recent Activity</h3>
+            <h3 class="section-title">{{ 'dash.user.recentActivity' | t }}</h3>
             <a routerLink="/my-reviews" class="section-link text-sm text-primary hover:text-primary-600 font-medium">
-              See all
+              {{ 'common.seeAll' | t }}
             </a>
           </div>
           
@@ -177,46 +178,6 @@
           </div>
         </div>
 
-        <!-- Your Businesses (for business owners) -->
-        <div *ngIf="currentUser()?.role === 'business' || currentUser()?.role === 'BUSINESS_OWNER'" class="dashboard-card content-card smooth-fade-in">
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="section-title">Your Businesses</h3>
-            <a routerLink="/business" class="section-link text-sm text-primary hover:text-primary-600 font-medium">
-              Manage all
-            </a>
-          </div>
-          
-          <div class="space-y-4">
-            <div 
-              *ngFor="let business of userBusinesses" 
-              class="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-3">
-                  <h4 class="font-medium text-gray-900">{{ business.name }}</h4>
-                  <span *ngIf="business.isVerified" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <i class="uil uil-check-circle text-xs mr-1"></i>
-                    Verified
-                  </span>
-                </div>
-                <div class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white"
-                     [class]="getTrustGradeColor(business.grade)">
-                  {{ business.grade }}
-                </div>
-              </div>
-              <div class="flex items-center justify-between text-sm text-gray-500">
-                <div class="flex items-center space-x-4">
-                  <span>{{ business.category }}</span>
-                  <span>{{ business.reviewCount }} reviews</span>
-                  <span class="flex items-center">
-                    <i class="uil uil-star text-yellow-400 text-xs mr-1"></i>
-                    {{ business.averageRating }}
-                  </span>
-                </div>
-                <span>{{ formatTimeAgo(business.lastActivity) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Right Column (sticky sidebar) -->
@@ -224,7 +185,7 @@
         
         <!-- Quick Actions -->
         <div class="dashboard-card content-card smooth-fade-in">
-          <h3 class="section-title mb-4">Quick Actions</h3>
+          <h3 class="section-title mb-4">{{ 'common.quickActions' | t }}</h3>
           <div class="space-y-3">
             <a 
               *ngFor="let action of quickActions; let i = index" 
@@ -287,6 +248,57 @@
                 <span class="review-summary-value" [class]="getReputationColor()">{{ getCustomerReputationLevel() || 'New Member' }}</span>
               </div>
             </div>
+            <div class="review-summary-item" *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'">
+              <div class="review-summary-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">
+                <i class="uil uil-check-circle" style="color:#1d4ed8;font-size:1.1rem;"></i>
+              </div>
+              <div class="review-summary-info">
+                <span class="review-summary-label">Verified Activity</span>
+                <span class="review-summary-value">{{ getVerifiedActivityCount() }}</span>
+              </div>
+            </div>
+            <div class="review-summary-item" *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'">
+              <div class="review-summary-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);">
+                <i class="uil uil-clock" style="color:#b45309;font-size:1.1rem;"></i>
+              </div>
+              <div class="review-summary-info">
+                <span class="review-summary-label">Pending Activity</span>
+                <span class="review-summary-value">{{ getPendingActivityCount() }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-card content-card smooth-fade-in">
+          <h3 class="section-title mb-4">Discover & Stay Safe</h3>
+          <div class="space-y-3">
+            <a routerLink="/map" class="quick-action-item flex items-center space-x-3 p-3 rounded-lg transition-all duration-300">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary to-primary-600">
+                <i class="uil uil-map-marker text-lg text-gray-900"></i>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">Explore Business Map</p>
+                <p class="text-sm text-gray-600">Find nearby trusted businesses quickly.</p>
+              </div>
+            </a>
+            <a routerLink="/bookmarks" class="quick-action-item flex items-center space-x-3 p-3 rounded-lg transition-all duration-300">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary to-primary-600">
+                <i class="uil uil-bookmark text-lg text-gray-900"></i>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">Saved Businesses</p>
+                <p class="text-sm text-gray-600">Open your bookmark list in one click.</p>
+              </div>
+            </a>
+            <a routerLink="/report-business" class="quick-action-item flex items-center space-x-3 p-3 rounded-lg transition-all duration-300">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-primary to-primary-600">
+                <i class="uil uil-shield-exclamation text-lg text-gray-900"></i>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">Report Concern</p>
+                <p class="text-sm text-gray-600">Flag suspicious behavior with evidence.</p>
+              </div>
+            </a>
           </div>
         </div>
 

@@ -738,13 +738,13 @@
 
         <!-- General Settings -->
         <div class="content-panel">
-          <h3 class="panel-title">General Settings</h3>
+          <h3 class="panel-title">{{ 'settings.general' | t }}</h3>
           <div class="settings-list">
             <!-- Theme Toggle -->
             <div class="setting-item">
               <div class="setting-info">
-                <h4 class="setting-title">Theme</h4>
-                <p class="setting-description">Choose your preferred theme</p>
+                <h4 class="setting-title">{{ 'settings.theme' | t }}</h4>
+                <p class="setting-description">{{ 'settings.chooseTheme' | t }}</p>
               </div>
               <div class="setting-control">
                 <div class="theme-toggle">
@@ -837,14 +837,14 @@
             <!-- Language Selection -->
             <div class="setting-item">
               <div class="setting-info">
-                <h4 class="setting-title">Language</h4>
-                <p class="setting-description">Choose your preferred language</p>
+                <h4 class="setting-title">{{ 'settings.language' | t }}</h4>
+                <p class="setting-description">{{ 'settings.chooseLanguage' | t }}</p>
               </div>
               <div class="setting-control">
                 <select class="language-select" [value]="selectedLanguage()" (change)="onLanguageChange($event)">
-                  <option value="en">English</option>
-                  <option value="sw">Kiswahili</option>
-                  <option value="fr">Français</option>
+                  <option value="en">{{ 'language.en' | t }}</option>
+                  <option value="sw">{{ 'language.sw' | t }}</option>
+                  <option value="fr">{{ 'language.fr' | t }}</option>
                 </select>
               </div>
             </div>

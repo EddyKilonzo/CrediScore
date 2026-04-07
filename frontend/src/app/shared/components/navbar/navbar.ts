@@ -5,10 +5,12 @@ import { AuthService, User } from '../../../core/services/auth.service';
 import { ToastService } from '../toast/toast.service';
 import { ImageService } from '../../services/image.service';
 import { AppNotificationsService, AppNotification } from '../../../core/services/app-notifications.service';
+import { Subscription } from 'rxjs';
+import { TPipe } from '../../pipes/t.pipe';
 
 @Component({
   selector: 'app-navbar',
-  imports: [RouterLink, RouterLinkActive, CommonModule],
+  imports: [RouterLink, RouterLinkActive, CommonModule, TPipe],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css'
 })
@@ -26,10 +28,14 @@ export class Navbar implements OnInit, OnDestroy {
   notifications: AppNotification[] = [];
   notifLoading = false;
   isDark = false;
+  private notifSub?: Subscription;
 
   ngOnInit() {
     if (this.isAuthenticated()) {
       this.notifService.startPolling();
+      this.notifSub = this.notifService.notifications.subscribe(
+        n => this.notifications = n
+      );
     }
     // Sync with saved theme
     const saved = localStorage.getItem('theme');
@@ -48,6 +54,7 @@ export class Navbar implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.notifService.stopPolling();
+    this.notifSub?.unsubscribe();
   }
 
   @HostListener('document:click', ['$event'])
@@ -67,7 +74,6 @@ export class Navbar implements OnInit, OnDestroy {
         next: () => { this.notifLoading = false; },
         error: () => { this.notifLoading = false; }
       });
-      this.notifService.notifications.subscribe(n => this.notifications = n);
     }
   }
 

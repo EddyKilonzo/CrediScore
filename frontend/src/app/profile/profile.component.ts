@@ -8,6 +8,8 @@ import { ToastService } from '../shared/components/toast/toast.service';
 import { CloudinaryService } from '../core/services/cloudinary.service';
 import { ImageService } from '../shared/services/image.service';
 import { ReviewReplyComponent } from '../shared/components/review-reply/review-reply.component';
+import { TPipe } from '../shared/pipes/t.pipe';
+import { I18nService } from '../core/services/i18n.service';
 import { environment } from '../../environments/environment';
 
 interface Tab {
@@ -71,7 +73,7 @@ interface RoleBasedData {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ReviewReplyComponent],
+  imports: [CommonModule, ReactiveFormsModule, ReviewReplyComponent, TPipe],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css'
 })
@@ -91,7 +93,6 @@ export class ProfileComponent implements OnInit {
   reviewReminders = signal(true);
   publicProfile = signal(true);
   selectedLanguage = signal('en');
-
   // Notification preferences (Feature 9)
   notifPrefs = signal({
     reviewReply: true,
@@ -142,6 +143,7 @@ export class ProfileComponent implements OnInit {
     private toastService: ToastService,
     private cloudinaryService: CloudinaryService,
     public imageService: ImageService,
+    public i18n: I18nService,
     private router: Router
   ) {
     this.profileForm = this.fb.group({
@@ -225,7 +227,7 @@ export class ProfileComponent implements OnInit {
     
     // Load language
     const savedLanguage = localStorage.getItem('language') || 'en';
-    this.selectedLanguage.set(savedLanguage);
+    this.applyLanguage(savedLanguage, false);
   }
 
   getVisibleTabs(): Tab[] {
@@ -269,7 +271,8 @@ export class ProfileComponent implements OnInit {
     if (!user?.createdAt) return 'Unknown';
     
     const date = new Date(user.createdAt);
-    return date.toLocaleDateString('en-US', { 
+    const locale = this.i18n.getLocaleFor(this.selectedLanguage());
+    return date.toLocaleDateString(locale, {
       year: 'numeric', 
       month: 'long',
       day: 'numeric'
@@ -634,9 +637,17 @@ export class ProfileComponent implements OnInit {
 
   onLanguageChange(event: Event): void {
     const language = (event.target as HTMLSelectElement).value;
-    this.selectedLanguage.set(language);
-    localStorage.setItem('language', language);
-    this.toastService.success(`Language changed to ${language}`);
+    this.applyLanguage(language, true);
+  }
+
+  private applyLanguage(language: string, showToast: boolean): void {
+    this.i18n.setLanguage(language);
+    const normalizedLanguage = this.i18n.currentLanguage();
+    this.selectedLanguage.set(normalizedLanguage);
+
+    if (showToast) {
+      this.toastService.success(this.i18n.t('language.changed', { language: this.i18n.t(`language.${normalizedLanguage}`) }));
+    }
   }
 
   toggleNotifPref(key: keyof ReturnType<typeof this.notifPrefs>) {

@@ -4,11 +4,12 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService, LoginRequest } from '../../core/services/auth.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { TPipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, TPipe],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })

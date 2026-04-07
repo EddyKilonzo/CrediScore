@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { AuthService, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
 import { environment } from '../../environments/environment';
+import { TPipe } from '../shared/pipes/t.pipe';
 
 interface TrendingBusiness {
   id: string;
@@ -41,7 +42,7 @@ interface Statistic {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TPipe],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })

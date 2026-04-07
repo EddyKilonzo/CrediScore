@@ -9,6 +9,7 @@ import { BusinessService, Business } from '../core/services/business.service';
 import { BusinessLocation } from '../core/services/map.service';
 import { correctLikelyEastAfricaLatLngSwap } from '../core/utils/geo-coords';
 import { BusinessMapViewComponent } from '../shared/components/business-map-view/business-map-view.component';
+import { TPipe } from '../shared/pipes/t.pipe';
 
 interface Review {
   id: string;
@@ -38,7 +39,7 @@ interface BusinessWithRating extends Omit<Business, 'trustScore'> {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, BusinessMapViewComponent],
+  imports: [CommonModule, FormsModule, RouterModule, BusinessMapViewComponent, TPipe],
   templateUrl: './search.component.html',
   styleUrl: './search.component.css'
 })
@@ -511,6 +512,10 @@ export class SearchComponent implements OnInit, OnDestroy {
   onStarFilterChange(stars: number | null) {
     this.selectedStars = this.selectedStars === stars ? null : stars;
     this.applySearchAndFilters();
+  }
+
+  getStarFilterLabel(stars: number): string {
+    return `${stars} ${stars === 1 ? 'star' : 'stars'} & up`;
   }
 
   onGradeFilterChange(grade: string | null) {

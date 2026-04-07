@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ReviewService, Review, ReviewReply } from '../../core/services/review.service';
+import { TPipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-my-reviews',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TPipe],
   templateUrl: './my-reviews.component.html',
   styleUrl: './my-reviews.component.css',
 })
@@ -82,7 +83,17 @@ export class MyReviewsComponent implements OnInit {
 
     this.reviewService.getUserReviews(this.currentPage, this.pageSize).subscribe({
       next: (response) => {
-        this.reviews = response.reviews;
+        this.reviews = response.reviews.map((review) => ({
+          ...review,
+          helpfulCount:
+            review.helpfulCount ??
+            review.votes?.filter((v) => v.vote === 'HELPFUL').length ??
+            0,
+          notHelpfulCount:
+            review.notHelpfulCount ??
+            review.votes?.filter((v) => v.vote === 'NOT_HELPFUL').length ??
+            0,
+        }));
         this.totalReviews = response.pagination.total;
         this.totalPages = response.pagination.totalPages;
         this.calculateStatistics();

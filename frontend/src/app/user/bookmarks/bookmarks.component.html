@@ -1,26 +1,26 @@
 <div class="bookmarks-container">
   <div class="bookmarks-header">
-    <h1><i class="uil uil-bookmark"></i> Saved Businesses</h1>
-    <p>Businesses you've saved for later</p>
+    <h1><i class="uil uil-bookmark"></i> {{ 'bookmarks.title' | t }}</h1>
+    <p>{{ 'bookmarks.subtitle' | t }}</p>
   </div>
 
   <div *ngIf="isLoading" class="loading-state">
     <div class="spinner"></div>
-    <p>Loading your bookmarks...</p>
+    <p>{{ 'bookmarks.loading' | t }}</p>
   </div>
 
   <div *ngIf="error && !isLoading" class="error-state">
     <i class="uil uil-exclamation-circle"></i>
     <p>{{ error }}</p>
-    <button (click)="loadBookmarks()">Try Again</button>
+    <button (click)="loadBookmarks()">{{ 'common.tryAgain' | t }}</button>
   </div>
 
   <div *ngIf="!isLoading && !error">
     <div *ngIf="bookmarks.length === 0" class="empty-state">
       <i class="uil uil-bookmark"></i>
-      <h3>No saved businesses yet</h3>
-      <p>When you bookmark a business, it will appear here.</p>
-      <a routerLink="/search" class="browse-btn">Browse Businesses</a>
+      <h3>{{ 'bookmarks.emptyTitle' | t }}</h3>
+      <p>{{ 'bookmarks.emptySubtitle' | t }}</p>
+      <a routerLink="/search" class="browse-btn">{{ 'home.browseBusinesses' | t }}</a>
     </div>
 
     <div class="bookmarks-grid" *ngIf="bookmarks.length > 0">
@@ -42,10 +42,10 @@
           <p class="card-desc" *ngIf="bm.business.description">{{ bm.business.description | slice:0:100 }}{{ bm.business.description.length > 100 ? '...' : '' }}</p>
         </div>
         <div class="card-actions">
-          <a [routerLink]="['/business', bm.business.id]" class="view-btn">View Business</a>
+          <a [routerLink]="['/business', bm.business.id]" class="view-btn">{{ 'bookmarks.viewBusiness' | t }}</a>
           <button (click)="removeBookmark(bm.business.id)" [disabled]="removingId === bm.business.id" class="remove-btn">
             <i class="uil uil-bookmark-slash"></i>
-            <span>{{ removingId === bm.business.id ? 'Removing...' : 'Remove' }}</span>
+            <span>{{ removingId === bm.business.id ? ('bookmarks.removing' | t) : ('bookmarks.remove' | t) }}</span>
           </button>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { ReviewReplyComponent } from '../../shared/components/review-reply/revie
 import { ReviewService } from '../../core/services/review.service';
 import { Subject, takeUntil } from 'rxjs';
 import { signal } from '@angular/core';
+import { TPipe } from '../../shared/pipes/t.pipe';
 
 interface BusinessDashboardStats {
   totalReviews: number;
@@ -69,7 +70,7 @@ interface QuickAction {
 @Component({
   selector: 'app-business-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ReviewReplyComponent],
+  imports: [CommonModule, RouterModule, FormsModule, ReviewReplyComponent, TPipe],
   templateUrl: './business-dashboard.component.html',
   styleUrl: './business-dashboard.component.css'
 })

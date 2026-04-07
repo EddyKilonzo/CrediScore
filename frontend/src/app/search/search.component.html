@@ -3,8 +3,8 @@
     <div class="search-content">
       <!-- Welcome Section -->
       <div class="welcome-section">
-        <h1 class="welcome-title">Search Businesses</h1>
-        <p class="welcome-subtitle">Find verified businesses and check their trust scores</p>
+        <h1 class="welcome-title">{{ 'search.title' | t }}</h1>
+        <p class="welcome-subtitle">{{ 'search.subtitle' | t }}</p>
       </div>
 
       <!-- Main Content with Sidebar Layout -->
@@ -15,7 +15,7 @@
             <div class="filters-header">
               <h3 class="filters-title">
                 <i class="uil uil-filter"></i>
-                <span>Filters</span>
+                <span>{{ 'search.filters' | t }}</span>
               </h3>
               @if (showFilters) {
               <button type="button" (click)="toggleFilters()" class="close-filters-btn">
@@ -47,7 +47,7 @@
             <div class="filter-section">
               <h3 class="filter-section-title">
                 <i class="uil uil-star"></i>
-                Star Rating
+                {{ 'search.starRating' | t }}
               </h3>
               <div class="star-filter-options">
                 <button
@@ -63,7 +63,7 @@
                       <i *ngIf="i > stars" class="uil uil-star star-empty"></i>
                     </span>
                   </div>
-                  <span class="star-label">{{ stars }} stars & up</span>
+                  <span class="star-label">{{ getStarFilterLabel(stars) }}</span>
                 </button>
               </div>
             </div>
@@ -72,7 +72,7 @@
             <div class="filter-section">
               <h3 class="filter-section-title">
                 <i class="uil uil-shield-check"></i>
-                Trust Grade
+                {{ 'search.trustGrade' | t }}
               </h3>
               <div class="grade-filter-options">
                 <button
@@ -93,7 +93,7 @@
             <div class="filter-section" *ngIf="availableCategories.length > 0">
               <h3 class="filter-section-title">
                 <i class="uil uil-tag"></i>
-                Category
+                {{ 'search.category' | t }}
               </h3>
               <div class="grade-filter-options" style="flex-wrap:wrap;gap:6px;">
                 <button
@@ -111,11 +111,11 @@
             <div class="filter-section">
               <h3 class="filter-section-title">
                 <i class="uil uil-check-circle"></i>
-                Verified Only
+                {{ 'search.verifiedOnly' | t }}
               </h3>
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;color:#374151;">
                 <input type="checkbox" [(ngModel)]="verifiedOnly" (ngModelChange)="applySearchAndFilters()" style="width:16px;height:16px;accent-color:#2C5270;" />
-                Show verified businesses only
+                {{ 'search.showVerifiedOnly' | t }}
               </label>
             </div>
 
@@ -123,7 +123,7 @@
             <div class="filter-section">
               <h3 class="filter-section-title">
                 <i class="uil uil-sort-amount-down"></i>
-                Sort By
+                {{ 'search.sortBy' | t }}
               </h3>
               <div class="grade-filter-options" style="flex-direction:column;gap:4px;">
                 <button type="button" (click)="onSortChange('trust')" class="grade-filter-btn" [class.active]="sortBy === 'trust'" style="justify-content:flex-start;gap:6px;width:100%;">
@@ -145,7 +145,7 @@
             <div class="filter-actions" *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())">
               <button type="button" (click)="clearFilters()" class="clear-filters-btn">
                 <i class="uil uil-times-circle"></i>
-                Clear All Filters
+                {{ 'search.clearFilters' | t }}
               </button>
             </div>
           </div>
@@ -164,14 +164,14 @@
                   type="text"
                   [(ngModel)]="searchQuery"
                   (ngModelChange)="onSearchInput()"
-                  placeholder="Search by business name, category, or location..."
+                  placeholder="{{ 'search.searchPlaceholder' | t }}"
                   class="search-input"
                   (keyup.enter)="onSearch()"
                   (blur)="hideAutocomplete()"
                   autocomplete="off"
                 />
                 <button (click)="onSearch()" class="search-button">
-                  Search
+                  {{ 'search.search' | t }}
                 </button>
               </div>
               <!-- Autocomplete dropdown -->
@@ -195,7 +195,7 @@
                 <svg class="filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                 </svg>
-                <span>Filters</span>
+                <span>{{ 'search.filters' | t }}</span>
                 <span *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim())" class="filter-badge">{{ (selectedStars ? 1 : 0) + (selectedGrade ? 1 : 0) + (selectedCategory ? 1 : 0) + (verifiedOnly ? 1 : 0) + ((locationFilter && locationFilter.trim()) ? 1 : 0) }}</span>
               </button>
             </div>
@@ -205,7 +205,7 @@
       <!-- Loading State -->
       <div *ngIf="isLoading" class="loading-state">
         <div class="loading-spinner"></div>
-        <p>Searching businesses...</p>
+        <p>{{ 'search.searchingBusinesses' | t }}</p>
       </div>
 
       <!-- Error State -->
@@ -234,7 +234,7 @@
             title="List View"
           >
             <i class="uil uil-list-ul"></i>
-            <span>List</span>
+            <span>{{ 'search.list' | t }}</span>
           </button>
           <button 
             type="button"
@@ -244,7 +244,7 @@
             title="Map View"
           >
             <i class="uil uil-map"></i>
-            <span>Map</span>
+            <span>{{ 'search.map' | t }}</span>
           </button>
         </div>
       </div>
@@ -609,7 +609,7 @@
         <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <h3>No businesses found</h3>
+        <h3>{{ 'search.noBusinessesFound' | t }}</h3>
         <p *ngIf="selectedStars || selectedGrade || selectedCategory || verifiedOnly || (locationFilter && locationFilter.trim()) || searchQuery">
           Try adjusting your filters or search for a different term.
         </p>

@@ -14,7 +14,7 @@
           <!-- Simple Header -->
           <div class="mb-3 sm:mb-4 flex-shrink-0">
             <div class="text-center">
-              <h3 class="text-xl font-bold mb-1" style="color: #2C5270;">Get Started Today</h3>
+              <h3 class="text-xl font-bold mb-1" style="color: #2C5270;">{{ 'auth.register.getStarted' | t }}</h3>
               <div class="w-16 h-1 mx-auto mt-2 rounded-full" style="background: linear-gradient(90deg, #2C5270 0%, rgba(44, 82, 112, 0.5) 100%);"></div>
             </div>
           </div>
@@ -26,7 +26,7 @@
                 <div class="grid grid-cols-2 gap-3">
                   <!-- First Name -->
                   <div>
-                    <label for="firstName" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <label for="firstName" class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.firstName' | t }}</label>
                     <input
                       formControlName="firstName"
                       type="text"
@@ -42,7 +42,7 @@
 
                   <!-- Last Name -->
                   <div>
-                    <label for="lastName" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <label for="lastName" class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.lastName' | t }}</label>
       <input 
                       formControlName="lastName"
         type="text" 
@@ -59,7 +59,7 @@
 
                 <!-- Email -->
                 <div>
-                  <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                  <label for="email" class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.email' | t }}</label>
       <input 
                     formControlName="email"
         type="email" 
@@ -75,7 +75,7 @@
 
                 <!-- Phone -->
                 <div>
-                  <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.phone' | t }}</label>
                   <input
                     formControlName="phone"
                     type="tel"
@@ -91,7 +91,7 @@
 
                 <!-- Role Selection -->
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">I am a...</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.role' | t }}</label>
                   <div class="grid grid-cols-2 gap-3">
                     <label class="relative cursor-pointer">
                       <input 
@@ -111,7 +111,7 @@
                              [class.text-gray-500]="signupForm.get('role')?.value !== 'user'"></i>
                           <span class="text-sm font-medium" 
                                 [class.text-blue-700]="signupForm.get('role')?.value === 'user'"
-                                [class.text-gray-700]="signupForm.get('role')?.value !== 'user'">Customer</span>
+                                [class.text-gray-700]="signupForm.get('role')?.value !== 'user'">{{ 'auth.register.customer' | t }}</span>
                         </div>
                       </div>
                     </label>
@@ -134,7 +134,7 @@
                              [class.text-gray-500]="signupForm.get('role')?.value !== 'business'"></i>
                           <span class="text-sm font-medium" 
                                 [class.text-blue-700]="signupForm.get('role')?.value === 'business'"
-                                [class.text-gray-700]="signupForm.get('role')?.value !== 'business'">Business Owner</span>
+                                [class.text-gray-700]="signupForm.get('role')?.value !== 'business'">{{ 'auth.register.businessOwner' | t }}</span>
                         </div>
                       </div>
                     </label>
@@ -149,7 +149,7 @@
 
                 <!-- Password -->
                 <div>
-                  <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <label for="password" class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.password' | t }}</label>
                   <!-- Password Requirements Checklist (live) -->
                   <div class="mb-2 p-2 bg-gray-50 border border-gray-200 rounded-lg">
                     <p class="text-xs text-gray-600 font-medium mb-1">Password must contain:</p>
@@ -220,7 +220,7 @@
 
                 <!-- Confirm Password -->
                 <div class="relative">
-                  <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                  <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">{{ 'auth.register.confirmPassword' | t }}</label>
                   <input 
                     formControlName="confirmPassword"
                     [type]="showConfirmPassword() ? 'text' : 'password'" 
@@ -253,8 +253,7 @@
                     id="acceptTerms"
                     class="mt-1 rounded border-gray-300 focus:ring-gray-400">
                   <label for="acceptTerms" class="text-xs text-gray-600">
-                    I agree to the <a href="/terms" class="text-gray-700 underline hover:text-gray-900">Terms of Service</a> 
-                    and <a href="/privacy" class="text-gray-700 underline hover:text-gray-900">Privacy Policy</a>
+                    {{ 'auth.register.terms' | t }}
                   </label>
                 </div>
                 
@@ -272,7 +271,7 @@
                 <div class="w-full border-t border-gray-300"></div>
               </div>
               <div class="relative flex justify-center text-xs">
-                <span class="px-2 bg-white text-gray-500">Or continue with Google</span>
+                <span class="px-2 bg-white text-gray-500">{{ 'auth.register.googleDivider' | t }}</span>
               </div>
             </div>
             
@@ -300,7 +299,7 @@
                 class="animate-spin rounded-full h-4 w-4 border-b-2 mr-2"
                 style="border-color: #2C5270;"></div>
               
-              <span class="text-xs">{{ isGoogleLoading() ? 'Signing in...' : 'Continue with Google' }}</span>
+              <span class="text-xs">{{ isGoogleLoading() ? ('auth.login.signingIn' | t) : ('auth.register.continueWithGoogle' | t) }}</span>
             </button>
           </div>
 
@@ -308,9 +307,9 @@
           <div class="mt-3 sm:mt-4 flex items-center justify-between flex-shrink-0">
             <!-- Login Link -->
             <div class="text-sm text-gray-600">
-              Already have an account? 
+              {{ 'auth.register.alreadyAccount' | t }}
               <a routerLink="/auth/login" class="text-gray-700 font-medium hover:text-gray-900 underline">
-                Sign in here
+                {{ 'auth.register.signInHere' | t }}
               </a>
             </div>
 
@@ -325,12 +324,12 @@
               <!-- Loading State -->
               <div *ngIf="isLoading()" class="flex items-center">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating Account...
+                {{ 'auth.register.creatingAccount' | t }}
               </div>
               
               <!-- Default State -->
               <div *ngIf="!isLoading()" class="flex items-center">
-                Create Account
+                {{ 'auth.register.createAccount' | t }}
                 <i class="fas fa-check ml-2"></i>
               </div>
             </button>
