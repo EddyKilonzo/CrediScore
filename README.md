@@ -6,10 +6,62 @@
 
 ## Full stack at a glance
 
+### Visual overview (SVG logos)
+
+Logos are shown for quick recognition; they remain the property of their respective projects.
+
+<!-- Logo CDNs: Devicon, Simple Icons (jsDelivr), official/Wikimedia where noted -->
+
+<p>
+  <strong>Frontend</strong><br>
+  <a href="https://angular.dev/" title="Angular"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/angular/angular-original.svg" alt="Angular" width="40" height="40"></a>&nbsp;
+  <a href="https://www.typescriptlang.org/" title="TypeScript"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg" alt="TypeScript" width="40" height="40"></a>&nbsp;
+  <a href="https://tailwindcss.com/" title="Tailwind CSS"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg" alt="Tailwind CSS" width="40" height="40"></a>&nbsp;
+  <a href="https://developer.mozilla.org/en-US/docs/Web/SVG" title="SVG"><img src="https://www.w3.org/Icons/SVG/svg-logo-v.svg" alt="SVG" width="40" height="40"></a>&nbsp;
+  <a href="https://leafletjs.com/" title="Leaflet"><img src="https://raw.githubusercontent.com/Leaflet/Leaflet/main/src/images/logo.svg" alt="Leaflet" width="40" height="40"></a>&nbsp;
+  <a href="https://iconscout.com/unicons" title="Unicons"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/iconscout.svg" alt="IconScout Unicons" width="40" height="40"></a>
+</p>
+<p>
+  <strong>API &amp; runtime</strong><br>
+  <a href="https://nestjs.com/" title="NestJS"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nestjs/nestjs-original.svg" alt="NestJS" width="40" height="40"></a>&nbsp;
+  <a href="https://nodejs.org/" title="Node.js"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg" alt="Node.js" width="40" height="40"></a>&nbsp;
+  <a href="https://swagger.io/tools/swagger-ui/" title="OpenAPI / Swagger"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/swagger/swagger-original.svg" alt="Swagger" width="40" height="40"></a>
+</p>
+<p>
+  <strong>Data &amp; jobs</strong><br>
+  <a href="https://www.prisma.io/" title="Prisma"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/prisma/prisma-original.svg" alt="Prisma" width="40" height="40"></a>&nbsp;
+  <a href="https://www.postgresql.org/" title="PostgreSQL"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg" alt="PostgreSQL" width="40" height="40"></a>&nbsp;
+  <a href="https://neon.tech/" title="Neon"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/neon.svg" alt="Neon" width="40" height="40"></a>&nbsp;
+  <a href="https://redis.io/" title="Redis"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/redis/redis-original.svg" alt="Redis" width="40" height="40"></a>
+</p>
+<p>
+  <strong>Auth &amp; media</strong><br>
+  <a href="https://developers.google.com/identity" title="Google OAuth"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/google/google-original.svg" alt="Google" width="40" height="40"></a>&nbsp;
+  <a href="https://jwt.io/" title="JWT"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/jsonwebtokens.svg" alt="JWT" width="40" height="40"></a>&nbsp;
+  <a href="https://www.passportjs.org/" title="Passport"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/passport/passport-original.svg" alt="Passport" width="40" height="40"></a>&nbsp;
+  <a href="https://cloudinary.com/" title="Cloudinary"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/cloudinary.svg" alt="Cloudinary" width="40" height="40"></a>&nbsp;
+  <a href="https://nodemailer.com/" title="Nodemailer / email"><img src="https://cdn.jsdelivr.net/npm/@mdi/svg@7.4.47/svg/email-outline.svg" alt="Email" width="40" height="40"></a>
+</p>
+<p>
+  <strong>AI / OCR, payments, fraud service</strong><br>
+  <a href="https://cloud.google.com/vision" title="Google Cloud Vision"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/googlecloud/googlecloud-original.svg" alt="Google Cloud" width="40" height="40"></a>&nbsp;
+  <a href="https://tesseract.projectnaptha.com/" title="Tesseract OCR"><img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Tesseract_OCR_logo.svg" alt="Tesseract" width="40" height="40"></a>&nbsp;
+  <a href="https://www.anthropic.com/" title="Anthropic (optional)"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/anthropic.svg" alt="Anthropic" width="40" height="40"></a>&nbsp;
+  <a href="https://www.safaricom.co.ke/" title="M-Pesa (Safaricom)"><img src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Safaricom_logo.svg" alt="M-Pesa / Safaricom" width="40" height="40"></a>&nbsp;
+  <a href="https://fastapi.tiangolo.com/" title="FastAPI"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/fastapi/fastapi-original.svg" alt="FastAPI" width="40" height="40"></a>&nbsp;
+  <a href="https://www.python.org/" title="Python"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" alt="Python" width="40" height="40"></a>&nbsp;
+  <a href="https://scikit-learn.org/" title="scikit-learn"><img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Scikit_learn_logo_small.svg" alt="scikit-learn" width="40" height="40"></a>
+</p>
+<p>
+  <strong>Observability &amp; hardening</strong><br>
+  <a href="https://prometheus.io/" title="Prometheus metrics"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/prometheus/prometheus-original.svg" alt="Prometheus" width="40" height="40"></a>&nbsp;
+  <a href="https://helmetjs.github.io/" title="Helmet"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/express/express-original.svg" alt="Express / middleware (Helmet)" width="40" height="40"></a>
+</p>
+
 | Layer | Technology | Role |
 |-------|------------|------|
 | **Web app** | [Angular](https://angular.dev/) 20, TypeScript 5.9 | SPA with SSR/hydration (`@angular/ssr`), routing, forms, HTTP client |
-| **UI** | [Tailwind CSS](https://tailwindcss.com/) 3, [@iconscout/unicons](https://iconscout.com/unicons), [Leaflet](https://leafletjs.com/) | Styling, icons, maps (business discovery / locations) |
+| **UI** | [Tailwind CSS](https://tailwindcss.com/) 3, [SVG](https://developer.mozilla.org/en-US/docs/Web/SVG), [@iconscout/unicons](https://iconscout.com/unicons), [Leaflet](https://leafletjs.com/) | Styling, scalable vector graphics (inline templates and assets), icons, maps (business discovery / locations) |
 | **API** | [NestJS](https://nestjs.com/) 11, Node.js | REST API under global prefix `/api`; OpenAPI/Swagger at `/api` |
 | **ORM / DB access** | [Prisma](https://www.prisma.io/) 5, `@prisma/adapter-neon` | Schema, migrations, type-safe queries to PostgreSQL |
 | **Database** | [PostgreSQL](https://www.postgresql.org/) (e.g. [Neon](https://neon.tech/) serverless) | Primary datastore (`DATABASE_URL`, `DIRECT_URL`) |
