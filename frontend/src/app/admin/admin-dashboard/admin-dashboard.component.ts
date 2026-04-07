@@ -570,17 +570,7 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   getActivityBarData(): ActivityBarDatum[] {
-    const activities = this.recentActivities();
-    const counts: Record<AdminActivityType, number> = {
-      user_registered: 0,
-      business_verified: 0,
-      fraud_report: 0,
-    };
-
-    for (const activity of activities) {
-      counts[activity.type] += 1;
-    }
-
+    const counts = this.getActivityCounts();
     const max = Math.max(1, ...Object.values(counts));
     return (Object.keys(counts) as AdminActivityType[]).map((key) => ({
       key,
@@ -591,16 +581,7 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   getActivityRingData(): ActivityRingDatum[] {
-    const activities = this.recentActivities();
-    const counts: Record<AdminActivityType, number> = {
-      user_registered: 0,
-      business_verified: 0,
-      fraud_report: 0,
-    };
-
-    for (const activity of activities) {
-      counts[activity.type] += 1;
-    }
+    const counts = this.getActivityCounts();
 
     const ringMeta: { key: AdminActivityType; label: string; color: string; radius: number }[] = [
       { key: 'user_registered', label: 'User Registered', color: '#2C5270', radius: 64 },
@@ -627,7 +608,29 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   getTotalRecentActivityCount(): number {
-    return this.recentActivities().length;
+    const counts = this.getActivityCounts();
+    return counts.user_registered + counts.business_verified + counts.fraud_report;
+  }
+
+  private getActivityCounts(): Record<AdminActivityType, number> {
+    const stats = this.getStats();
+    if (stats) {
+      return {
+        user_registered: stats.userStats?.newUsersThisMonth ?? 0,
+        business_verified: stats.businessStats?.verifiedBusinesses ?? 0,
+        fraud_report: stats.fraudReportStats?.reportsThisMonth ?? 0,
+      };
+    }
+
+    const fallback: Record<AdminActivityType, number> = {
+      user_registered: 0,
+      business_verified: 0,
+      fraud_report: 0,
+    };
+    for (const activity of this.recentActivities()) {
+      fallback[activity.type] += 1;
+    }
+    return fallback;
   }
 
   private getActivityTypeLabel(type: AdminActivityType): string {
