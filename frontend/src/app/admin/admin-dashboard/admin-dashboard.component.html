@@ -277,7 +277,31 @@
           <!-- Recent Activity -->
           <div class="dashboard-card">
             <h2 class="section-title">Recent Activity</h2>
-            <div class="space-y-4">
+            <div class="activity-chart-wrap">
+              @for (bar of getActivityBarData(); track bar.key; let i = $index) {
+              <div class="activity-bar-row">
+                <div class="activity-bar-head">
+                  <div class="activity-bar-label">
+                    <i [class]="getRecentActivityIcon(bar.key)"></i>
+                    <span>{{ bar.label }}</span>
+                  </div>
+                  <span class="activity-bar-count">{{ bar.count }}</span>
+                </div>
+                <div class="activity-bar-track">
+                  <div
+                    class="activity-bar-fill"
+                    [class.users]="bar.key === 'user_registered'"
+                    [class.verified]="bar.key === 'business_verified'"
+                    [class.fraud]="bar.key === 'fraud_report'"
+                    [style.width]="bar.width"
+                    [style.animation-delay.ms]="i * 120">
+                  </div>
+                </div>
+              </div>
+              }
+            </div>
+
+            <div class="space-y-4 mt-5">
               @if (recentActivities().length === 0) {
               <div class="activity-item">
                 <div class="flex items-center gap-3 p-3 rounded-lg">

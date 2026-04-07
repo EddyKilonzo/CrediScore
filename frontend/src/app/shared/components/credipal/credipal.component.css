@@ -132,6 +132,24 @@
   gap: 8px;
 }
 
+.credipal-section {
+  border-top: 1px solid #edf2f7;
+}
+
+.credipal-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fbff;
+  border: none;
+  color: #2c5270;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
 .credipal-input {
   display: grid;
   grid-template-columns: 1fr auto;

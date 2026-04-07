@@ -17,6 +17,13 @@ interface AdminRecentActivity {
   timestamp: Date;
 }
 
+interface ActivityBarDatum {
+  key: AdminActivityType;
+  label: string;
+  count: number;
+  width: string;
+}
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
@@ -537,5 +544,32 @@ export class AdminDashboardComponent implements OnInit {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
     return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  }
+
+  getActivityBarData(): ActivityBarDatum[] {
+    const activities = this.recentActivities();
+    const counts: Record<AdminActivityType, number> = {
+      user_registered: 0,
+      business_verified: 0,
+      fraud_report: 0,
+    };
+
+    for (const activity of activities) {
+      counts[activity.type] += 1;
+    }
+
+    const max = Math.max(1, ...Object.values(counts));
+    return (Object.keys(counts) as AdminActivityType[]).map((key) => ({
+      key,
+      label: this.getActivityTypeLabel(key),
+      count: counts[key],
+      width: `${Math.max(8, Math.round((counts[key] / max) * 100))}%`,
+    }));
+  }
+
+  private getActivityTypeLabel(type: AdminActivityType): string {
+    if (type === 'user_registered') return 'User Registered';
+    if (type === 'business_verified') return 'Business Verified';
+    return 'Fraud Reports';
   }
 }

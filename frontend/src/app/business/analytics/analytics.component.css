@@ -258,6 +258,28 @@
   background:
     radial-gradient(circle at top right, rgba(45, 90, 135, 0.06), transparent 36%),
     #ffffff;
+  box-shadow: 0 14px 28px rgba(45, 90, 135, 0.1);
+  border-color: #dbe5ef !important;
+}
+
+.trend-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.trend-card-title {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.trend-legend-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .trend-chart-shell {
@@ -290,12 +312,13 @@
   width: 100%;
   height: 180px;
   display: block;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d5e2ee;
   border-radius: 0.6rem;
-  background: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
   margin-bottom: 0.5rem;
   position: relative;
   z-index: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .trend-axis-line {
@@ -309,8 +332,8 @@
 }
 
 .trend-axis-label {
-  fill: #94a3b8;
-  font-size: 10px;
+  fill: #64748b;
+  font-size: 10.5px;
   font-weight: 600;
   text-anchor: end;
 }
@@ -356,8 +379,8 @@
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
-  font-size: 0.65rem;
-  color: #6b7280;
+  font-size: 0.7rem;
+  color: #475569;
   font-weight: 600;
   animation: chartLabelsFadeIn 0.45s ease-out 0.25s both;
 }
@@ -372,16 +395,16 @@
 
 .trend-values-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 0.6rem;
   animation: chartLabelsFadeIn 0.5s ease-out 0.45s both;
 }
 
 .trend-value-item {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.6rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f9fd 100%);
+  border: 1px solid #d8e4ef;
+  border-radius: 0.65rem;
+  padding: 0.62rem 0.68rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -389,6 +412,25 @@
   transform: translateY(-2px);
   border-color: #d7e2ec;
   box-shadow: 0 8px 18px rgba(45, 90, 135, 0.12);
+}
+
+.trend-value-month {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.2rem;
+}
+
+.trend-value-rating {
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.trend-value-grade {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: #2d5a87;
+  font-weight: 700;
 }
 
 .trend-legend {
@@ -400,9 +442,9 @@
 }
 
 .trend-legend-pill {
-  padding: 0.3rem 0.55rem;
-  border: 1px solid #dbe5ef;
-  background: #f8fbff;
+  padding: 0.34rem 0.62rem;
+  border: 1px solid #d5e3ef;
+  background: linear-gradient(180deg, #f8fbff 0%, #f0f6fb 100%);
   border-radius: 9999px;
 }
 
@@ -421,6 +463,13 @@
 .trend-dot-grade {
   background: #5C8BA5;
   box-shadow: 0 0 0 3px rgba(92, 139, 165, 0.16);
+}
+
+@media (max-width: 900px) {
+  .trend-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Staggered delay for trend points */

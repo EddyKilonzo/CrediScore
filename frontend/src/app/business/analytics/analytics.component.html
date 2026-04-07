@@ -243,12 +243,12 @@
 
       <!-- Grade and Rating Trend -->
       <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8 trend-card">
-        <div class="flex items-center justify-between mb-5">
-          <h2 class="text-lg font-semibold text-gray-900">
+        <div class="trend-card-header">
+          <h2 class="text-lg font-semibold text-gray-900 trend-card-title">
             <i class="uil uil-chart-growth mr-2 text-[#2D5A87]"></i>
             {{ 'analytics.gradeRatingTrend' | t }}
           </h2>
-          <div class="flex items-center gap-2 text-xs">
+          <div class="trend-legend-row">
             <span class="trend-legend trend-legend-pill">
               <i class="trend-dot trend-dot-rating"></i> {{ 'analytics.rating' | t }}
             </span>
@@ -314,9 +314,9 @@
 
           <div class="trend-values-grid">
             <div *ngFor="let point of getTrendPointData()" class="trend-value-item">
-              <div class="text-sm font-semibold text-gray-900">{{ point.month }}</div>
-              <div class="text-xs text-gray-500">{{ 'analytics.rating' | t }}: {{ point.rating | number:'1.1-1' }}/5</div>
-              <div class="text-xs text-[#5C8BA5]">{{ 'analytics.grade' | t }}: {{ point.grade }}</div>
+              <div class="trend-value-month">{{ point.month }}</div>
+              <div class="trend-value-rating">{{ 'analytics.rating' | t }}: {{ point.rating | number:'1.1-1' }}/5</div>
+              <div class="trend-value-grade">{{ 'analytics.grade' | t }}: {{ point.grade }}</div>
             </div>
           </div>
         </div>

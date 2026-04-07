@@ -37,16 +37,28 @@
       </div>
     </div>
 
-    <div class="credipal-prompts">
-      <button type="button" *ngFor="let prompt of prompts" (click)="ask(prompt)">
-        {{ prompt.label }}
+    <div class="credipal-section">
+      <button type="button" class="credipal-section-toggle" (click)="toggleQuickQuestions()">
+        <span>Quick Questions</span>
+        <i class="uil" [ngClass]="showQuickQuestions ? 'uil-angle-up' : 'uil-angle-down'"></i>
       </button>
+      <div class="credipal-prompts" *ngIf="showQuickQuestions">
+        <button type="button" *ngFor="let prompt of prompts" (click)="ask(prompt)">
+          {{ prompt.label }}
+        </button>
+      </div>
     </div>
 
-    <div class="credipal-actions">
-      <button type="button" (click)="goTo('/search')">Open Search</button>
-      <button type="button" (click)="goTo('/dashboard')">Open Dashboard</button>
-      <button type="button" (click)="goTo('/leaderboard')">Open Leaderboard</button>
+    <div class="credipal-section">
+      <button type="button" class="credipal-section-toggle" (click)="toggleQuickActions()">
+        <span>Quick Navigation</span>
+        <i class="uil" [ngClass]="showQuickActions ? 'uil-angle-up' : 'uil-angle-down'"></i>
+      </button>
+      <div class="credipal-actions" *ngIf="showQuickActions">
+        <button type="button" (click)="goTo('/search')">Open Search</button>
+        <button type="button" (click)="goTo('/dashboard')">Open Dashboard</button>
+        <button type="button" (click)="goTo('/leaderboard')">Open Leaderboard</button>
+      </div>
     </div>
 
     <form class="credipal-input" (submit)="$event.preventDefault(); askQuestion()">

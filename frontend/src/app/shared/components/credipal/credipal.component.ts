@@ -25,6 +25,8 @@ export class CrediPalComponent {
   isExpanded = false;
   isTyping = false;
   question = '';
+  showQuickQuestions = false;
+  showQuickActions = false;
 
   messages: CrediPalMessage[] = [
     {
@@ -53,6 +55,14 @@ export class CrediPalComponent {
 
   toggleExpanded(): void {
     this.isExpanded = !this.isExpanded;
+  }
+
+  toggleQuickQuestions(): void {
+    this.showQuickQuestions = !this.showQuickQuestions;
+  }
+
+  toggleQuickActions(): void {
+    this.showQuickActions = !this.showQuickActions;
   }
 
   ask(prompt: CrediPalPrompt): void {

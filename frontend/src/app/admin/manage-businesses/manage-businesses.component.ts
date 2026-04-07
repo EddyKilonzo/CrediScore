@@ -437,6 +437,14 @@ export class ManageBusinessesComponent implements OnInit {
       ? url
       : `${environment.apiUrl}${url.startsWith('/') ? url : `/${url}`}`;
 
+    // Open a placeholder tab while still in the user gesture context,
+    // then populate it after async work to avoid popup blockers.
+    const openedWindow = window.open('', '_blank', 'noopener');
+    if (!openedWindow) {
+      this.toastService.error('Unable to open document. Please allow popups and try again.');
+      return;
+    }
+
     // Internal API links can require bearer auth. Fetch first, then open blob in a new tab.
     if (!hasProtocol || resolvedUrl.includes('/api/')) {
       try {
@@ -451,10 +459,7 @@ export class ManageBusinessesComponent implements OnInit {
 
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
-        const win = window.open(objectUrl, '_blank', 'noopener');
-        if (!win) {
-          this.toastService.error('Popup blocked. Please allow popups and try again.');
-        }
+        openedWindow.location.href = objectUrl;
 
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         return;
@@ -463,9 +468,6 @@ export class ManageBusinessesComponent implements OnInit {
       }
     }
 
-    const opened = window.open(resolvedUrl, '_blank', 'noopener');
-    if (!opened) {
-      this.toastService.error('Unable to open document. Please allow popups and try again.');
-    }
+    openedWindow.location.href = resolvedUrl;
   }
 }
