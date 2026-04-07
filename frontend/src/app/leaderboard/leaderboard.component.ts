@@ -42,6 +42,14 @@ export class LeaderboardComponent implements OnInit {
 
   users: LeaderboardUser[] = [];
   businesses: LeaderboardBusiness[] = [];
+  localReviewers: Array<{
+    id: string;
+    name: string;
+    reputation: number;
+    reviewCount: number;
+    streakDays: number;
+    badges: string[];
+  }> = [];
   isLoading = true;
   error: string | null = null;
   limit = 50;
@@ -56,6 +64,7 @@ export class LeaderboardComponent implements OnInit {
 
   ngOnInit() {
     this.loadLeaderboard();
+    this.loadTopLocalReviewers();
   }
 
   loadLeaderboard() {
@@ -151,9 +160,37 @@ export class LeaderboardComponent implements OnInit {
   }
 
   getRankIcon(rank: number): string {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
+    if (rank === 1) return '1';
+    if (rank === 2) return '2';
+    if (rank === 3) return '3';
     return `#${rank}`;
+  }
+
+  getRankIconClass(rank: number): string {
+    if (rank === 1) return 'uil-medal medal-gold';
+    if (rank === 2) return 'uil-medal medal-silver';
+    if (rank === 3) return 'uil-medal medal-bronze';
+    return 'uil-hashtag';
+  }
+
+  private loadTopLocalReviewers(): void {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        this.http
+          .get<any[]>(
+            `${this.API_URL}/user/top-local-reviewers?lat=${latitude}&lng=${longitude}&radiusKm=20&limit=5`,
+          )
+          .subscribe({
+            next: (rows) => {
+              this.localReviewers = rows || [];
+            },
+            error: () => {},
+          });
+      },
+      () => {},
+      { timeout: 5000 },
+    );
   }
 }

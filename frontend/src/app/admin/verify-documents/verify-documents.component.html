@@ -40,9 +40,21 @@
 
   <!-- Loading State -->
   @if (isLoading()) {
-    <div class="loading-container fade-in-up">
-      <div class="loading-spinner"></div>
-      <p class="loading-text">Loading documents...</p>
+    <div class="verify-docs-skeleton fade-in-up">
+      <div class="vdsk vdsk-title"></div>
+      <div class="vdsk vdsk-subtitle"></div>
+      <div class="vdsk-grid">
+        <div class="vdsk-card" *ngFor="let item of [1,2,3,4]">
+          <div class="vdsk vdsk-line"></div>
+          <div class="vdsk vdsk-line short"></div>
+          <div class="vdsk vdsk-box"></div>
+          <div class="vdsk-row">
+            <div class="vdsk vdsk-pill"></div>
+            <div class="vdsk vdsk-pill"></div>
+            <div class="vdsk vdsk-pill"></div>
+          </div>
+        </div>
+      </div>
     </div>
   }
   

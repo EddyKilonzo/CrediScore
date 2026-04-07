@@ -334,6 +334,33 @@
   font-weight: 500;
 }
 
+.manage-users-skeleton {
+  padding: 1.5rem 1rem 2rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.musk {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: manageUsersShimmer 1.4s infinite linear;
+  border-radius: 10px;
+}
+
+.musk-title { height: 34px; width: 260px; margin-bottom: 12px; }
+.musk-subtitle { height: 16px; width: 380px; margin-bottom: 18px; max-width: 100%; }
+.musk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+.musk-card { background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem; }
+.musk-avatar { width: 56px; height: 56px; border-radius: 50%; margin-bottom: 0.9rem; }
+.musk-line { height: 12px; margin-bottom: 0.6rem; }
+.musk-line.short { width: 70%; }
+.musk-row { display: flex; gap: 0.6rem; margin: 0.6rem 0; }
+.musk-pill { width: 92px; height: 24px; border-radius: 999px; }
+
+@keyframes manageUsersShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .error-content {
   max-width: 400px;
 }

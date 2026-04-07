@@ -65,6 +65,13 @@ export interface ReviewsResponse {
   };
 }
 
+export interface PriceScoreAlert {
+  businessId: string;
+  minTrustScore?: number;
+  maxAverageSpend?: number;
+  isActive?: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -147,6 +154,43 @@ export class ReviewService {
 
   removeBookmark(businessId: string): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.API_URL}/user/bookmarks/${businessId}`);
+  }
+
+  setBookmarkTags(businessId: string, tags: string[]): Observable<{ message: string; tags: string[] }> {
+    return this.http.patch<{ message: string; tags: string[] }>(
+      `${this.API_URL}/user/bookmarks/${businessId}/tags`,
+      { tags },
+    );
+  }
+
+  bulkBookmarkAction(payload: {
+    businessIds: string[];
+    action: 'remove' | 'tag' | 'untag' | 'clear-tags';
+    tag?: string;
+  }): Observable<{ message: string; affected: number }> {
+    return this.http.post<{ message: string; affected: number }>(
+      `${this.API_URL}/user/bookmarks/bulk`,
+      payload,
+    );
+  }
+
+  getPriceScoreAlerts(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.API_URL}/user/alerts/price-score`);
+  }
+
+  upsertPriceScoreAlert(payload: PriceScoreAlert): Observable<any> {
+    return this.http.put<any>(`${this.API_URL}/user/alerts/price-score`, payload);
+  }
+
+  deletePriceScoreAlert(businessId: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.API_URL}/user/alerts/price-score/${businessId}`,
+    );
+  }
+
+  getRecommendations(limit = 10): Observable<any[]> {
+    const params = new HttpParams().set('limit', String(limit));
+    return this.http.get<any[]>(`${this.API_URL}/user/recommendations`, { params });
   }
 
   /** Trust & safety: customer report → admin fraud-reports queue */

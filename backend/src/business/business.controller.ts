@@ -247,6 +247,31 @@ export class BusinessController {
     return this.businessService.deleteResponseTemplate(req.user.id, templateId);
   }
 
+  @Get('owner/disputes')
+  @ApiOperation({ summary: 'Get disputes for businesses owned by current user' })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  async getOwnerDisputes(
+    @Request() req: { user: UserWithoutPassword },
+    @Query('status') status?: 'PENDING' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED',
+  ) {
+    return this.businessService.getOwnerDisputes(req.user.id, status);
+  }
+
+  @Patch('owner/disputes/:id/respond')
+  @ApiOperation({ summary: 'Owner response on disputed review' })
+  @ApiParam({ name: 'id', description: 'Dispute ID' })
+  async respondToDispute(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('id') disputeId: string,
+    @Body() body: { ownerNote: string },
+  ) {
+    return this.businessService.respondToDisputeAsOwner(
+      req.user.id,
+      disputeId,
+      body.ownerNote,
+    );
+  }
+
   @Get(':id/export/analytics')
   @ApiOperation({ summary: 'Export business analytics as CSV' })
   @ApiParam({ name: 'id', description: 'Business ID' })
@@ -683,6 +708,21 @@ export class BusinessController {
   })
   async getTrustScore(@Param('id') businessId: string) {
     return this.businessService.getTrustScore(businessId);
+  }
+
+  @Get(':id/trust-score/history')
+  @ApiOperation({ summary: 'Get business trust score history timeline' })
+  @ApiParam({ name: 'id', description: 'Business ID' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Trust score history retrieved successfully',
+  })
+  async getTrustScoreHistory(
+    @Param('id') businessId: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.businessService.getTrustScoreHistory(businessId, limit);
   }
 
   @Post(':id/trust-score/calculate')

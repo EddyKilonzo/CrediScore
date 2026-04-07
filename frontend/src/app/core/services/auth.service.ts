@@ -44,6 +44,17 @@ export interface AuthResponse {
   accessToken?: string; // Backend returns this field
 }
 
+export interface ProfileCompletionResponse {
+  score: number;
+  completed: number;
+  total: number;
+  missingFields: string[];
+  sections: {
+    user: { score: number; missingFields: string[] };
+    business: { score: number; missingFields: string[] };
+  };
+}
+
 // Backend signup response structure (direct user data)
 export interface SignUpResponse {
   id: string;
@@ -317,6 +328,12 @@ export class AuthService {
     const headers = { 'Authorization': `Bearer ${token}` };
     
     return this.http.get(`${this.API_URL}/user/profile-data`, { headers });
+  }
+
+  getProfileCompletion(): Observable<ProfileCompletionResponse> {
+    const token = this.getToken();
+    const headers = { 'Authorization': `Bearer ${token}` };
+    return this.http.get<ProfileCompletionResponse>(`${this.API_URL}/user/profile-completion`, { headers });
   }
 
   // Review Reply Methods

@@ -747,3 +747,25 @@
   line-height: 1.6;
   max-width: 500px;
 }
+
+.fraud-skeleton { padding: 1rem 0.5rem 1.5rem; }
+.frsk {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: fraudSkeletonShimmer 1.4s linear infinite;
+  border-radius: 10px;
+}
+.frsk-title { height: 30px; width: 280px; margin-bottom: 10px; }
+.frsk-subtitle { height: 14px; width: 420px; margin-bottom: 16px; max-width: 100%; }
+.frsk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+.frsk-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; }
+.frsk-line { height: 12px; margin-bottom: 0.6rem; }
+.frsk-line.short { width: 65%; }
+.frsk-box { height: 70px; margin: 0.7rem 0; }
+.frsk-row { display: flex; gap: 0.6rem; }
+.frsk-pill { width: 100px; height: 24px; border-radius: 999px; }
+
+@keyframes fraudSkeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

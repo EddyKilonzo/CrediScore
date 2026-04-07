@@ -108,6 +108,22 @@ export interface OnboardingStatusResponse {
   progress: OnboardingProgress;
 }
 
+export interface TrustScoreHistoryPoint {
+  id: string;
+  score: number;
+  grade: string;
+  changeDelta: number;
+  eventType: string;
+  reason: string;
+  confidence?: number | null;
+  createdAt: string;
+}
+
+export interface TrustScoreHistoryResponse {
+  businessId: string;
+  points: TrustScoreHistoryPoint[];
+}
+
 export interface BusinessHours {
   day: string;
   open: string;
@@ -151,6 +167,18 @@ export interface ResponseTemplate {
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BusinessComparisonRow {
+  id: string;
+  name: string;
+  category?: string;
+  trustScore: number;
+  complaints: number;
+  responseRate: number;
+  sentiment: number;
+  averageRating: number;
+  reviewCount: number;
 }
 
 @Injectable({
@@ -218,6 +246,15 @@ export class BusinessService {
           throw error;
         })
       );
+  }
+
+  getTrustScoreHistory(
+    businessId: string,
+    limit = 30,
+  ): Observable<TrustScoreHistoryResponse> {
+    return this.http.get<TrustScoreHistoryResponse>(
+      `${this.API_URL}/business/${businessId}/trust-score/history?limit=${limit}`,
+    );
   }
 
   createBusiness(businessData: CreateBusinessRequest): Observable<Business> {
@@ -523,6 +560,13 @@ export class BusinessService {
       );
   }
 
+  submitClaim(businessId: string, message?: string): Observable<{ message: string; claim: any }> {
+    return this.http.post<{ message: string; claim: any }>(
+      `${this.API_URL}/business/${businessId}/claim`,
+      { message: message?.trim() || undefined },
+    );
+  }
+
   // OCR/AI Service Health Check
   checkOCRHealth(): Observable<OCRHealthStatus> {
     return this.http.get<OCRHealthStatus>(`${this.API_URL}/business/health/ocr`)
@@ -583,6 +627,56 @@ export class BusinessService {
     return this.http.delete<{ message: string }>(
       `${this.API_URL}/business/response-templates/${templateId}`,
     );
+  }
+
+  getBusinessComparison(ids: string[]): Observable<{ businesses: BusinessComparisonRow[] }> {
+    const q = encodeURIComponent(ids.join(','));
+    return this.http.get<{ businesses: BusinessComparisonRow[] }>(
+      `${this.API_URL}/user/compare?ids=${q}`,
+    );
+  }
+
+  getLocalInsights(params: {
+    lat: number;
+    lng: number;
+    radiusKm?: number;
+    category?: string;
+    openNow?: boolean;
+    minTrustScore?: number;
+  }): Observable<any> {
+    const qp = new URLSearchParams();
+    qp.set('lat', String(params.lat));
+    qp.set('lng', String(params.lng));
+    if (params.radiusKm != null) qp.set('radiusKm', String(params.radiusKm));
+    if (params.category) qp.set('category', params.category);
+    if (params.openNow != null) qp.set('openNow', String(params.openNow));
+    if (params.minTrustScore != null) qp.set('minTrustScore', String(params.minTrustScore));
+    return this.http.get<any>(`${this.API_URL}/user/local-insights?${qp.toString()}`);
+  }
+
+  getTopLocalReviewers(lat: number, lng: number, radiusKm = 15, limit = 10): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.API_URL}/user/top-local-reviewers?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}&limit=${limit}`,
+    );
+  }
+
+  trackConversionEvent(
+    businessId: string,
+    eventType:
+      | 'VIEW'
+      | 'CLICK_CALL'
+      | 'CLICK_EMAIL'
+      | 'CLICK_WEBSITE'
+      | 'CLICK_DIRECTIONS'
+      | 'REDEEM_OFFER'
+      | 'BOOKING_REQUEST',
+    metadata?: Record<string, unknown>,
+  ): Observable<{ tracked: boolean }> {
+    return this.http.post<{ tracked: boolean }>(`${this.API_URL}/user/conversion-events`, {
+      businessId,
+      eventType,
+      metadata,
+    });
   }
 }
 

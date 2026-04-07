@@ -80,9 +80,22 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="getLoadingState()" class="loading-container">
-    <div class="loading-spinner"></div>
-    <p class="loading-text">Loading users...</p>
+  <div *ngIf="getLoadingState()" class="manage-users-skeleton">
+    <div class="musk musk-title"></div>
+    <div class="musk musk-subtitle"></div>
+    <div class="musk-grid">
+      <div class="musk-card" *ngFor="let item of [1,2,3,4,5,6]">
+        <div class="musk musk-avatar"></div>
+        <div class="musk musk-line"></div>
+        <div class="musk musk-line short"></div>
+        <div class="musk-row">
+          <div class="musk musk-pill"></div>
+          <div class="musk musk-pill"></div>
+        </div>
+        <div class="musk musk-line"></div>
+        <div class="musk musk-line short"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Error State -->

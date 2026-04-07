@@ -507,6 +507,33 @@ html, body {
   font-weight: 500;
 }
 
+.manage-businesses-skeleton {
+  padding: 1.5rem 1rem 2rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.mbsk {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: manageBusinessesShimmer 1.4s infinite linear;
+  border-radius: 10px;
+}
+
+.mbsk-title { height: 34px; width: 280px; margin-bottom: 12px; }
+.mbsk-subtitle { height: 16px; width: 420px; margin-bottom: 18px; max-width: 100%; }
+.mbsk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+.mbsk-card { background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1rem; }
+.mbsk-avatar { width: 56px; height: 56px; border-radius: 50%; margin-bottom: 0.9rem; }
+.mbsk-line { height: 12px; margin-bottom: 0.6rem; }
+.mbsk-line.short { width: 70%; }
+.mbsk-row { display: flex; gap: 0.6rem; margin: 0.6rem 0; }
+.mbsk-pill { width: 92px; height: 24px; border-radius: 999px; }
+
+@keyframes manageBusinessesShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .error-content {
   max-width: 400px;
 }

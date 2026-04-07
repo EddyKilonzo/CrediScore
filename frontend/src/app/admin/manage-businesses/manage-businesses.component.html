@@ -158,9 +158,22 @@
   </div>
 
   <!-- Loading State -->
-  <div *ngIf="getLoadingState()" class="loading-container">
-    <div class="loading-spinner"></div>
-    <p class="loading-text">Loading businesses...</p>
+  <div *ngIf="getLoadingState()" class="manage-businesses-skeleton">
+    <div class="mbsk mbsk-title"></div>
+    <div class="mbsk mbsk-subtitle"></div>
+    <div class="mbsk-grid">
+      <div class="mbsk-card" *ngFor="let item of [1,2,3,4,5,6]">
+        <div class="mbsk mbsk-avatar"></div>
+        <div class="mbsk mbsk-line"></div>
+        <div class="mbsk mbsk-line short"></div>
+        <div class="mbsk-row">
+          <div class="mbsk mbsk-pill"></div>
+          <div class="mbsk mbsk-pill"></div>
+        </div>
+        <div class="mbsk mbsk-line"></div>
+        <div class="mbsk mbsk-line short"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Error State -->

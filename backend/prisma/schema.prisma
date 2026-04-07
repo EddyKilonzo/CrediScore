@@ -53,6 +53,9 @@ model User {
   businessClaims               BusinessClaim[]
   reviewFlags                  ReviewFlag[]
   reviewDisputes               ReviewDispute[]
+  priceScoreAlerts             PriceScoreAlert[]
+  weeklyDigestEnabled          Boolean         @default(true)
+  weeklyDigestUnsubToken       String?         @unique
 }
 
 model Business {
@@ -91,6 +94,7 @@ model Business {
   reviews            Review[]
   trustScore         TrustScore?
   bookmarks          Bookmark[]
+  priceScoreAlerts   PriceScoreAlert[]
   claims             BusinessClaim[]
   responseTemplates  ResponseTemplate[]
 }
@@ -186,8 +190,25 @@ model Bookmark {
   userId     String
   businessId String
   createdAt  DateTime @default(now())
+  tags       String[] @default([])
   user       User     @relation(fields: [userId], references: [id])
   business   Business @relation(fields: [businessId], references: [id])
+
+  @@unique([userId, businessId])
+}
+
+model PriceScoreAlert {
+  id                 String   @id @default(uuid())
+  userId             String
+  businessId         String
+  minTrustScore      Int?
+  maxAverageSpend    Float?
+  isActive           Boolean  @default(true)
+  lastTriggeredAt    DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id])
+  business           Business @relation(fields: [businessId], references: [id])
 
   @@unique([userId, businessId])
 }
@@ -249,6 +270,25 @@ model TrustScore {
   factors    Json?
   updatedAt  DateTime @updatedAt
   business   Business @relation(fields: [businessId], references: [id])
+  history    TrustScoreHistory[]
+}
+
+model TrustScoreHistory {
+  id           String     @id @default(uuid())
+  trustScoreId String
+  businessId   String
+  score        Int
+  grade        String
+  changeDelta  Int
+  eventType    String
+  reason       String
+  confidence   Int?
+  factors      Json?
+  createdAt    DateTime   @default(now())
+  trustScore   TrustScore @relation(fields: [trustScoreId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt(sort: Desc)])
+  @@index([trustScoreId, createdAt(sort: Desc)])
 }
 
 model FraudReport {
@@ -261,6 +301,15 @@ model FraudReport {
   evidenceSummary  String?
   /// JSON array of URL strings (e.g. image links, public posts)
   evidenceLinks    Json?
+  /// Deterministic key used to collapse duplicate reports in a short time window.
+  dedupeKey        String?
+  /// Structured evidence metadata (counts, host breakdown, hashes, telemetry).
+  evidenceMetadata Json?
+  /// Case-management fields (phase 1 lite).
+  assigneeId       String?
+  slaDueAt         DateTime?
+  auditLog         Json?
+  lastActionAt     DateTime?
   adminNotes       String?
   status           ReportStatus @default(PENDING)
   createdAt        DateTime     @default(now())
@@ -352,6 +401,9 @@ enum NotificationType {
   CLAIM_REJECTED
   REVIEW_FLAGGED
   DISPUTE_UPDATE
+  ALERT_TRIGGERED
+  WEEKLY_DIGEST
+  RECOMMENDATION
 }
 
 enum ClaimStatus {

@@ -37,7 +37,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/dto/user-role.enum';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsNumber } from 'class-validator';
 
 // DTOs for admin operations
 export class UpdateUserRoleDto {
@@ -51,6 +51,18 @@ export class UpdateFraudReportStatusDto {
   @IsOptional()
   @IsString()
   adminNotes?: string;
+
+  @IsOptional()
+  @IsString()
+  assigneeId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  slaHours?: number;
+
+  @IsOptional()
+  @IsString()
+  actionSummary?: string;
 }
 
 export class UnflagUserDto {
@@ -469,6 +481,9 @@ export class AdminController {
       reportId,
       updateStatusDto.status,
       updateStatusDto.adminNotes,
+      updateStatusDto.assigneeId,
+      updateStatusDto.slaHours,
+      updateStatusDto.actionSummary,
     );
   }
 
@@ -922,6 +937,42 @@ export class AdminController {
     @Body() body: { action: string; adminNote?: string },
   ) {
     return this.adminService.resolveDispute(disputeId, body.action, body.adminNote);
+  }
+
+  @Get('claims')
+  @ApiOperation({ summary: 'Get business claim queue' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Claims retrieved' })
+  async getClaims(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('status') status?: string,
+  ) {
+    return this.adminService.getClaims(page, limit, status);
+  }
+
+  @Patch('claims/:id/resolve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resolve a business claim' })
+  @ApiParam({ name: 'id', description: 'Claim ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['APPROVED', 'REJECTED'] },
+        adminNotes: { type: 'string' },
+      },
+      required: ['action'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Claim resolved' })
+  async resolveClaim(
+    @Param('id') claimId: string,
+    @Body() body: { action: 'APPROVED' | 'REJECTED'; adminNotes?: string },
+  ) {
+    return this.adminService.resolveClaim(claimId, body.action, body.adminNotes);
   }
 
   // ──────────────────────────────────────────────────────────────────────────

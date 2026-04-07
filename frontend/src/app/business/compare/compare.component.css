@@ -1,0 +1,8 @@
+.compare-page { padding: 24px; }
+.subtitle { color: #64748b; margin-bottom: 16px; }
+.state { padding: 14px; border-radius: 10px; background: #f8fafc; }
+.state.error { background: #fef2f2; color: #b91c1c; }
+.table-wrap { overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+thead th { background: #f8fafc; }

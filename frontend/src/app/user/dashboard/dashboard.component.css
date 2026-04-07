@@ -1297,3 +1297,46 @@ header {
 .chart-col:nth-child(6) .chart-val { animation-delay: 0.9s; }
 .chart-col:nth-child(7) .chart-bar { animation-delay: 0.35s; }
 .chart-col:nth-child(7) .chart-val { animation-delay: 0.95s; }
+
+/* Dashboard skeleton */
+.dashboard-skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+.sk {
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: dashboardSkShimmer 1.4s infinite linear;
+}
+
+.sk-title { height: 2.2rem; width: min(420px, 70%); }
+.sk-subtitle { height: 1rem; width: min(640px, 90%); }
+
+.sk-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.sk-card { height: 120px; }
+
+.sk-main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+.sk-left, .sk-right { display: grid; gap: 1rem; }
+.sk-panel { height: 260px; }
+.sk-panel-sm { height: 200px; }
+
+@media (max-width: 1024px) {
+  .sk-main { grid-template-columns: 1fr; }
+}
+
+@keyframes dashboardSkShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

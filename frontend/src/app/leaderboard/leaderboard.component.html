@@ -7,10 +7,26 @@
     <p class="leaderboard-subtitle">Our most trusted community members ranked by reputation</p>
   </div>
 
-  <!-- Loading -->
-  <div *ngIf="isLoading" class="loading-state">
-    <div class="loading-spinner"></div>
-    <p>Loading leaderboard...</p>
+  <!-- Loading Skeleton -->
+  <div *ngIf="isLoading" class="skeleton-state">
+    <div class="skeleton-tabs">
+      <div class="skeleton skeleton-pill"></div>
+      <div class="skeleton skeleton-pill"></div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-line title"></div>
+      <div class="skeleton-grid">
+        <div class="skeleton skeleton-line" *ngFor="let _ of [1,2,3,4]"></div>
+      </div>
+    </div>
+    <div class="skeleton-podium">
+      <div class="skeleton skeleton-podium-col second"></div>
+      <div class="skeleton skeleton-podium-col first"></div>
+      <div class="skeleton skeleton-podium-col third"></div>
+    </div>
+    <div class="skeleton-table">
+      <div class="skeleton skeleton-row" *ngFor="let _ of [1,2,3,4,5]"></div>
+    </div>
   </div>
 
   <!-- Error -->
@@ -42,6 +58,16 @@
       </div>
     </div>
 
+    <div class="tiers-card" *ngIf="localReviewers.length > 0">
+      <h3 class="tiers-title">Top Local Reviewers</h3>
+      <div class="tiers-list">
+        <div class="tier-item" *ngFor="let reviewer of localReviewers">
+          <span class="tier-name">{{ reviewer.name }}</span>
+          <span class="tier-range">{{ reviewer.reputation }} pts · {{ reviewer.streakDays }}d streak</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Top 3 podium -->
     <div class="podium" *ngIf="activeBoard === 'customers' && users.length >= 3">
       <div class="podium-item second" *ngIf="users[1]">
@@ -49,19 +75,19 @@
           <img *ngIf="users[1].avatar" [src]="users[1].avatar" [alt]="users[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />
           <div *ngIf="!users[1].avatar" class="avatar-placeholder">{{ getUserInitials(users[1].name) }}</div>
         </div>
-        <div class="podium-rank">🥈</div>
+        <div class="podium-rank"><i class="uil uil-medal medal-silver"></i></div>
         <div class="podium-name">{{ users[1].name }}</div>
         <div class="podium-rep">{{ users[1].reputation }} pts</div>
         <div class="podium-level">{{ users[1].reputationLevel }}</div>
         <div class="podium-bar second-bar"></div>
       </div>
       <div class="podium-item first" *ngIf="users[0]">
-        <div class="podium-crown">👑</div>
+        <div class="podium-crown"><i class="uil uil-crown"></i></div>
         <div class="podium-avatar">
           <img *ngIf="users[0].avatar" [src]="users[0].avatar" [alt]="users[0].name" class="avatar-img" (error)="$event.target.style.display='none'" />
           <div *ngIf="!users[0].avatar" class="avatar-placeholder gold">{{ getUserInitials(users[0].name) }}</div>
         </div>
-        <div class="podium-rank">🥇</div>
+        <div class="podium-rank"><i class="uil uil-medal medal-gold"></i></div>
         <div class="podium-name">{{ users[0].name }}</div>
         <div class="podium-rep">{{ users[0].reputation }} pts</div>
         <div class="podium-level">{{ users[0].reputationLevel }}</div>
@@ -72,7 +98,7 @@
           <img *ngIf="users[2].avatar" [src]="users[2].avatar" [alt]="users[2].name" class="avatar-img" (error)="$event.target.style.display='none'" />
           <div *ngIf="!users[2].avatar" class="avatar-placeholder">{{ getUserInitials(users[2].name) }}</div>
         </div>
-        <div class="podium-rank">🥉</div>
+        <div class="podium-rank"><i class="uil uil-medal medal-bronze"></i></div>
         <div class="podium-name">{{ users[2].name }}</div>
         <div class="podium-rep">{{ users[2].reputation }} pts</div>
         <div class="podium-level">{{ users[2].reputationLevel }}</div>
@@ -86,19 +112,19 @@
           <img *ngIf="businesses[1].logo" [src]="businesses[1].logo" [alt]="businesses[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />
           <div *ngIf="!businesses[1].logo" class="avatar-placeholder">{{ getUserInitials(businesses[1].name) }}</div>
         </div>
-        <div class="podium-rank">🥈</div>
+        <div class="podium-rank"><i class="uil uil-medal medal-silver"></i></div>
         <div class="podium-name">{{ businesses[1].name }}</div>
         <div class="podium-rep">{{ businesses[1].leadScore }} pts</div>
         <div class="podium-level">{{ businesses[1].leadTier }}</div>
         <div class="podium-bar second-bar"></div>
       </div>
       <div class="podium-item first" *ngIf="businesses[0]">
-        <div class="podium-crown">👑</div>
+        <div class="podium-crown"><i class="uil uil-crown"></i></div>
         <div class="podium-avatar">
           <img *ngIf="businesses[0].logo" [src]="businesses[0].logo" [alt]="businesses[0].name" class="avatar-img" (error)="$event.target.style.display='none'" />
           <div *ngIf="!businesses[0].logo" class="avatar-placeholder gold">{{ getUserInitials(businesses[0].name) }}</div>
         </div>
-        <div class="podium-rank">🥇</div>
+        <div class="podium-rank"><i class="uil uil-medal medal-gold"></i></div>
         <div class="podium-name">{{ businesses[0].name }}</div>
         <div class="podium-rep">{{ businesses[0].leadScore }} pts</div>
         <div class="podium-level">{{ businesses[0].leadTier }}</div>
@@ -109,7 +135,7 @@
           <img *ngIf="businesses[2].logo" [src]="businesses[2].logo" [alt]="businesses[2].name" class="avatar-img" (error)="$event.target.style.display='none'" />
           <div *ngIf="!businesses[2].logo" class="avatar-placeholder">{{ getUserInitials(businesses[2].name) }}</div>
         </div>
-        <div class="podium-rank">🥉</div>
+        <div class="podium-rank"><i class="uil uil-medal medal-bronze"></i></div>
         <div class="podium-name">{{ businesses[2].name }}</div>
         <div class="podium-rep">{{ businesses[2].leadScore }} pts</div>
         <div class="podium-level">{{ businesses[2].leadTier }}</div>
@@ -128,7 +154,10 @@
       <div *ngFor="let user of getCustomerListRows()" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(user.rank) + '20'" [style.color]="getRankBadgeColor(user.rank)">
-            {{ user.rank <= 3 ? getRankIcon(user.rank) : '#' + user.rank }}
+            <ng-container *ngIf="user.rank <= 3; else userTextRank">
+              <i class="uil" [ngClass]="getRankIconClass(user.rank)"></i>
+            </ng-container>
+            <ng-template #userTextRank>#{{ user.rank }}</ng-template>
           </span>
         </span>
         <span class="col-user">
@@ -158,7 +187,10 @@
       <div *ngFor="let business of getBusinessListRows()" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(business.rank) + '20'" [style.color]="getRankBadgeColor(business.rank)">
-            {{ business.rank <= 3 ? getRankIcon(business.rank) : '#' + business.rank }}
+            <ng-container *ngIf="business.rank <= 3; else businessTextRank">
+              <i class="uil" [ngClass]="getRankIconClass(business.rank)"></i>
+            </ng-container>
+            <ng-template #businessTextRank>#{{ business.rank }}</ng-template>
           </span>
         </span>
         <span class="col-user">

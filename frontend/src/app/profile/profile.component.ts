@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { AuthService, User } from '../core/services/auth.service';
+import { AuthService, ProfileCompletionResponse, User } from '../core/services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
 import { CloudinaryService } from '../core/services/cloudinary.service';
 import { ImageService } from '../shared/services/image.service';
@@ -79,6 +79,7 @@ interface RoleBasedData {
 export class ProfileComponent implements OnInit {
   // Real data from backend
   profileData: RoleBasedData | null = null;
+  profileCompletion = signal<ProfileCompletionResponse | null>(null);
 
   profileForm: FormGroup;
   activeTab = signal('overview');
@@ -195,12 +196,24 @@ export class ProfileComponent implements OnInit {
     this.authService.getRoleBasedProfileData().subscribe({
       next: (data) => {
         this.profileData = data;
+        this.loadProfileCompletion();
         this.isLoading.set(false);
       },
       error: (error) => {
         console.error('Error loading profile data:', error);
         this.isLoading.set(false);
         this.toastService.error('Failed to load profile data');
+      }
+    });
+  }
+
+  private loadProfileCompletion(): void {
+    this.authService.getProfileCompletion().subscribe({
+      next: (data) => {
+        this.profileCompletion.set(data);
+      },
+      error: (error) => {
+        console.error('Error loading profile completion:', error);
       }
     });
   }

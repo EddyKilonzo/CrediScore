@@ -271,13 +271,22 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         try {
             const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
             if (!response.ok) throw new Error('Download failed');
-            const blob = await response.blob();
+            const rawCsv = await response.text();
+            const generatedAt = new Date().toISOString();
+            const brandedCsv = [
+                'CrediScore Business Analytics Export',
+                `Business,${this.currentBusiness.name}`,
+                `Generated At,${generatedAt}`,
+                '',
+                rawCsv,
+            ].join('\n');
+            const blob = new Blob([brandedCsv], { type: 'text/csv;charset=utf-8;' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `analytics-${this.currentBusiness.name}-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.download = `crediscore-analytics-${this.currentBusiness.name}-${new Date().toISOString().slice(0, 10)}.csv`;
             a.click();
             URL.revokeObjectURL(a.href);
-            this.toastService.success('CSV downloaded successfully');
+            this.toastService.success('Branded analytics CSV downloaded successfully.');
         } catch {
             this.toastService.error('Failed to download CSV. Please try again.');
         }
@@ -522,6 +531,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
         win.document.close();
         win.focus();
         setTimeout(() => { win.print(); }, 700);
+        this.toastService.success('Branded analytics PDF is ready to print/download.');
     }
 
     getMaxTrendCount(): number {

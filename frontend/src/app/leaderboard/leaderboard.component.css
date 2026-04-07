@@ -124,6 +124,97 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Skeleton loading */
+.skeleton-state {
+  display: grid;
+  gap: 14px;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e8edf2;
+  border-radius: 10px;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: shimmer 1.3s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.skeleton-pill {
+  width: 170px;
+  height: 36px;
+  border-radius: 999px;
+}
+
+.skeleton-card {
+  border: 1px solid #d7e2ec;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.skeleton-line {
+  height: 14px;
+}
+
+.skeleton-line.title {
+  width: 180px;
+  margin-bottom: 12px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.skeleton-podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.skeleton-podium-col {
+  width: 100px;
+  border-radius: 12px 12px 0 0;
+}
+
+.skeleton-podium-col.first { height: 92px; }
+.skeleton-podium-col.second { height: 68px; }
+.skeleton-podium-col.third { height: 52px; }
+
+.skeleton-table {
+  border: 1px solid #d7e2ec;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton-row {
+  height: 52px;
+  border-radius: 8px;
+}
+
 .retry-btn {
   margin-top: 12px;
   padding: 8px 20px;
@@ -150,7 +241,7 @@
   gap: 6px;
 }
 
-.podium-crown { font-size: 1.5rem; }
+.podium-crown { font-size: 1.5rem; color: #f59e0b; line-height: 1; }
 
 .podium-avatar {
   position: relative;
@@ -175,7 +266,11 @@
 
 .avatar-placeholder.gold { background: #f59e0b; }
 
-.podium-rank { font-size: 1.4rem; }
+.podium-rank { font-size: 1.4rem; line-height: 1; }
+
+.medal-gold { color: #f59e0b; }
+.medal-silver { color: #94a3b8; }
+.medal-bronze { color: #b45309; }
 
 .podium-name {
   font-weight: 600;
@@ -249,6 +344,11 @@
   font-weight: 700;
   font-size: 0.85rem;
   min-width: 40px;
+}
+
+.rank-badge i {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .user-info {

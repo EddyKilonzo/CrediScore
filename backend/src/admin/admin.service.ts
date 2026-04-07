@@ -13,6 +13,7 @@ import { UpdateBusinessStatusDto } from '../business/dto/business.dto';
 import { MailerService } from '../shared/mailer/mailer.service';
 import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection.service';
 import { BusinessService } from '../business/business.service';
+import { NotificationsService } from '../shared/notifications/notifications.service';
 
 export interface AdminUserStats {
   totalUsers: number;
@@ -64,6 +65,7 @@ export class AdminService {
     private readonly mailerService: MailerService,
     private readonly fraudDetectionService: FraudDetectionService,
     private readonly businessService: BusinessService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // User Management
@@ -786,6 +788,9 @@ export class AdminService {
     reportId: string,
     status: string,
     adminNotes?: string,
+    assigneeId?: string,
+    slaHours?: number,
+    actionSummary?: string,
   ): Promise<{ message: string }> {
     try {
       const report = await this.prisma.fraudReport.findUnique({
@@ -799,12 +804,33 @@ export class AdminService {
       const previousStatus = report.status;
 
       await this.prisma.$transaction(async (tx) => {
+        const nextSlaDueAt =
+          typeof slaHours === 'number' && slaHours > 0
+            ? new Date(Date.now() + slaHours * 60 * 60 * 1000)
+            : undefined;
+
+        const currentAudit = Array.isArray(report.auditLog)
+          ? report.auditLog
+          : [];
+        const auditEntry = {
+          at: new Date().toISOString(),
+          fromStatus: previousStatus,
+          toStatus: status,
+          assigneeId: assigneeId || report.assigneeId || null,
+          summary: actionSummary || null,
+          adminNotes: adminNotes || null,
+        };
+
         await tx.fraudReport.update({
           where: { id: reportId },
           data: {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             status: status as any,
             ...(adminNotes !== undefined && { adminNotes }),
+            ...(assigneeId !== undefined && { assigneeId }),
+            ...(nextSlaDueAt !== undefined && { slaDueAt: nextSlaDueAt }),
+            lastActionAt: new Date(),
+            auditLog: [...currentAudit, auditEntry] as any,
           },
         });
 
@@ -834,12 +860,23 @@ export class AdminService {
       });
 
       try {
-        await this.businessService.calculateTrustScore(report.businessId);
+        await this.businessService.calculateTrustScore(report.businessId, {
+          eventType: `FRAUD_REPORT_${status}`,
+          reason: `Fraud report status set to ${status}.`,
+        });
       } catch (e) {
         this.logger.warn(
           `Trust score recalc after fraud status ${status}: ${e}`,
         );
       }
+
+      await this.notificationsService.create(
+        report.reporterId,
+        'DISPUTE_UPDATE',
+        'Fraud report updated',
+        `Your fraud report has been moved to ${status}.`,
+        reportId,
+      );
 
       this.logger.log(`Fraud report status updated: ${reportId} -> ${status}`);
       return { message: 'Fraud report status updated successfully' };
@@ -1285,7 +1322,10 @@ export class AdminService {
       });
 
       // Recalculate trust score — verification status is a scoring factor
-      await this.recalculateBusinessTrustScore(businessId);
+      await this.recalculateBusinessTrustScore(businessId, {
+        eventType: 'BUSINESS_STATUS_REVIEW',
+        reason: `Business status changed to ${status}.`,
+      });
 
       this.logger.log(
         `Business status updated: ${businessId} -> ${updateStatusDto.status} by admin: ${adminUserId}`,
@@ -1417,7 +1457,10 @@ export class AdminService {
       });
 
       // Recalculate trust score now that a document is verified
-      await this.recalculateBusinessTrustScore(document.businessId);
+      await this.recalculateBusinessTrustScore(document.businessId, {
+        eventType: 'DOCS_VERIFIED_MANUAL',
+        reason: 'Admin approved a business document.',
+      });
 
       this.logger.log(
         `Document approved: ${documentId} by admin: ${adminUserId}`,
@@ -1511,9 +1554,12 @@ export class AdminService {
   }
 
   /** Delegates to BusinessService so fraud penalties match the public trust algorithm. */
-  private async recalculateBusinessTrustScore(businessId: string): Promise<void> {
+  private async recalculateBusinessTrustScore(
+    businessId: string,
+    trigger?: { eventType?: string; reason?: string },
+  ): Promise<void> {
     try {
-      await this.businessService.calculateTrustScore(businessId);
+      await this.businessService.calculateTrustScore(businessId, trigger);
     } catch (error) {
       this.logger.error(
         `Error recalculating trust score for business ${businessId}:`,
@@ -1642,7 +1688,10 @@ export class AdminService {
       // Use setTimeout to ensure the review update transaction is committed first
       setTimeout(async () => {
         try {
-          await this.recalculateBusinessTrustScore(review.businessId);
+          await this.recalculateBusinessTrustScore(review.businessId, {
+            eventType: 'REVIEW_APPROVED',
+            reason: 'A pending review was approved by an admin.',
+          });
           this.logger.log(
             `Trust score recalculated successfully for business ${review.businessId} after review approval`,
           );
@@ -2082,6 +2131,92 @@ export class AdminService {
         throw error;
       }
       throw new InternalServerErrorException('Failed to resolve dispute');
+    }
+  }
+
+  async getClaims(page: number = 1, limit: number = 10, status?: string) {
+    try {
+      const skip = (page - 1) * limit;
+      const where: { status?: any } = {};
+      if (status) {
+        where.status = status;
+      }
+
+      const [claims, total] = await Promise.all([
+        this.prisma.businessClaim.findMany({
+          where,
+          skip,
+          take: limit,
+          include: {
+            business: {
+              select: { id: true, name: true, ownerId: true, isVerified: true },
+            },
+            user: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.businessClaim.count({ where }),
+      ]);
+
+      return {
+        claims,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error fetching business claims:', error);
+      throw new InternalServerErrorException('Failed to fetch business claims');
+    }
+  }
+
+  async resolveClaim(
+    claimId: string,
+    action: 'APPROVED' | 'REJECTED',
+    adminNotes?: string,
+  ): Promise<{ message: string }> {
+    try {
+      const claim = await this.prisma.businessClaim.findUnique({
+        where: { id: claimId },
+        include: { business: true, user: true },
+      });
+
+      if (!claim) {
+        throw new NotFoundException('Business claim not found');
+      }
+
+      if (claim.status !== 'PENDING') {
+        throw new BadRequestException('Only pending claims can be reviewed');
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.businessClaim.update({
+          where: { id: claimId },
+          data: { status: action, adminNotes },
+        });
+
+        if (action === 'APPROVED') {
+          await tx.business.update({
+            where: { id: claim.businessId },
+            data: {
+              ownerId: claim.userId,
+              isVerified: true,
+            },
+          });
+        }
+      });
+
+      this.logger.log(`Claim ${claimId} resolved as ${action}`);
+      return { message: `Business claim ${action.toLowerCase()} successfully` };
+    } catch (error) {
+      this.logger.error('Error resolving business claim:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to resolve business claim');
     }
   }
 

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsDateString, IsEnum, Matches, IsBoolean, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsDateString, IsEnum, Matches, IsBoolean, IsArray, IsIn, IsUUID, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProfileDto {
@@ -160,6 +160,16 @@ export class CreateReviewDto {
   @IsString()
   @Matches(/^[A-Z0-9]{10}$/i, { message: 'M-Pesa code must be 10 alphanumeric characters' })
   mpesaCode?: string;
+
+  @ApiProperty({ description: 'Client IP address for abuse detection', required: false })
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
+
+  @ApiProperty({ description: 'Client device fingerprint for abuse detection', required: false })
+  @IsOptional()
+  @IsString()
+  deviceFingerprint?: string;
 }
 
 export class UpdateReviewDto {
@@ -267,4 +277,82 @@ export class UpdateNotificationPrefsDto {
   @IsOptional()
   @IsBoolean()
   marketing?: boolean;
+}
+
+export class TrackConversionEventDto {
+  @ApiProperty({ description: 'Business ID' })
+  @IsUUID()
+  businessId: string;
+
+  @ApiProperty({
+    enum: ['VIEW', 'CLICK_CALL', 'CLICK_EMAIL', 'CLICK_WEBSITE', 'CLICK_DIRECTIONS', 'REDEEM_OFFER', 'BOOKING_REQUEST'],
+  })
+  @IsIn([
+    'VIEW',
+    'CLICK_CALL',
+    'CLICK_EMAIL',
+    'CLICK_WEBSITE',
+    'CLICK_DIRECTIONS',
+    'REDEEM_OFFER',
+    'BOOKING_REQUEST',
+  ])
+  eventType:
+    | 'VIEW'
+    | 'CLICK_CALL'
+    | 'CLICK_EMAIL'
+    | 'CLICK_WEBSITE'
+    | 'CLICK_DIRECTIONS'
+    | 'REDEEM_OFFER'
+    | 'BOOKING_REQUEST';
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  metadata?: Record<string, unknown>;
+}
+
+export class BookmarkBulkActionDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  businessIds: string[];
+
+  @ApiProperty({ enum: ['remove', 'tag', 'untag', 'clear-tags'] })
+  @IsIn(['remove', 'tag', 'untag', 'clear-tags'])
+  action: 'remove' | 'tag' | 'untag' | 'clear-tags';
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  tag?: string;
+}
+
+export class UpsertBookmarkTagsDto {
+  @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  tags: string[];
+}
+
+export class UpsertPriceScoreAlertDto {
+  @ApiProperty()
+  @IsUUID()
+  businessId: string;
+
+  @ApiProperty({ required: false, minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  minTrustScore?: number;
+
+  @ApiProperty({ required: false, minimum: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  maxAverageSpend?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

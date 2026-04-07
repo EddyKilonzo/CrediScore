@@ -23,9 +23,15 @@
     </div>
 
     <!-- Loading State -->
-    <div *ngIf="isLoading" class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <span class="ml-2 text-gray-600">{{ 'dash.business.loading' | t }}</span>
+    <div *ngIf="isLoading" class="business-dash-skeleton">
+      <div class="bdsk bdsk-hero"></div>
+      <div class="bdsk-stats">
+        <div class="bdsk bdsk-card" *ngFor="let _ of [1,2,3]"></div>
+      </div>
+      <div class="bdsk-main">
+        <div class="bdsk bdsk-left"></div>
+        <div class="bdsk bdsk-right"></div>
+      </div>
     </div>
 
     <!-- Dashboard Content -->
@@ -429,9 +435,8 @@
             <h5 class="text-sm font-semibold text-gray-900 mb-3">Reviews</h5>
             
             <!-- Loading State -->
-            <div *ngIf="loadingCustomerReviews" class="text-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p class="text-sm text-gray-600 mt-2">Loading reviews...</p>
+            <div *ngIf="loadingCustomerReviews" class="customer-reviews-skeleton">
+              <div class="bdsk bdsk-review" *ngFor="let _ of [1,2,3]"></div>
             </div>
 
             <!-- Reviews -->

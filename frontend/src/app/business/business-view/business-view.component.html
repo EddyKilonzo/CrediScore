@@ -1,8 +1,13 @@
 <div class="business-view-container">
   <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <div class="loading-spinner"></div>
-    <p>Loading business details...</p>
+  <div *ngIf="loading" class="business-skeleton">
+    <div class="bsk bsk-hero"></div>
+    <div class="bsk bsk-score"></div>
+    <div class="bsk bsk-info"></div>
+    <div class="bsk-grid">
+      <div class="bsk bsk-main"></div>
+      <div class="bsk bsk-side"></div>
+    </div>
   </div>
 
   <!-- Error State -->
@@ -38,6 +43,15 @@
           <button *ngIf="isAuthenticated() && !isBusinessOwner()" (click)="openFraudReportModal()" class="refresh-button-hero report-fraud-btn" title="Report Fraud">
             <i class="uil uil-shield-exclamation"></i>
             <span>Report</span>
+          </button>
+          <button
+            *ngIf="isAuthenticated() && !isBusinessOwner()"
+            (click)="claimBusiness()"
+            class="refresh-button-hero"
+            [disabled]="isSubmittingClaim"
+            title="Claim Business">
+            <i class="uil uil-check-circle"></i>
+            <span>{{ isSubmittingClaim ? 'Submitting...' : 'Claim Business' }}</span>
           </button>
         </div>
         
@@ -118,6 +132,30 @@
           <div class="score-value">{{ getBusinessScore() }}%</div>
           <div class="score-bar">
             <div class="score-bar-fill" [style.width.%]="getBusinessScore()" [style.background]="'linear-gradient(90deg, ' + getGradeColor(getBusinessGrade()) + ', ' + getGradeColor(getBusinessGrade()) + 'CC)'"></div>
+          </div>
+          <div class="trust-explain-panel" *ngIf="getTrustExplanationFactors().length > 0">
+            <h4>Why this score?</h4>
+            <div class="trust-meta-copy">
+              <span>Confidence: {{ getTrustConfidence() }}%</span>
+              <span *ngIf="getTrustEventReason()">{{ getTrustEventReason() }}</span>
+            </div>
+            <p class="trust-trend-copy">{{ getTrustTrendCopy() }}</p>
+            <div class="factor-row" *ngFor="let factor of getTrustExplanationFactors()">
+              <span>{{ factor.label }} ({{ factor.weight }})</span>
+              <strong>{{ factor.contribution > 0 ? '+' : '' }}{{ factor.contribution | number:'1.0-1' }}</strong>
+            </div>
+            <div class="history-chart-wrap" *ngIf="trustScoreHistory.length > 1">
+              <svg viewBox="0 0 360 120" preserveAspectRatio="none" class="history-chart">
+                <polyline [attr.points]="getHistoryPointsForChart()" fill="none" stroke="#3E6A8A" stroke-width="2"></polyline>
+              </svg>
+              <div class="history-events">
+                <div class="history-event" *ngFor="let point of trustScoreHistory.slice(-5)">
+                  <span>{{ formatDate(point.createdAt) }}</span>
+                  <span>{{ point.score }} ({{ point.changeDelta > 0 ? '+' : '' }}{{ point.changeDelta }})</span>
+                  <small>{{ point.reason }}</small>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -205,9 +243,9 @@
             </div>
             <div class="info-item-content">
               <span class="info-item-label">Phone</span>
-              <a [href]="'tel:' + business.phone" class="info-item-value">{{ business.phone }}</a>
+              <a [href]="'tel:' + business.phone" class="info-item-value" (click)="trackConversion('CLICK_CALL')">{{ business.phone }}</a>
               <div class="info-item-actions">
-                <a [href]="'tel:' + business.phone" class="info-action-chip">
+                <a [href]="'tel:' + business.phone" class="info-action-chip" (click)="trackConversion('CLICK_CALL')">
                   <i class="uil uil-phone"></i>
                   Call now
                 </a>
@@ -221,9 +259,9 @@
             </div>
             <div class="info-item-content">
               <span class="info-item-label">Email</span>
-              <a [href]="'mailto:' + business.email" class="info-item-value">{{ business.email }}</a>
+              <a [href]="'mailto:' + business.email" class="info-item-value" (click)="trackConversion('CLICK_EMAIL')">{{ business.email }}</a>
               <div class="info-item-actions">
-                <a [href]="'mailto:' + business.email" class="info-action-chip">
+                <a [href]="'mailto:' + business.email" class="info-action-chip" (click)="trackConversion('CLICK_EMAIL')">
                   <i class="uil uil-envelope-upload"></i>
                   Send email
                 </a>
@@ -237,12 +275,12 @@
             </div>
             <div class="info-item-content">
               <span class="info-item-label">Website</span>
-              <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="info-item-value website-link">
+              <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="info-item-value website-link" (click)="trackConversion('CLICK_WEBSITE')">
                 {{ business.website }}
                 <i class="uil uil-external-link-alt"></i>
               </a>
               <div class="info-item-actions">
-                <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="info-action-chip">
+                <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="info-action-chip" (click)="trackConversion('CLICK_WEBSITE')">
                   <i class="uil uil-external-link-alt"></i>
                   Open website
                 </a>
@@ -258,7 +296,7 @@
               <span class="info-item-label">Location</span>
               <span class="info-item-value">{{ business.location || business.address }}</span>
               <div class="info-item-actions">
-                <a [href]="getOsmDirectionsUrl()" target="_blank" rel="noopener noreferrer" class="info-action-chip">
+                <a [href]="getOsmDirectionsUrl()" target="_blank" rel="noopener noreferrer" class="info-action-chip" (click)="trackConversion('CLICK_DIRECTIONS')">
                   <i class="uil uil-directions"></i>
                   Get directions
                 </a>
@@ -789,7 +827,7 @@
               </div>
               <div class="sidebar-contact-details">
                 <span class="sidebar-contact-label">Phone</span>
-                <a [href]="'tel:' + business.phone" class="sidebar-contact-value">{{ business.phone }}</a>
+                <a [href]="'tel:' + business.phone" class="sidebar-contact-value" (click)="trackConversion('CLICK_CALL')">{{ business.phone }}</a>
               </div>
             </div>
 
@@ -799,7 +837,7 @@
               </div>
               <div class="sidebar-contact-details">
                 <span class="sidebar-contact-label">Email</span>
-                <a [href]="'mailto:' + business.email" class="sidebar-contact-value">{{ business.email }}</a>
+                <a [href]="'mailto:' + business.email" class="sidebar-contact-value" (click)="trackConversion('CLICK_EMAIL')">{{ business.email }}</a>
               </div>
             </div>
 
@@ -809,7 +847,7 @@
               </div>
               <div class="sidebar-contact-details">
                 <span class="sidebar-contact-label">Website</span>
-                <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="sidebar-contact-value website-link">
+                <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="sidebar-contact-value website-link" (click)="trackConversion('CLICK_WEBSITE')">
                   {{ business.website }}
                   <i class="uil uil-external-link-alt"></i>
                 </a>

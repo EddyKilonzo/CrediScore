@@ -998,6 +998,7 @@ export class MyBusinessComponent implements OnInit, OnDestroy {
 
           const fileUrl = URL.createObjectURL(blob);
           window.open(fileUrl, '_blank', 'noopener,noreferrer');
+          this.toastService.show('Document download opened successfully.', 'success');
 
           setTimeout(() => URL.revokeObjectURL(fileUrl), 60_000);
         },

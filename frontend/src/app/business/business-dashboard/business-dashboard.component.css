@@ -73,6 +73,50 @@
   animation: slideInLeft 0.8s ease-out 0.2s both;
 }
 
+/* Business dashboard skeletons */
+.business-dash-skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+.bdsk {
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: businessDashSkShimmer 1.4s infinite linear;
+}
+
+.bdsk-hero { height: 180px; }
+.bdsk-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.bdsk-card { height: 110px; }
+.bdsk-main {
+  display: grid;
+  grid-template-columns: 2.6fr 1fr;
+  gap: 1rem;
+}
+.bdsk-left { height: 520px; }
+.bdsk-right { height: 520px; }
+
+.customer-reviews-skeleton {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.bdsk-review { height: 110px; }
+
+@media (max-width: 1280px) {
+  .bdsk-main { grid-template-columns: 1fr; }
+}
+
+@keyframes businessDashSkShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Reputation Badge */
 .reputation-badge {
   background: linear-gradient(135deg, #E8EEF3, #C5D6E3);

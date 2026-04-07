@@ -8,12 +8,13 @@ import { CloudinaryModule } from '../shared/cloudinary/cloudinary.module';
 import { QueueModule, QueueModuleDisabled } from '../shared/queue/queue.module';
 import { NotificationsModule } from '../shared/notifications/notifications.module';
 import { MpesaModule } from '../shared/mpesa/mpesa.module';
+import { MailerModule } from '../shared/mailer/mailer.module';
 
 const queueModule =
   process.env.DISABLE_QUEUES === 'true' ? QueueModuleDisabled : QueueModule;
 
 @Module({
-  imports: [PrismaModule, AiModule, FraudDetectionModule, CloudinaryModule, queueModule, NotificationsModule, MpesaModule],
+  imports: [PrismaModule, AiModule, FraudDetectionModule, CloudinaryModule, queueModule, NotificationsModule, MpesaModule, MailerModule],
   controllers: [UserController, UserPublicController, BusinessController],
   providers: [UserService],
   exports: [UserService],

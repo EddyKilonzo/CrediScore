@@ -59,6 +59,10 @@ export const routes: Routes = [
     path: 'search',
     loadComponent: () => import('./search/search.component').then(m => m.SearchComponent)
   },
+  {
+    path: 'compare',
+    loadComponent: () => import('./business/compare/compare.component').then(m => m.CompareComponent)
+  },
 
   // Map Route - accessible to all authenticated users
   {

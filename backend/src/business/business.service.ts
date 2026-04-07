@@ -915,7 +915,11 @@ export class BusinessService {
       });
 
       if (shouldAutoVerify) {
-        await this.calculateTrustScore(document.businessId);
+        await this.calculateTrustScore(document.businessId, {
+          eventType: 'DOCS_VERIFIED_AI',
+          reason:
+            'Document passed automated verification and improved trust evidence.',
+        });
         
         // Check if business should be marked as VERIFIED
         // Get all documents for this business
@@ -1324,7 +1328,10 @@ export class BusinessService {
       this.logger.log(
         `Payment method added: ${payment.id} for business: ${businessId}`,
       );
-      await this.calculateTrustScore(businessId);
+      await this.calculateTrustScore(businessId, {
+        eventType: 'PAYMENT_METHOD_ADDED',
+        reason: 'A verified payment channel was added.',
+      });
       return payment;
     } catch (error) {
       this.logger.error('Error adding payment method:', error);
@@ -1398,7 +1405,10 @@ export class BusinessService {
       this.logger.log(
         `Payment method deleted: ${paymentId} by user: ${userId}`,
       );
-      await this.calculateTrustScore(payment.businessId);
+      await this.calculateTrustScore(payment.businessId, {
+        eventType: 'PAYMENT_METHOD_REMOVED',
+        reason: 'A payment channel was removed.',
+      });
       return { message: 'Payment method deleted successfully' };
     } catch (error) {
       this.logger.error('Error deleting payment method:', error);
@@ -1540,8 +1550,55 @@ export class BusinessService {
     }
   }
 
+  private getGradeFromScore(score: number): string {
+    if (score >= 90) return 'A+';
+    if (score >= 80) return 'A';
+    if (score >= 70) return 'B';
+    if (score >= 60) return 'C';
+    if (score >= 50) return 'D';
+    return 'F';
+  }
+
+  private buildTrendExplanation(scores: number[]): {
+    trend: 'up' | 'down' | 'stable';
+    explanation: string;
+  } {
+    if (scores.length < 2) {
+      return {
+        trend: 'stable',
+        explanation:
+          'Trend is still forming. More score events are needed before a clear movement appears.',
+      };
+    }
+    const latest = scores[scores.length - 1];
+    const previous = scores[scores.length - 2];
+    const delta = latest - previous;
+    if (delta >= 3) {
+      return {
+        trend: 'up',
+        explanation:
+          'Trust is improving based on stronger verification and recent positive trust signals.',
+      };
+    }
+    if (delta <= -3) {
+      return {
+        trend: 'down',
+        explanation:
+          'Trust dipped after recent risk signals or weaker verification outcomes.',
+      };
+    }
+    return {
+      trend: 'stable',
+      explanation:
+        'Trust is stable. Recent positive and negative signals are balanced.',
+    };
+  }
+
   // Trust Score Management
-  async calculateTrustScore(businessId: string) {
+  async calculateTrustScore(
+    businessId: string,
+    trigger?: { eventType?: string; reason?: string },
+  ) {
     try {
       const business = await this.prisma.business.findUnique({
         where: { id: businessId },
@@ -1679,29 +1736,133 @@ export class BusinessService {
       // Ensure score is between 0 and 100
       score = Math.max(0, Math.min(100, score));
 
-      // Determine grade
-      let grade: string;
-      if (score >= 90) grade = 'A+';
-      else if (score >= 80) grade = 'A';
-      else if (score >= 70) grade = 'B';
-      else if (score >= 60) grade = 'C';
-      else if (score >= 50) grade = 'D';
-      else grade = 'F';
+      const roundedScore = Math.round(score);
+      const grade = this.getGradeFromScore(roundedScore);
 
-      // Update or create trust score
-      const trustScore = await this.prisma.trustScore.upsert({
-        where: { businessId: businessId },
-        update: {
-          grade,
-          score: Math.round(score),
-          factors,
+      const confidence = Math.max(
+        35,
+        Math.min(
+          98,
+          Math.round(
+            35 +
+              Math.min(business.reviews.length, 40) * 1.1 +
+              Math.min(business.documents.length, 8) * 4 +
+              Math.min(business.payments.length, 6) * 3 -
+              Math.min((factors.fraudReports?.totalPenalty as number) || 0, 30) *
+                0.4,
+          ),
+        ),
+      );
+
+      const previousTrust = await this.prisma.trustScore.findUnique({
+        where: { businessId },
+        select: { score: true },
+      });
+      const previousHistory = await this.prisma.trustScoreHistory.findMany({
+        where: { businessId },
+        orderBy: { createdAt: 'asc' },
+        take: 11,
+        select: { score: true },
+      });
+      const trend = this.buildTrendExplanation([
+        ...previousHistory.map((h) => h.score),
+        roundedScore,
+      ]);
+      const changeDelta = roundedScore - (previousTrust?.score ?? roundedScore);
+
+      const factorBreakdown = [
+        {
+          key: 'verification',
+          label: 'Business verification',
+          weight: 40,
+          contribution: Math.max(
+            0,
+            Math.min(40, Number(factors.verified ?? 0)),
+          ),
         },
-        create: {
-          businessId: businessId,
-          grade,
-          score: Math.round(score),
-          factors,
+        {
+          key: 'reviews',
+          label: 'Review quality & volume',
+          weight: 40,
+          contribution: Math.max(
+            0,
+            Math.min(40, Number(factors.reviews?.totalScore ?? 0)),
+          ),
         },
+        {
+          key: 'documents',
+          label: 'Verified documents',
+          weight: 20,
+          contribution: Math.max(
+            0,
+            Math.min(20, Number(factors.documents?.score ?? 0)),
+          ),
+        },
+        {
+          key: 'payments',
+          label: 'Verified payment channels',
+          weight: 10,
+          contribution: Math.max(
+            0,
+            Math.min(10, Number(factors.payments?.score ?? 0)),
+          ),
+        },
+        {
+          key: 'fraud',
+          label: 'Fraud and risk penalties',
+          weight: -45,
+          contribution: -Math.max(
+            0,
+            Math.min(45, Number(factors.fraudReports?.totalPenalty ?? 0)),
+          ),
+        },
+      ];
+
+      const eventType = trigger?.eventType ?? 'SYSTEM_RECALC';
+      const reason = trigger?.reason ?? 'Trust score recomputed from latest trust signals.';
+      const factorsWithExplanation = {
+        ...factors,
+        explanation: {
+          eventType,
+          reason,
+          confidence,
+          trend,
+          scoreChange: changeDelta,
+          factorBreakdown,
+        },
+      };
+
+      const trustScore = await this.prisma.$transaction(async (tx) => {
+        const updatedTrust = await tx.trustScore.upsert({
+          where: { businessId },
+          update: {
+            grade,
+            score: roundedScore,
+            factors: factorsWithExplanation,
+          },
+          create: {
+            businessId,
+            grade,
+            score: roundedScore,
+            factors: factorsWithExplanation,
+          },
+        });
+
+        await tx.trustScoreHistory.create({
+          data: {
+            trustScoreId: updatedTrust.id,
+            businessId,
+            score: roundedScore,
+            grade,
+            changeDelta,
+            eventType,
+            reason,
+            confidence,
+            factors: factorsWithExplanation,
+          },
+        });
+
+        return updatedTrust;
       });
 
       this.logger.log(
@@ -1725,7 +1886,10 @@ export class BusinessService {
 
       if (!trustScore) {
         // Calculate if doesn't exist
-        return this.calculateTrustScore(businessId);
+        return this.calculateTrustScore(businessId, {
+          eventType: 'INITIAL_CALC',
+          reason: 'Initial trust score generated for this business.',
+        });
       }
 
       return trustScore;
@@ -1733,6 +1897,26 @@ export class BusinessService {
       this.logger.error('Error fetching trust score:', error);
       throw new InternalServerErrorException('Failed to fetch trust score');
     }
+  }
+
+  async getTrustScoreHistory(businessId: string, limit = 30) {
+    const safeLimit = Math.max(5, Math.min(120, Number(limit) || 30));
+    const history = await this.prisma.trustScoreHistory.findMany({
+      where: { businessId },
+      orderBy: { createdAt: 'asc' },
+      take: safeLimit,
+      select: {
+        id: true,
+        score: true,
+        grade: true,
+        changeDelta: true,
+        eventType: true,
+        reason: true,
+        confidence: true,
+        createdAt: true,
+      },
+    });
+    return { businessId, points: history };
   }
 
   // Business Category Management
@@ -2017,7 +2201,10 @@ export class BusinessService {
           },
           _sum: { amount: true },
         }),
-        this.calculateTrustScore(businessId), // Always recalculate for fresh analytics
+        this.calculateTrustScore(businessId, {
+          eventType: 'ANALYTICS_REFRESH',
+          reason: 'Analytics refresh requested current trust factors.',
+        }), // Always recalculate for fresh analytics
       ]);
 
       const totalReviews = reviews.length;
@@ -2437,7 +2624,11 @@ export class BusinessService {
             },
           });
 
-          await this.calculateTrustScore(businessId);
+          await this.calculateTrustScore(businessId, {
+            eventType: 'BUSINESS_VERIFIED',
+            reason:
+              'Business completed onboarding and met trust verification requirements.',
+          });
           this.logger.log(`Business verified automatically: ${businessId}`);
           return verifiedBusiness;
         }
@@ -2606,6 +2797,10 @@ export class BusinessService {
             `Business ${document.businessId} verified after manual document verification`,
           );
         }
+        await this.calculateTrustScore(document.businessId, {
+          eventType: 'DOCS_VERIFIED_MANUAL',
+          reason: 'A document was manually verified by an admin.',
+        });
       }
 
       this.logger.log(
@@ -3042,6 +3237,58 @@ export class BusinessService {
       }
       throw new InternalServerErrorException('Failed to review claim');
     }
+  }
+
+  async getOwnerDisputes(
+    userId: string,
+    status?: 'PENDING' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED',
+  ) {
+    const where: any = {
+      review: { business: { ownerId: userId } },
+    };
+    if (status) where.status = status;
+
+    return this.prisma.reviewDispute.findMany({
+      where,
+      include: {
+        review: {
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+            business: { select: { id: true, name: true } },
+          },
+        },
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async respondToDisputeAsOwner(
+    userId: string,
+    disputeId: string,
+    ownerNote: string,
+  ): Promise<{ message: string }> {
+    const dispute = await this.prisma.reviewDispute.findUnique({
+      where: { id: disputeId },
+      include: {
+        review: { include: { business: true } },
+      },
+    });
+    if (!dispute) throw new NotFoundException('Dispute not found');
+    if (dispute.review.business.ownerId !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.prisma.reviewDispute.update({
+      where: { id: disputeId },
+      data: {
+        status: 'UNDER_REVIEW',
+        adminNote: ownerNote?.trim() || dispute.adminNote,
+      },
+    });
+    return { message: 'Owner response submitted. Admin review is in progress.' };
   }
 
   // ─── Response Templates ──────────────────────────────────────────────────

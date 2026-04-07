@@ -211,3 +211,54 @@
 }
 
 .remove-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bulk-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bulk-actions input {
+  padding: 6px 8px;
+}
+
+.card-select {
+  padding: 8px 12px 0;
+}
+
+.tag-row,
+.alert-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag-row input,
+.alert-row input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.tag-row button,
+.alert-row button {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.recommendations {
+  margin-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+}
+
+.recommendation-item {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}

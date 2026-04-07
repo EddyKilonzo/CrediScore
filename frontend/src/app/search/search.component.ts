@@ -78,6 +78,13 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   /** Same field owners set in My Business onboarding (`location` + lat/lng) — filter by area/address text */
   locationFilter = '';
+  distanceKm: number | null = null;
+  openNowOnly = false;
+  minTrustScore = 0;
+  userLat: number | null = null;
+  userLng: number | null = null;
+  localInsights: any = null;
+  selectedCompareIds = new Set<string>();
   /** Markers for embedded map — always matches sidebar filters + search */
   mapLocationsForChild: BusinessLocation[] = [];
 
@@ -113,6 +120,7 @@ export class SearchComponent implements OnInit, OnDestroy {
         this.showAutocomplete = false;
       }
     });
+    this.tryGetUserLocation();
   }
 
   ngOnDestroy() {
@@ -394,6 +402,27 @@ export class SearchComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(b => b.isVerified);
     }
 
+    if (this.openNowOnly) {
+      filtered = filtered.filter((b) => this.isBusinessOpen(b));
+    }
+
+    if (this.minTrustScore > 0) {
+      filtered = filtered.filter((b) => this.getBusinessScore(b) >= this.minTrustScore);
+    }
+
+    if (
+      this.distanceKm != null &&
+      this.distanceKm > 0 &&
+      this.userLat != null &&
+      this.userLng != null
+    ) {
+      filtered = filtered.filter((b) => {
+        if (b.latitude == null || b.longitude == null) return false;
+        const d = this.getDistanceKm(this.userLat as number, this.userLng as number, Number(b.latitude), Number(b.longitude));
+        return d <= (this.distanceKm as number);
+      });
+    }
+
     // Sort
     filtered.sort((a, b) => {
       switch (this.sortBy) {
@@ -412,6 +441,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     this.filteredBusinesses = filtered;
     this.mapLocationsForChild = this.buildMapLocations(filtered);
+    this.loadLocalInsights();
   }
 
   private buildMapLocations(list: BusinessWithRating[]): BusinessLocation[] {
@@ -529,6 +559,9 @@ export class SearchComponent implements OnInit, OnDestroy {
     this.selectedCategory = null;
     this.verifiedOnly = false;
     this.locationFilter = '';
+    this.distanceKm = null;
+    this.openNowOnly = false;
+    this.minTrustScore = 0;
     this.sortBy = 'trust';
     this.applySearchAndFilters();
     this.router.navigate(['/search'], {
@@ -539,6 +572,65 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   onLocationFilterInput() {
     this.applySearchAndFilters();
+  }
+
+  private tryGetUserLocation(): void {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.userLat = position.coords.latitude;
+        this.userLng = position.coords.longitude;
+        this.loadLocalInsights();
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 5000 },
+    );
+  }
+
+  private getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  private loadLocalInsights(): void {
+    if (this.userLat == null || this.userLng == null) return;
+    this.businessService
+      .getLocalInsights({
+        lat: this.userLat,
+        lng: this.userLng,
+        radiusKm: this.distanceKm || 10,
+        category: this.selectedCategory || undefined,
+        openNow: this.openNowOnly,
+        minTrustScore: this.minTrustScore,
+      })
+      .subscribe({
+        next: (res) => {
+          this.localInsights = res;
+        },
+        error: () => {},
+      });
+  }
+
+  toggleCompareSelection(id: string): void {
+    if (this.selectedCompareIds.has(id)) {
+      this.selectedCompareIds.delete(id);
+      return;
+    }
+    if (this.selectedCompareIds.size >= 4) return;
+    this.selectedCompareIds.add(id);
+  }
+
+  goToCompare(): void {
+    if (this.selectedCompareIds.size < 2) return;
+    this.router.navigate(['/compare'], {
+      queryParams: { ids: Array.from(this.selectedCompareIds).join(',') },
+    });
   }
 
   toggleFilters() {

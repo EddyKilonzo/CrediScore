@@ -251,6 +251,38 @@
         </div>
         }
 
+        <div class="content-panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Profile Completion</h3>
+          </div>
+          @if (profileCompletion(); as completion) {
+            <div class="trust-score-content">
+              <div class="score-item">
+                <span class="score-value">{{ completion.score }}%</span>
+                <span class="score-label">Overall completion</span>
+              </div>
+              <div class="score-item">
+                <span class="score-value">{{ completion.sections.user.score }}%</span>
+                <span class="score-label">Personal profile</span>
+              </div>
+              <div class="score-item">
+                <span class="score-value">{{ completion.sections.business.score }}%</span>
+                <span class="score-label">Business profile</span>
+              </div>
+            </div>
+            @if (completion.missingFields.length > 0) {
+              <div style="margin-top: 0.75rem; color: #64748b;">
+                Missing:
+                {{ completion.missingFields.join(', ') }}
+              </div>
+            }
+          } @else {
+            <div class="empty-state">
+              <p>Loading completion score...</p>
+            </div>
+          }
+        </div>
+
         <!-- Activity Panel -->
         <div class="content-panel">
           <div class="panel-header">

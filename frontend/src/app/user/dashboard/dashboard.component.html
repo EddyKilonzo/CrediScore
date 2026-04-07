@@ -1,6 +1,24 @@
 <!-- Main Dashboard Content -->
 <main class="dashboard-main">
   <div class="dashboard-container">
+    <div *ngIf="isLoading" class="dashboard-skeleton">
+      <div class="sk sk-title"></div>
+      <div class="sk sk-subtitle"></div>
+      <div class="sk-stats">
+        <div class="sk sk-card" *ngFor="let _ of [1,2,3,4]"></div>
+      </div>
+      <div class="sk-main">
+        <div class="sk-left">
+          <div class="sk sk-panel"></div>
+          <div class="sk sk-panel"></div>
+        </div>
+        <div class="sk-right">
+          <div class="sk sk-panel-sm"></div>
+          <div class="sk sk-panel-sm"></div>
+        </div>
+      </div>
+    </div>
+    <ng-container *ngIf="!isLoading">
     
     <!-- Welcome Section -->
     <div class="welcome-section">
@@ -330,5 +348,6 @@
 
       </aside>
     </div>
+    </ng-container>
   </div>
 </main>

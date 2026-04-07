@@ -54,6 +54,11 @@ export interface ReviewPatternAnalysis {
   riskScore: number;
 }
 
+type ReviewTelemetry = {
+  ipAddress?: string;
+  deviceFingerprint?: string;
+};
+
 @Injectable()
 export class FraudDetectionService {
   private readonly logger = new Logger(FraudDetectionService.name);
@@ -325,6 +330,14 @@ export class FraudDetectionService {
         orderBy: {
           createdAt: 'desc',
         },
+        select: {
+          businessId: true,
+          createdAt: true,
+          isVerified: true,
+          rating: true,
+          comment: true,
+          validationResult: true,
+        },
       });
 
       const totalReviews = reviews.length;
@@ -462,6 +475,32 @@ export class FraudDetectionService {
           `${repeatedBusinessBursts} rapid repeat reviews on the same business`,
         );
         riskScore += repeatedBusinessBursts * 12;
+      }
+
+      // Pattern 12: Reused device fingerprints across rapid submissions
+      const deviceClusterCount = this.detectTelemetryClusters(
+        reviews.map((review) =>
+          this.extractReviewTelemetry(review.validationResult),
+        ),
+        'deviceFingerprint',
+      );
+      if (deviceClusterCount > 0) {
+        suspiciousPatterns.push(
+          `${deviceClusterCount} suspicious device-fingerprint clusters`,
+        );
+        riskScore += Math.min(deviceClusterCount * 10, 25);
+      }
+
+      // Pattern 13: Reused IP address across rapid submissions
+      const ipClusterCount = this.detectTelemetryClusters(
+        reviews.map((review) =>
+          this.extractReviewTelemetry(review.validationResult),
+        ),
+        'ipAddress',
+      );
+      if (ipClusterCount > 0) {
+        suspiciousPatterns.push(`${ipClusterCount} suspicious IP clusters`);
+        riskScore += Math.min(ipClusterCount * 8, 20);
       }
 
       return {
@@ -752,6 +791,40 @@ export class FraudDetectionService {
     const union = new Set([...set1, ...set2]);
 
     return intersection.size / union.size;
+  }
+
+  private extractReviewTelemetry(validationResult: unknown): ReviewTelemetry {
+    if (!validationResult || typeof validationResult !== 'object') {
+      return {};
+    }
+    const source = validationResult as Record<string, unknown>;
+    return {
+      ipAddress:
+        typeof source.ipAddress === 'string' ? source.ipAddress : undefined,
+      deviceFingerprint:
+        typeof source.deviceFingerprint === 'string'
+          ? source.deviceFingerprint
+          : undefined,
+    };
+  }
+
+  private detectTelemetryClusters(
+    telemetry: ReviewTelemetry[],
+    key: keyof ReviewTelemetry,
+  ): number {
+    const counts = new Map<string, number>();
+    for (const item of telemetry) {
+      const value = item[key];
+      if (!value) continue;
+      counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    let clusters = 0;
+    for (const [, count] of counts) {
+      if (count >= 3) {
+        clusters++;
+      }
+    }
+    return clusters;
   }
 
   /**

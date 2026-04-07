@@ -1,0 +1,46 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`BusinessService trust transparency matches explanation payload snapshot 1`] = `
+{
+  "confidence": 42,
+  "eventType": "REVIEW_APPROVED",
+  "factorBreakdown": [
+    {
+      "contribution": 40,
+      "key": "verification",
+      "label": "Business verification",
+      "weight": 40,
+    },
+    {
+      "contribution": 30.734693877551024,
+      "key": "reviews",
+      "label": "Review quality & volume",
+      "weight": 40,
+    },
+    {
+      "contribution": 10,
+      "key": "documents",
+      "label": "Verified documents",
+      "weight": 20,
+    },
+    {
+      "contribution": 2,
+      "key": "payments",
+      "label": "Verified payment channels",
+      "weight": 10,
+    },
+    {
+      "contribution": -15,
+      "key": "fraud",
+      "label": "Fraud and risk penalties",
+      "weight": -45,
+    },
+  ],
+  "reason": "A pending review was approved.",
+  "scoreChange": -2,
+  "trend": {
+    "explanation": "Trust is stable. Recent positive and negative signals are balanced.",
+    "trend": "stable",
+  },
+}
+`;

@@ -212,6 +212,19 @@ export interface VerifyDocumentDto {
   verificationNotes?: string;
 }
 
+export interface BusinessClaim {
+  id: string;
+  businessId: string;
+  userId: string;
+  message?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  adminNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  business: { id: string; name: string; ownerId?: string; isVerified: boolean };
+  user: { id: string; name: string; email: string };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -472,6 +485,40 @@ export class AdminService {
       .pipe(
         catchError(error => this.handleError(error))
       );
+  }
+
+  getClaims(
+    page: number = 1,
+    limit: number = 10,
+    status?: string,
+  ): Observable<{ data: BusinessClaim[]; pagination: PaginatedResponse<BusinessClaim>['pagination'] }> {
+    this.clearError();
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+    if (status) params = params.set('status', status);
+
+    return this.http.get<{ claims: BusinessClaim[]; pagination: PaginatedResponse<BusinessClaim>['pagination'] }>(
+      `${this.API_URL}/admin/claims`,
+      { params },
+    ).pipe(
+      map((res) => ({ data: res.claims ?? [], pagination: res.pagination })),
+      catchError((error) => this.handleError(error)),
+    );
+  }
+
+  resolveClaim(
+    claimId: string,
+    action: 'APPROVED' | 'REJECTED',
+    adminNotes?: string,
+  ): Observable<{ message: string }> {
+    this.clearError();
+    return this.http.patch<{ message: string }>(
+      `${this.API_URL}/admin/claims/${claimId}/resolve`,
+      { action, adminNotes },
+    ).pipe(
+      catchError((error) => this.handleError(error)),
+    );
   }
 
   getBusinessOnboardingDetails(businessId: string): Observable<any> {

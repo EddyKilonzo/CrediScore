@@ -65,6 +65,32 @@ interface TrustScore {
   grade: string;
   score: number;
   businessId: string;
+  factors?: {
+    explanation?: {
+      confidence?: number;
+      trend?: { trend: 'up' | 'down' | 'stable'; explanation: string };
+      factorBreakdown?: Array<{
+        key: string;
+        label: string;
+        weight: number;
+        contribution: number;
+      }>;
+      scoreChange?: number;
+      reason?: string;
+      eventType?: string;
+    };
+  };
+}
+
+interface TrustScoreHistoryPoint {
+  id: string;
+  score: number;
+  grade: string;
+  changeDelta: number;
+  eventType: string;
+  reason: string;
+  confidence?: number | null;
+  createdAt: string;
 }
 
 interface BusinessWithDetails extends Omit<Business, 'trustScore'> {
@@ -129,6 +155,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   totalReviews: number = 0;
   isAuthenticated = this.authService.isAuthenticated;
   activeScoreTab: 'trust' | 'customer' | 'lead' = 'trust';
+  trustScoreHistory: TrustScoreHistoryPoint[] = [];
 
   // Review Form
   reviewForm: FormGroup = new FormGroup({});
@@ -155,6 +182,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly fraudEvidenceMaxBytes = 10 * 1024 * 1024;
   fraudEvidenceDropActive = false;
   isSubmittingFraudReport = false;
+  isSubmittingClaim = false;
 
   ngOnInit() {
     // Initialize review form
@@ -223,6 +251,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
         this.totalReviews = 0;
 
         this.business = this.normalizeBusinessFromApi(business as BusinessWithDetails);
+        this.loadTrustScoreHistory(this.business.id);
         const raw = business as any;
         const countFromApi =
           raw._count?.reviews != null ? Number(raw._count.reviews) : NaN;
@@ -267,6 +296,8 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
             this.totalReviews = this.reviews.length;
           }
         }
+
+        this.trackConversion('VIEW');
 
         this.loading = false;
         this.resolveMapAndInit();
@@ -318,6 +349,69 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       return trustScore;
     }
     return 0;
+  }
+
+  loadTrustScoreHistory(businessId: string): void {
+    this.businessService.getTrustScoreHistory(businessId, 30).subscribe({
+      next: (response) => {
+        this.trustScoreHistory = response?.points ?? [];
+      },
+      error: () => {
+        this.trustScoreHistory = [];
+      },
+    });
+  }
+
+  getTrustExplanationFactors(): Array<{
+    key: string;
+    label: string;
+    weight: number;
+    contribution: number;
+  }> {
+    const trust = this.business?.trustScore;
+    if (typeof trust !== 'object' || !trust?.factors?.explanation?.factorBreakdown) {
+      return [];
+    }
+    return trust.factors.explanation.factorBreakdown;
+  }
+
+  getTrustConfidence(): number {
+    const trust = this.business?.trustScore;
+    if (typeof trust !== 'object') return 0;
+    return Number(trust?.factors?.explanation?.confidence ?? 0);
+  }
+
+  getTrustTrendCopy(): string {
+    const trust = this.business?.trustScore;
+    if (typeof trust !== 'object') return 'Trend data unavailable.';
+    return (
+      trust?.factors?.explanation?.trend?.explanation ??
+      'Trend data unavailable.'
+    );
+  }
+
+  getTrustEventReason(): string {
+    const trust = this.business?.trustScore;
+    if (typeof trust !== 'object') return '';
+    return String(trust?.factors?.explanation?.reason ?? '');
+  }
+
+  getHistoryPointsForChart(): string {
+    if (this.trustScoreHistory.length === 0) return '';
+    const width = 360;
+    const height = 120;
+    const pad = 12;
+    const max = 100;
+    const min = 0;
+    const count = this.trustScoreHistory.length;
+    return this.trustScoreHistory
+      .map((point, idx) => {
+        const x = pad + (idx * (width - pad * 2)) / Math.max(count - 1, 1);
+        const y =
+          pad + ((max - point.score) * (height - pad * 2)) / (max - min || 1);
+        return `${x},${y}`;
+      })
+      .join(' ');
   }
 
   getGradeFromScore(score: number): string {
@@ -658,6 +752,24 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => { this.isTogglingBookmark = false; }
     });
+  }
+
+  trackConversion(
+    eventType:
+      | 'VIEW'
+      | 'CLICK_CALL'
+      | 'CLICK_EMAIL'
+      | 'CLICK_WEBSITE'
+      | 'CLICK_DIRECTIONS'
+      | 'REDEEM_OFFER'
+      | 'BOOKING_REQUEST',
+  ): void {
+    if (!this.business?.id || !this.isAuthenticated()) return;
+    this.businessService
+      .trackConversionEvent(this.business.id, eventType, {
+        source: 'business-view',
+      })
+      .subscribe({ next: () => {}, error: () => {} });
   }
 
   openFlagModal(review: Review, event: Event) {
@@ -1464,6 +1576,23 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     this.fraudEvidenceFiles = [];
     this.fraudEvidenceDropActive = false;
     this.showFraudReportModal = true;
+  }
+
+  claimBusiness(): void {
+    if (!this.business?.id || this.isSubmittingClaim) return;
+    this.isSubmittingClaim = true;
+    this.businessService
+      .submitClaim(this.business.id, 'Claim submitted from public business page.')
+      .subscribe({
+        next: () => {
+          this.toastService.success('Claim submitted. Our team will review and contact you.');
+          this.isSubmittingClaim = false;
+        },
+        error: (err) => {
+          this.toastService.error(err?.error?.message || 'Failed to submit claim');
+          this.isSubmittingClaim = false;
+        },
+      });
   }
 
   private parseFraudEvidenceLinks(): string[] {

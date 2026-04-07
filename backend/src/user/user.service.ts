@@ -1,12 +1,13 @@
 import {
   Injectable,
+  OnModuleInit,
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
   Logger,
   ForbiddenException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { NotificationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserWithoutPassword } from '../auth/interfaces/user.interface';
 import { UserRole } from '../auth/dto/user-role.enum';
@@ -15,6 +16,9 @@ import { FraudDetectionService } from '../shared/fraud-detection/fraud-detection
 import { QueueService } from '../shared/queue/queue.service';
 import { NotificationsService } from '../shared/notifications/notifications.service';
 import { MpesaService } from '../shared/mpesa/mpesa.service';
+import { MailerService } from '../shared/mailer/mailer.service';
+import { ConfigService } from '@nestjs/config';
+import { createHash } from 'crypto';
 import {
   CreateBusinessDto,
   UpdateBusinessDto,
@@ -24,6 +28,7 @@ import {
   UpdateProfileDto,
   CreateReviewReplyDto,
   UpdateReviewReplyDto,
+  TrackConversionEventDto,
 } from './dto/user.dto';
 
 // Type definitions for ReviewReply
@@ -52,8 +57,26 @@ interface ReviewReply {
 }
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   private readonly logger = new Logger(UserService.name);
+
+  private deriveVerificationBadge(review: {
+    isVerified: boolean;
+    receiptUrl?: string | null;
+    mpesaVerified?: boolean;
+    credibility?: number | null;
+  }): { tier: 'UNVERIFIED' | 'BASIC' | 'RECEIPT_VERIFIED' | 'TRANSACTION_VERIFIED'; label: string } {
+    if (!review.isVerified) return { tier: 'UNVERIFIED', label: 'Unverified' };
+    if (review.mpesaVerified) {
+      return { tier: 'TRANSACTION_VERIFIED', label: 'Transaction Verified' };
+    }
+    if (review.receiptUrl) {
+      return { tier: 'RECEIPT_VERIFIED', label: 'Receipt Verified' };
+    }
+    return (review.credibility || 0) >= 70
+      ? { tier: 'BASIC', label: 'Trusted Review' }
+      : { tier: 'UNVERIFIED', label: 'Unverified' };
+  }
 
   // Helper method to access reviewReply with proper typing
   private get reviewReply() {
@@ -67,7 +90,23 @@ export class UserService {
     private readonly queueService: QueueService,
     private readonly notificationsService: NotificationsService,
     private readonly mpesaService: MpesaService,
+    private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
   ) {}
+
+  onModuleInit() {
+    const weeklyDigestEnabled =
+      this.configService.get<string>('ENABLE_WEEKLY_DIGEST_JOB', 'true') ===
+      'true';
+    if (!weeklyDigestEnabled) return;
+
+    // Run every 24h and dispatch on configured digest day.
+    setInterval(() => {
+      this.dispatchWeeklyDigests().catch((error) =>
+        this.logger.error('Weekly digest job failed:', error),
+      );
+    }, 24 * 60 * 60 * 1000);
+  }
 
   // Profile Management
   async updateProfile(
@@ -1345,7 +1384,12 @@ export class UserService {
           isVerified: false,
           credibility: 0,
           isActive: true,
-          validationResult: { status: 'pending', queuedAt: new Date().toISOString() } as any,
+          validationResult: {
+            status: 'pending',
+            queuedAt: new Date().toISOString(),
+            ipAddress: reviewData.ipAddress || null,
+            deviceFingerprint: reviewData.deviceFingerprint || null,
+          } as any,
         },
         include: {
           user: { select: { id: true, name: true, reputation: true } },
@@ -1496,7 +1540,10 @@ export class UserService {
       ]);
 
       return {
-        reviews,
+        reviews: reviews.map((review) => ({
+          ...review,
+          verificationBadge: this.deriveVerificationBadge(review),
+        })),
         pagination: {
           page,
           limit,
@@ -1704,7 +1751,18 @@ export class UserService {
         throw new NotFoundException('Business not found');
       }
 
-      // Check if user already reported this business
+      const normalizedReason = reportData.reason.trim().toLowerCase();
+      const normalizedDescription = (reportData.description || '')
+        .trim()
+        .toLowerCase()
+        .slice(0, 280);
+      const dedupeKey = createHash('sha256')
+        .update(
+          `${userId}:${reportData.businessId}:${normalizedReason}:${normalizedDescription}`,
+        )
+        .digest('hex');
+
+      // Hard dedupe for exact prior report by same user/business.
       const existingReport = await this.prisma.fraudReport.findFirst({
         where: {
           reporterId: userId,
@@ -1718,10 +1776,37 @@ export class UserService {
         );
       }
 
+      // Soft dedupe across active queue to avoid duplicates on retries.
+      const duplicateInQueue = await this.prisma.fraudReport.findFirst({
+        where: {
+          businessId: reportData.businessId,
+          dedupeKey,
+          status: { in: ['PENDING', 'UNDER_REVIEW'] },
+        },
+      });
+      if (duplicateInQueue) {
+        throw new BadRequestException(
+          'A similar report is already under review for this business',
+        );
+      }
+
       const evidenceLinksJson: Prisma.InputJsonValue | undefined =
         reportData.evidenceLinks && reportData.evidenceLinks.length > 0
           ? (reportData.evidenceLinks as Prisma.InputJsonValue)
           : undefined;
+
+      const evidenceMetadata = {
+        evidenceCount: reportData.evidenceLinks?.length || 0,
+        evidenceHosts: (reportData.evidenceLinks || []).map((url) => {
+          try {
+            return new URL(url).hostname;
+          } catch {
+            return 'invalid-url';
+          }
+        }),
+        summaryLength: reportData.evidenceSummary?.length || 0,
+        submittedAt: new Date().toISOString(),
+      };
 
       const report = await this.prisma.fraudReport.create({
         data: {
@@ -1730,6 +1815,18 @@ export class UserService {
           description: reportData.description,
           evidenceSummary: reportData.evidenceSummary,
           evidenceLinks: evidenceLinksJson,
+          evidenceMetadata: evidenceMetadata as any,
+          dedupeKey,
+          auditLog: [
+            {
+              at: new Date().toISOString(),
+              action: 'REPORT_CREATED',
+              byUserId: userId,
+              summary: 'Fraud report created',
+            },
+          ] as any,
+          slaDueAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+          lastActionAt: new Date(),
           reporterId: userId,
         },
         include: {
@@ -1957,7 +2054,13 @@ export class UserService {
         throw new NotFoundException('Business is not active');
       }
 
-      return business;
+      return {
+        ...business,
+        reviews: business.reviews.map((review) => ({
+          ...review,
+          verificationBadge: this.deriveVerificationBadge(review),
+        })),
+      };
     } catch (error) {
       this.logger.error('Error fetching business details:', error);
       if (error instanceof NotFoundException) {
@@ -2337,6 +2440,142 @@ export class UserService {
     }
   }
 
+  async setBookmarkTags(
+    userId: string,
+    businessId: string,
+    tags: string[],
+  ): Promise<{ message: string; tags: string[] }> {
+    const normalized = Array.from(
+      new Set(
+        (tags || [])
+          .map((tag) => tag.trim().toLowerCase())
+          .filter((tag) => tag.length > 0),
+      ),
+    ).slice(0, 20);
+
+    const bookmark = await this.prisma.bookmark.findUnique({
+      where: { userId_businessId: { userId, businessId } },
+    });
+    if (!bookmark) {
+      throw new NotFoundException('Bookmark not found');
+    }
+
+    await this.prisma.bookmark.update({
+      where: { userId_businessId: { userId, businessId } },
+      data: { tags: normalized } as any,
+    });
+
+    return { message: 'Bookmark tags updated', tags: normalized };
+  }
+
+  async bulkBookmarkAction(
+    userId: string,
+    body: {
+      businessIds: string[];
+      action: 'remove' | 'tag' | 'untag' | 'clear-tags';
+      tag?: string;
+    },
+  ) {
+    const businessIds = Array.from(new Set(body.businessIds || []));
+    if (!businessIds.length) {
+      throw new BadRequestException('No businesses selected');
+    }
+
+    if (body.action === 'remove') {
+      const result = await this.prisma.bookmark.deleteMany({
+        where: { userId, businessId: { in: businessIds } },
+      });
+      return { message: 'Bookmarks removed', affected: result.count };
+    }
+
+    const bookmarks = await (this.prisma.bookmark as any).findMany({
+      where: { userId, businessId: { in: businessIds } },
+      select: { userId: true, businessId: true, tags: true },
+    });
+
+    const tag = body.tag?.trim().toLowerCase();
+    if ((body.action === 'tag' || body.action === 'untag') && !tag) {
+      throw new BadRequestException('Tag is required for this action');
+    }
+
+    await this.prisma.$transaction(
+      bookmarks.map((bookmark) => {
+        const current = bookmark.tags || [];
+        let nextTags = current;
+        if (body.action === 'clear-tags') nextTags = [];
+        if (body.action === 'tag' && tag) {
+          nextTags = Array.from(new Set([...current, tag]));
+        }
+        if (body.action === 'untag' && tag) {
+          nextTags = current.filter((t) => t !== tag);
+        }
+        return this.prisma.bookmark.update({
+          where: {
+            userId_businessId: {
+              userId: bookmark.userId,
+              businessId: bookmark.businessId,
+            },
+          },
+          data: { tags: nextTags } as any,
+        });
+      }),
+    );
+
+    return { message: 'Bulk bookmark action applied', affected: bookmarks.length };
+  }
+
+  async getPriceScoreAlerts(userId: string) {
+    return (this.prisma as any).priceScoreAlert.findMany({
+      where: { userId },
+      include: {
+        business: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            category: true,
+            trustScore: { select: { score: true, grade: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async upsertPriceScoreAlert(
+    userId: string,
+    body: {
+      businessId: string;
+      minTrustScore?: number;
+      maxAverageSpend?: number;
+      isActive?: boolean;
+    },
+  ) {
+    await this.getBusinessDetails(body.businessId);
+    return (this.prisma as any).priceScoreAlert.upsert({
+      where: { userId_businessId: { userId, businessId: body.businessId } },
+      update: {
+        minTrustScore: body.minTrustScore,
+        maxAverageSpend: body.maxAverageSpend,
+        isActive: body.isActive ?? true,
+      },
+      create: {
+        userId,
+        businessId: body.businessId,
+        minTrustScore: body.minTrustScore,
+        maxAverageSpend: body.maxAverageSpend,
+        isActive: body.isActive ?? true,
+      },
+    });
+  }
+
+  async deletePriceScoreAlert(userId: string, businessId: string) {
+    await (this.prisma as any).priceScoreAlert.delete({
+      where: { userId_businessId: { userId, businessId } },
+    });
+    return { message: 'Alert removed' };
+  }
+
   // ─── Review Flagging ────────────────────────────────────────────────────
 
   async flagReview(
@@ -2555,6 +2794,255 @@ export class UserService {
     }));
   }
 
+  private haversineKm(
+    a: { lat: number; lng: number },
+    b: { lat: number; lng: number },
+  ): number {
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  private isOpenNow(hoursRaw: unknown): boolean {
+    if (!hoursRaw) return true;
+    const now = new Date();
+    const days = [
+      'sunday',
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+    ];
+    const today = days[now.getDay()];
+    const parse = (t: string) => {
+      const [h, m] = String(t).split(':').map(Number);
+      return h * 60 + m;
+    };
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const entries: Array<{ day: string; open: string; close: string; isClosed: boolean }> = [];
+    if (Array.isArray(hoursRaw)) {
+      for (const h of hoursRaw as any[]) {
+        entries.push({
+          day: String(h?.day || '').toLowerCase(),
+          open: String(h?.open || '09:00'),
+          close: String(h?.close || '17:00'),
+          isClosed: !!(h?.isClosed ?? h?.closed),
+        });
+      }
+    } else if (typeof hoursRaw === 'object') {
+      const obj = hoursRaw as Record<string, any>;
+      for (const [day, slot] of Object.entries(obj)) {
+        entries.push({
+          day: String(day).toLowerCase(),
+          open: String(slot?.open || '09:00'),
+          close: String(slot?.close || '17:00'),
+          isClosed: !!(slot?.isClosed ?? slot?.closed),
+        });
+      }
+    }
+    const todayHours = entries.find((e) => e.day === today);
+    if (!todayHours || todayHours.isClosed) return false;
+    return currentMins >= parse(todayHours.open) && currentMins <= parse(todayHours.close);
+  }
+
+  async getBusinessComparison(businessIds: string[]) {
+    const ids = [...new Set((businessIds || []).filter(Boolean))].slice(0, 4);
+    if (ids.length < 2) {
+      throw new BadRequestException('Provide at least two business IDs to compare');
+    }
+    const businesses = await this.prisma.business.findMany({
+      where: { id: { in: ids }, isActive: true },
+      include: {
+        trustScore: true,
+        reviews: { where: { isActive: true }, select: { rating: true, createdAt: true } },
+        _count: { select: { reviews: true, fraudReports: true } },
+      },
+    });
+    return {
+      businesses: businesses.map((b) => {
+        const avgRating =
+          b.reviews.length > 0
+            ? b.reviews.reduce((sum, r) => sum + r.rating, 0) / b.reviews.length
+            : 0;
+        const recent = b.reviews.filter(
+          (r) => r.createdAt >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        ).length;
+        return {
+          id: b.id,
+          name: b.name,
+          category: b.category,
+          trustScore: b.trustScore?.score ?? 0,
+          complaints: b._count.fraudReports,
+          responseRate: 0,
+          sentiment: Math.round((avgRating / 5) * 100),
+          averageRating: Number(avgRating.toFixed(2)),
+          reviewCount: b._count.reviews,
+          reviewTrend30d: recent,
+        };
+      }),
+    };
+  }
+
+  async getLocalInsights(params: {
+    lat: number;
+    lng: number;
+    radiusKm: number;
+    category?: string;
+    openNow?: boolean;
+    minTrustScore?: number;
+  }) {
+    const { lat, lng } = params;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new BadRequestException('lat and lng are required numbers');
+    }
+    const radiusKm = Number.isFinite(params.radiusKm) ? params.radiusKm : 10;
+    const minTrustScore = Number.isFinite(params.minTrustScore)
+      ? params.minTrustScore || 0
+      : 0;
+    const base = await this.prisma.business.findMany({
+      where: {
+        isActive: true,
+        ...(params.category ? { category: params.category } : {}),
+      },
+      include: { trustScore: true, _count: { select: { reviews: true } } },
+      take: 1000,
+    });
+    const nearby = base
+      .filter((b) => Number.isFinite(b.latitude) && Number.isFinite(b.longitude))
+      .map((b) => {
+        const distanceKm = this.haversineKm(
+          { lat, lng },
+          { lat: b.latitude as number, lng: b.longitude as number },
+        );
+        return { b, distanceKm };
+      })
+      .filter(
+        ({ b, distanceKm }) =>
+          distanceKm <= radiusKm &&
+          (b.trustScore?.score ?? 0) >= minTrustScore &&
+          (!params.openNow || this.isOpenNow(b.businessHours)),
+      )
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+    const trustBuckets = { excellent: 0, good: 0, fair: 0, poor: 0 };
+    for (const item of nearby) {
+      const score = item.b.trustScore?.score ?? 0;
+      if (score >= 85) trustBuckets.excellent++;
+      else if (score >= 70) trustBuckets.good++;
+      else if (score >= 50) trustBuckets.fair++;
+      else trustBuckets.poor++;
+    }
+    return {
+      summary: {
+        radiusKm,
+        totalNearby: nearby.length,
+        averageTrustScore:
+          nearby.length > 0
+            ? Math.round(
+                nearby.reduce((sum, i) => sum + (i.b.trustScore?.score ?? 0), 0) /
+                  nearby.length,
+              )
+            : 0,
+      },
+      trustDistribution: trustBuckets,
+      nearbyTrustedBusinesses: nearby.slice(0, 8).map(({ b, distanceKm }) => ({
+        id: b.id,
+        name: b.name,
+        trustScore: b.trustScore?.score ?? 0,
+        category: b.category,
+        distanceKm: Number(distanceKm.toFixed(2)),
+        reviewCount: b._count.reviews,
+      })),
+    };
+  }
+
+  async getTopLocalReviewers(params: {
+    lat: number;
+    lng: number;
+    radiusKm: number;
+    limit: number;
+  }) {
+    const { lat, lng, radiusKm, limit } = params;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      throw new BadRequestException('lat and lng are required numbers');
+    }
+    const nearbyBusinesses = await this.prisma.business.findMany({
+      where: { isActive: true },
+      select: { id: true, latitude: true, longitude: true },
+    });
+    const nearbyIds = nearbyBusinesses
+      .filter((b) => Number.isFinite(b.latitude) && Number.isFinite(b.longitude))
+      .filter(
+        (b) =>
+          this.haversineKm(
+            { lat, lng },
+            { lat: b.latitude as number, lng: b.longitude as number },
+          ) <= radiusKm,
+      )
+      .map((b) => b.id);
+    if (nearbyIds.length === 0) return [];
+    const reviewers = await this.prisma.user.findMany({
+      where: { isActive: true, reviews: { some: { businessId: { in: nearbyIds } } } },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        reputation: true,
+        reviews: { where: { businessId: { in: nearbyIds }, isActive: true }, select: { id: true, isVerified: true } },
+      },
+      take: Math.min(Math.max(limit, 1), 20),
+    });
+    return reviewers
+      .map((u) => {
+        const verified = u.reviews.filter((r) => r.isVerified).length;
+        const streak = Math.min(30, Math.round((verified / Math.max(1, u.reviews.length)) * 30));
+        const badges: string[] = [];
+        if (u.reputation >= 200) badges.push('Elite Reviewer');
+        if (verified >= 5) badges.push('Verified Voice');
+        if (streak >= 7) badges.push('Weekly Streak');
+        return {
+          id: u.id,
+          name: u.name,
+          avatar: u.avatar,
+          reputation: u.reputation,
+          reviewCount: u.reviews.length,
+          verifiedReviews: verified,
+          streakDays: streak,
+          badges,
+        };
+      })
+      .sort((a, b) => b.reputation - a.reputation || b.verifiedReviews - a.verifiedReviews);
+  }
+
+  async trackConversionEvent(userId: string, body: TrackConversionEventDto) {
+    const business = await this.prisma.business.findUnique({
+      where: { id: body.businessId },
+      select: { id: true, ownerId: true, name: true },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    this.logger.log(
+      `Conversion event ${body.eventType} for business ${business.id} by user ${userId}`,
+    );
+    if (business.ownerId && business.ownerId !== userId) {
+      await this.notificationsService.create(
+        business.ownerId,
+        'REVIEW_VOTE',
+        'New conversion signal',
+        `A user triggered ${body.eventType} on ${business.name}.`,
+        business.id,
+      );
+    }
+    return { tracked: true };
+  }
+
   async updateNotificationPrefs(
     userId: string,
     prefs: Record<string, boolean>,
@@ -2564,6 +3052,75 @@ export class UserService {
       data: { notificationPrefs: prefs },
       select: { id: true, notificationPrefs: true },
     });
+  }
+
+  async getProfileCompletion(userId: string): Promise<{
+    score: number;
+    completed: number;
+    total: number;
+    missingFields: string[];
+    sections: {
+      user: { score: number; missingFields: string[] };
+      business: { score: number; missingFields: string[] };
+    };
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        businesses: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userChecks: Array<{ key: string; ok: boolean }> = [
+      { key: 'name', ok: !!user.name?.trim() },
+      { key: 'email', ok: !!user.email?.trim() },
+      { key: 'phone', ok: !!user.phone?.trim() },
+      { key: 'bio', ok: !!user.bio?.trim() },
+      { key: 'avatar', ok: !!user.avatar?.trim() },
+    ];
+
+    const b = user.businesses[0];
+    const businessChecks: Array<{ key: string; ok: boolean }> = [
+      { key: 'business.name', ok: !!b?.name?.trim() },
+      { key: 'business.description', ok: !!b?.description?.trim() },
+      { key: 'business.phone', ok: !!b?.phone?.trim() },
+      { key: 'business.email', ok: !!b?.email?.trim() },
+      { key: 'business.location', ok: !!b?.location?.trim() },
+      { key: 'business.category', ok: !!(b?.category || b?.businessCategoryId)?.toString().trim() },
+    ];
+
+    const userCompleted = userChecks.filter((c) => c.ok).length;
+    const businessCompleted = businessChecks.filter((c) => c.ok).length;
+    const completed = userCompleted + businessCompleted;
+    const total = userChecks.length + businessChecks.length;
+
+    const score = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const userMissing = userChecks.filter((c) => !c.ok).map((c) => c.key);
+    const businessMissing = businessChecks.filter((c) => !c.ok).map((c) => c.key);
+
+    return {
+      score,
+      completed,
+      total,
+      missingFields: [...userMissing, ...businessMissing],
+      sections: {
+        user: {
+          score: Math.round((userCompleted / userChecks.length) * 100),
+          missingFields: userMissing,
+        },
+        business: {
+          score: Math.round((businessCompleted / businessChecks.length) * 100),
+          missingFields: businessMissing,
+        },
+      },
+    };
   }
 
   // Public method to manually recalculate business trust score
@@ -2735,6 +3292,8 @@ export class UserService {
         },
       });
 
+      await this.checkAndTriggerPriceScoreAlerts(businessId);
+
     } catch (error) {
       this.logger.error(
         `Error recalculating trust score for business ${businessId}:`,
@@ -2745,6 +3304,247 @@ export class UserService {
       }
       throw error;
     }
+  }
+
+  async getPersonalizedRecommendations(userId: string, limit = 10) {
+    const safeLimit = Math.min(Math.max(limit || 10, 1), 30);
+    const myBookmarks = await this.prisma.bookmark.findMany({
+      where: { userId },
+      include: { business: true },
+    });
+    const bookmarkedIds = new Set(myBookmarks.map((b) => b.businessId));
+    const preferredCategories = myBookmarks
+      .map((b) => b.business.category)
+      .filter((v): v is string => !!v);
+    const preferredLocations = myBookmarks
+      .map((b) => b.business.location)
+      .filter((v): v is string => !!v);
+
+    const similarUsers = await this.prisma.bookmark.findMany({
+      where: {
+        businessId: { in: Array.from(bookmarkedIds) },
+        userId: { not: userId },
+      },
+      select: { userId: true },
+      distinct: ['userId'],
+      take: 40,
+    });
+    const similarUserIds = similarUsers.map((u) => u.userId);
+
+    const candidates = await this.prisma.business.findMany({
+      where: {
+        id: { notIn: Array.from(bookmarkedIds) },
+        isActive: true,
+      },
+      include: {
+        trustScore: true,
+        _count: { select: { bookmarks: true, reviews: true } },
+      },
+      take: 300,
+    });
+
+    const collaborativeCounts = await this.prisma.bookmark.groupBy({
+      by: ['businessId'],
+      where: { userId: { in: similarUserIds } },
+      _count: { businessId: true },
+    });
+    const collaborativeMap = new Map(
+      collaborativeCounts.map((c) => [c.businessId, c._count.businessId]),
+    );
+
+    const scored = candidates
+      .map((business) => {
+        const collaborative = collaborativeMap.get(business.id) || 0;
+        const categoryBoost = preferredCategories.includes(business.category || '')
+          ? 2
+          : 0;
+        const locationBoost = preferredLocations.includes(business.location || '')
+          ? 1.5
+          : 0;
+        const trustBoost = (business.trustScore?.score || 50) / 25;
+        const popularity = Math.min((business._count.reviews || 0) / 10, 3);
+        const score =
+          collaborative * 2 + categoryBoost + locationBoost + trustBoost + popularity;
+        return { business, score, reasons: { collaborative, categoryBoost, locationBoost } };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, safeLimit);
+
+    return scored.map((entry) => ({
+      ...entry.business,
+      recommendationScore: Number(entry.score.toFixed(2)),
+      reason: entry.reasons.collaborative
+        ? 'Users with similar saved businesses also saved this.'
+        : entry.reasons.categoryBoost
+          ? 'Matches your preferred categories.'
+          : 'Popular near your saved business locations.',
+    }));
+  }
+
+  private async checkAndTriggerPriceScoreAlerts(businessId: string) {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      include: { trustScore: true, reviews: { where: { isActive: true }, select: { amount: true } } },
+    });
+    if (!business) return;
+
+    const amounts = business.reviews
+      .map((review) => review.amount)
+      .filter((a): a is number => typeof a === 'number' && a > 0);
+    const averageSpend = amounts.length
+      ? amounts.reduce((sum, val) => sum + val, 0) / amounts.length
+      : null;
+    const trustScore = business.trustScore?.score ?? null;
+
+    const alerts = await this.prisma.priceScoreAlert.findMany({
+      where: { businessId, isActive: true },
+    });
+
+    for (const alert of alerts) {
+      const scoreMatch =
+        alert.minTrustScore == null ||
+        (trustScore != null && trustScore >= alert.minTrustScore);
+      const priceMatch =
+        alert.maxAverageSpend == null ||
+        (averageSpend != null && averageSpend <= alert.maxAverageSpend);
+
+      if (!scoreMatch || !priceMatch) continue;
+
+      await this.notificationsService.create(
+        alert.userId,
+        'ALERT_TRIGGERED' as NotificationType,
+        'Saved business alert triggered',
+        `${business.name} now matches your score/spend threshold.`,
+        business.id,
+      );
+
+      await this.prisma.priceScoreAlert.update({
+        where: { id: alert.id },
+        data: { lastTriggeredAt: new Date() },
+      });
+    }
+  }
+
+  async sendWeeklyDigestForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, notificationPrefs: true },
+    });
+    const prefs = (user?.notificationPrefs as Record<string, any> | null) || {};
+    if (!user || prefs.weeklyDigestEnabled === false) {
+      return { message: 'Weekly digest disabled' };
+    }
+
+    const token =
+      prefs.weeklyDigestUnsubToken ||
+      `${user.id.replace(/-/g, '')}-${Date.now().toString(36)}`;
+    if (!prefs.weeklyDigestUnsubToken) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          notificationPrefs: {
+            ...(prefs || {}),
+            weeklyDigestEnabled: true,
+            weeklyDigestUnsubToken: token,
+          } as any,
+        },
+      });
+    }
+
+    const [bookmarks, recommendations] = await Promise.all([
+      this.prisma.bookmark.findMany({
+        where: { userId },
+        include: {
+          business: { include: { trustScore: true, _count: { select: { reviews: true } } } },
+        },
+        take: 8,
+      }),
+      this.getPersonalizedRecommendations(userId, 6),
+    ]);
+
+    const appUrl = this.configService.get<string>('APP_URL', 'https://credi-score.vercel.app');
+    const unsubscribeUrl = `${appUrl}/api/user/digest/unsubscribe?token=${encodeURIComponent(token)}`;
+    await this.mailerService.sendEmail({
+      to: user.email,
+      subject: 'Your CrediScore weekly digest',
+      template: 'weekly-digest',
+      context: {
+        name: user.name,
+        bookmarks: bookmarks.map((b) => ({
+          id: b.business.id,
+          name: b.business.name,
+          category: b.business.category || 'General',
+          location: b.business.location || 'Unknown',
+          trustScore: b.business.trustScore?.score ?? 'N/A',
+          reviewCount: b.business._count.reviews,
+        })),
+        recommendations: recommendations.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          category: r.category || 'General',
+          location: r.location || 'Unknown',
+          trustScore: r.trustScore?.score ?? 'N/A',
+          reason: r.reason,
+        })),
+        unsubscribeUrl,
+      },
+    });
+
+    await this.notificationsService.create(
+      userId,
+      'WEEKLY_DIGEST' as NotificationType,
+      'Weekly digest sent',
+      'Your weekly digest has been emailed.',
+    );
+
+    return { message: 'Weekly digest sent' };
+  }
+
+  async dispatchWeeklyDigests() {
+    const targetDay = Number(this.configService.get<string>('WEEKLY_DIGEST_DAY', '1')); // 1=Monday
+    if (new Date().getDay() !== targetDay) return { message: 'Not digest day' };
+
+    const users = await this.prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true, notificationPrefs: true },
+    });
+    for (const user of users) {
+      const prefs = (user.notificationPrefs as Record<string, any> | null) || {};
+      if (prefs.weeklyDigestEnabled === false) continue;
+      try {
+        await this.sendWeeklyDigestForUser(user.id);
+      } catch (error) {
+        this.logger.warn(`Weekly digest failed for user ${user.id}`);
+      }
+    }
+    return { message: 'Weekly digest dispatch complete', users: users.length };
+  }
+
+  async unsubscribeWeeklyDigest(token: string) {
+    if (!token) throw new BadRequestException('Missing unsubscribe token');
+    const users = await this.prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true, notificationPrefs: true },
+    });
+    const matchedUser =
+      users.find(
+        (candidate) =>
+          (candidate.notificationPrefs as Record<string, any> | null)
+            ?.weeklyDigestUnsubToken === token,
+      ) || null;
+    if (!matchedUser) {
+      throw new NotFoundException('Invalid unsubscribe token');
+    }
+    await this.prisma.user.update({
+      where: { id: matchedUser.id },
+      data: {
+        notificationPrefs: {
+          ...((matchedUser.notificationPrefs as Record<string, any> | null) || {}),
+          weeklyDigestEnabled: false,
+        } as any,
+      },
+    });
+    return { message: 'You have been unsubscribed from weekly digests' };
   }
 
   // Admin Helper Methods

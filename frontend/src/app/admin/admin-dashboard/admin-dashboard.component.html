@@ -32,9 +32,15 @@
 
   <!-- Loading State -->
   @if (getLoadingState()) {
-    <div class="loading-container">
-      <div class="loading-spinner"></div>
-      <p class="loading-text">{{ 'dash.admin.loading' | t }}</p>
+    <div class="admin-skeleton">
+      <div class="adsk adsk-title"></div>
+      <div class="adsk-grid">
+        <div class="adsk adsk-card" *ngFor="let _ of [1,2,3,4]"></div>
+      </div>
+      <div class="adsk-main">
+        <div class="adsk adsk-panel-lg"></div>
+        <div class="adsk adsk-panel-sm"></div>
+      </div>
     </div>
   }
 

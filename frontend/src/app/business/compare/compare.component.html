@@ -1,0 +1,44 @@
+<div class="compare-page">
+  <h1>Business Comparison</h1>
+  <p class="subtitle">Compare trust score, complaints, response rate, and sentiment side-by-side.</p>
+
+  <div *ngIf="loading" class="state">Loading comparison...</div>
+  <div *ngIf="error && !loading" class="state error">{{ error }}</div>
+
+  <div *ngIf="!loading && !error && rows.length > 0" class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th *ngFor="let row of rows">{{ row.name }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Trust score</td>
+          <td *ngFor="let row of rows">{{ row.trustScore }}%</td>
+        </tr>
+        <tr>
+          <td>Complaints</td>
+          <td *ngFor="let row of rows">{{ row.complaints }}</td>
+        </tr>
+        <tr>
+          <td>Response rate</td>
+          <td *ngFor="let row of rows">{{ row.responseRate }}%</td>
+        </tr>
+        <tr>
+          <td>Sentiment</td>
+          <td *ngFor="let row of rows">{{ row.sentiment }}%</td>
+        </tr>
+        <tr>
+          <td>Average rating</td>
+          <td *ngFor="let row of rows">{{ row.averageRating }}</td>
+        </tr>
+        <tr>
+          <td>Reviews</td>
+          <td *ngFor="let row of rows">{{ row.reviewCount }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

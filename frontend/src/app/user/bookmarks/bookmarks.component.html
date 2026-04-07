@@ -23,8 +23,18 @@
       <a routerLink="/search" class="browse-btn">{{ 'home.browseBusinesses' | t }}</a>
     </div>
 
+    <div *ngIf="bookmarks.length > 0" class="bulk-actions">
+      <span>{{ selectedBusinessIds.size }} selected</span>
+      <input [(ngModel)]="bulkTag" placeholder="Tag for selected (e.g. fintech)" />
+      <button (click)="runBulkTag()">Add Tag</button>
+      <button (click)="runBulkRemove()">Remove Selected</button>
+    </div>
+
     <div class="bookmarks-grid" *ngIf="bookmarks.length > 0">
       <div *ngFor="let bm of bookmarks" class="bookmark-card">
+        <div class="card-select">
+          <input type="checkbox" [checked]="selectedBusinessIds.has(bm.business.id)" (change)="toggleSelected(bm.business.id, $any($event.target).checked)" />
+        </div>
         <div class="card-logo">
           <img *ngIf="bm.business.logo" [src]="bm.business.logo" [alt]="bm.business.name" (error)="$event.target.style.display='none'" />
           <div *ngIf="!bm.business.logo" class="logo-placeholder">{{ getInitials(bm.business.name) }}</div>
@@ -40,6 +50,33 @@
           <p class="card-category" *ngIf="bm.business.category"><i class="uil uil-tag"></i> {{ bm.business.category }}</p>
           <p class="card-location" *ngIf="bm.business.location"><i class="uil uil-map-marker"></i> {{ bm.business.location }}</p>
           <p class="card-desc" *ngIf="bm.business.description">{{ bm.business.description | slice:0:100 }}{{ bm.business.description.length > 100 ? '...' : '' }}</p>
+          <div class="tag-row">
+            <input
+              [ngModel]="tagDrafts[bm.business.id] || (bm.tags || []).join(', ')"
+              (ngModelChange)="tagDrafts[bm.business.id] = $event"
+              placeholder="tags comma separated"
+            />
+            <button (click)="saveTags(bm)">Save Tags</button>
+          </div>
+          <div class="alert-row">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              [ngModel]="alertsByBusiness[bm.business.id]?.minTrustScore"
+              (ngModelChange)="updateAlertField(bm.business.id, 'minTrustScore', $event)"
+              placeholder="Min trust score"
+            />
+            <input
+              type="number"
+              min="0"
+              [ngModel]="alertsByBusiness[bm.business.id]?.maxAverageSpend"
+              (ngModelChange)="updateAlertField(bm.business.id, 'maxAverageSpend', $event)"
+              placeholder="Max average spend"
+            />
+            <button (click)="saveAlert(bm.business.id)">Save Alert</button>
+            <button (click)="removeAlert(bm.business.id)">Clear</button>
+          </div>
         </div>
         <div class="card-actions">
           <a [routerLink]="['/business', bm.business.id]" class="view-btn">{{ 'bookmarks.viewBusiness' | t }}</a>
@@ -48,6 +85,14 @@
             <span>{{ removingId === bm.business.id ? ('bookmarks.removing' | t) : ('bookmarks.remove' | t) }}</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <div class="recommendations" *ngIf="recommendations.length > 0">
+      <h3>Recommended for you</h3>
+      <div class="recommendation-item" *ngFor="let rec of recommendations">
+        <a [routerLink]="['/business', rec.id]">{{ rec.name }}</a>
+        <span>{{ rec.reason }}</span>
       </div>
     </div>
   </div>

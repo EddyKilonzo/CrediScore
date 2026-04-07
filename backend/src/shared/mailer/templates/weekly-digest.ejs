@@ -1,0 +1,32 @@
+<%- include('_layout', { title: 'Your Weekly Digest', preheader: 'Saved businesses and recommendations for you' }) %>
+
+<h2 style="margin: 0 0 12px;">Hi <%= name %>, here is your weekly digest</h2>
+<p style="margin: 0 0 20px; color: #475569;">
+  A quick snapshot of your saved businesses and fresh picks.
+</p>
+
+<h3 style="margin: 0 0 8px;">Saved businesses</h3>
+<ul style="padding-left: 18px; margin: 0 0 20px;">
+  <% (bookmarks || []).forEach(function(item) { %>
+    <li style="margin-bottom: 6px;">
+      <strong><%= item.name %></strong>
+      (<%= item.category %>, <%= item.location %>) - Trust: <%= item.trustScore %>
+    </li>
+  <% }) %>
+</ul>
+
+<h3 style="margin: 0 0 8px;">Recommended for you</h3>
+<ul style="padding-left: 18px; margin: 0 0 20px;">
+  <% (recommendations || []).forEach(function(item) { %>
+    <li style="margin-bottom: 6px;">
+      <strong><%= item.name %></strong> - <%= item.reason %>
+    </li>
+  <% }) %>
+</ul>
+
+<p style="font-size: 13px; color: #64748b;">
+  Prefer not to receive this email?
+  <a href="<%= unsubscribeUrl %>">Unsubscribe from weekly digests</a>.
+</p>
+
+<%- include('_footer') %>

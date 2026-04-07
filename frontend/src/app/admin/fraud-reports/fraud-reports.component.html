@@ -13,9 +13,20 @@
   </div>
 
   @if (isLoading()) {
-    <div class="loading-container fade-in-up">
-      <div class="loading-spinner"></div>
-      <p class="loading-text">Loading fraud reports...</p>
+    <div class="fraud-skeleton fade-in-up">
+      <div class="frsk frsk-title"></div>
+      <div class="frsk frsk-subtitle"></div>
+      <div class="frsk-grid">
+        <div class="frsk-card" *ngFor="let item of [1,2,3,4]">
+          <div class="frsk frsk-line"></div>
+          <div class="frsk frsk-line short"></div>
+          <div class="frsk frsk-box"></div>
+          <div class="frsk-row">
+            <div class="frsk frsk-pill"></div>
+            <div class="frsk frsk-pill"></div>
+          </div>
+        </div>
+      </div>
     </div>
   }
 

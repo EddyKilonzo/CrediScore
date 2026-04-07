@@ -44,6 +44,10 @@ import {
   FlagReviewDto,
   DisputeReviewDto,
   UpdateNotificationPrefsDto,
+  BookmarkBulkActionDto,
+  UpsertBookmarkTagsDto,
+  UpsertPriceScoreAlertDto,
+  TrackConversionEventDto,
 } from './dto/user.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -137,6 +141,22 @@ export class UserController {
   })
   async getRoleBasedProfileData(@Request() req: { user: UserWithoutPassword }) {
     return this.userService.getRoleBasedProfileData(req.user.id);
+  }
+
+  @Get('profile-completion')
+  @ApiOperation({
+    summary: 'Get profile completion score with missing fields',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile completion metrics retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getProfileCompletion(@Request() req: { user: UserWithoutPassword }) {
+    return this.userService.getProfileCompletion(req.user.id);
   }
 
   // Business Management
@@ -440,7 +460,12 @@ export class UserController {
     @Request() req: { user: UserWithoutPassword },
     @Body(ValidationPipe) reviewData: CreateReviewDto,
   ) {
-    return this.userService.createReview(req.user.id, reviewData);
+    const requestWithIp = req as { user: UserWithoutPassword; ip?: string };
+    const enrichedReviewData: CreateReviewDto = {
+      ...reviewData,
+      ipAddress: reviewData.ipAddress || requestWithIp.ip,
+    };
+    return this.userService.createReview(req.user.id, enrichedReviewData);
   }
 
   @Get('reviews')
@@ -609,6 +634,71 @@ export class UserController {
     return this.userService.removeBookmark(req.user.id, businessId);
   }
 
+  @Patch('bookmarks/:businessId/tags')
+  @ApiOperation({ summary: 'Set tags for a bookmarked business' })
+  async setBookmarkTags(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('businessId') businessId: string,
+    @Body(ValidationPipe) body: UpsertBookmarkTagsDto,
+  ) {
+    return this.userService.setBookmarkTags(req.user.id, businessId, body.tags);
+  }
+
+  @Post('bookmarks/bulk')
+  @ApiOperation({ summary: 'Run bulk bookmark actions (remove/tag/untag/clear-tags)' })
+  async bulkBookmarkAction(
+    @Request() req: { user: UserWithoutPassword },
+    @Body(ValidationPipe) body: BookmarkBulkActionDto,
+  ) {
+    return this.userService.bulkBookmarkAction(req.user.id, body);
+  }
+
+  @Get('alerts/price-score')
+  @ApiOperation({ summary: 'List current user price/score alerts' })
+  async getPriceScoreAlerts(@Request() req: { user: UserWithoutPassword }) {
+    return this.userService.getPriceScoreAlerts(req.user.id);
+  }
+
+  @Put('alerts/price-score')
+  @ApiOperation({ summary: 'Create or update a price/score alert subscription' })
+  async upsertPriceScoreAlert(
+    @Request() req: { user: UserWithoutPassword },
+    @Body(ValidationPipe) body: UpsertPriceScoreAlertDto,
+  ) {
+    return this.userService.upsertPriceScoreAlert(req.user.id, body);
+  }
+
+  @Delete('alerts/price-score/:businessId')
+  @ApiOperation({ summary: 'Delete a price/score alert subscription' })
+  async deletePriceScoreAlert(
+    @Request() req: { user: UserWithoutPassword },
+    @Param('businessId') businessId: string,
+  ) {
+    return this.userService.deletePriceScoreAlert(req.user.id, businessId);
+  }
+
+  @Get('recommendations')
+  @ApiOperation({ summary: 'Get personalized recommendations' })
+  async getRecommendations(
+    @Request() req: { user: UserWithoutPassword },
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.userService.getPersonalizedRecommendations(req.user.id, limit);
+  }
+
+  @Post('digest/send-now')
+  @ApiOperation({ summary: 'Send weekly digest now (current user)' })
+  async sendMyDigestNow(@Request() req: { user: UserWithoutPassword }) {
+    return this.userService.sendWeeklyDigestForUser(req.user.id);
+  }
+
+  @Post('digest/unsubscribe')
+  @ApiOperation({ summary: 'Unsubscribe from weekly digest using token' })
+  @Public()
+  async unsubscribeDigest(@Body('token') token: string) {
+    return this.userService.unsubscribeWeeklyDigest(token);
+  }
+
   // Fraud Report Management
   @Post('fraud-reports')
   @HttpCode(HttpStatus.CREATED)
@@ -677,6 +767,16 @@ export class UserController {
   ) {
     return this.userService.updateNotificationPrefs(req.user.id, body as any);
   }
+
+  @Post('conversion-events')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Track booking/contact/offer conversion event' })
+  async trackConversionEvent(
+    @Request() req: { user: UserWithoutPassword },
+    @Body(ValidationPipe) body: TrackConversionEventDto,
+  ) {
+    return this.userService.trackConversionEvent(req.user.id, body);
+  }
 }
 
 @ApiTags('User Public')
@@ -709,6 +809,55 @@ export class UserPublicController {
   @ApiResponse({ status: 200, description: 'Top trusted businesses retrieved successfully' })
   async getTopTrustedBusinesses(@Query('limit') limit?: number) {
     return this.userService.getTopTrustedBusinesses(limit ? +limit : 12);
+  }
+
+  @Public()
+  @Get('compare')
+  @ApiOperation({ summary: 'Compare businesses side-by-side' })
+  async compareBusinesses(@Query('ids') ids?: string) {
+    const businessIds = (ids || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+    return this.userService.getBusinessComparison(businessIds);
+  }
+
+  @Public()
+  @Get('local-insights')
+  @ApiOperation({ summary: 'Local area trust and nearby insights' })
+  async getLocalInsights(
+    @Query('lat') lat?: number,
+    @Query('lng') lng?: number,
+    @Query('radiusKm') radiusKm?: number,
+    @Query('category') category?: string,
+    @Query('openNow') openNow?: string,
+    @Query('minTrustScore') minTrustScore?: number,
+  ) {
+    return this.userService.getLocalInsights({
+      lat: Number(lat),
+      lng: Number(lng),
+      radiusKm: Number(radiusKm || 10),
+      category,
+      openNow: String(openNow).toLowerCase() === 'true',
+      minTrustScore: Number(minTrustScore || 0),
+    });
+  }
+
+  @Public()
+  @Get('top-local-reviewers')
+  @ApiOperation({ summary: 'Get top local reviewers by reputation and activity' })
+  async getTopLocalReviewers(
+    @Query('lat') lat?: number,
+    @Query('lng') lng?: number,
+    @Query('radiusKm') radiusKm?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.userService.getTopLocalReviewers({
+      lat: Number(lat),
+      lng: Number(lng),
+      radiusKm: Number(radiusKm || 15),
+      limit: Number(limit || 10),
+    });
   }
 
   /** Curl this after deploy: if 404, the API image is stale (fraud evidence POST will 404 too). */

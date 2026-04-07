@@ -119,6 +119,34 @@
               </label>
             </div>
 
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-clock"></i>
+                Open now
+              </h3>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9rem;color:#374151;">
+                <input type="checkbox" [(ngModel)]="openNowOnly" (ngModelChange)="applySearchAndFilters()" style="width:16px;height:16px;accent-color:#2C5270;" />
+                Only show open businesses
+              </label>
+            </div>
+
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-location-point"></i>
+                Distance (km)
+              </h3>
+              <input type="number" min="1" max="200" [(ngModel)]="distanceKm" (ngModelChange)="applySearchAndFilters()" class="location-filter-input" placeholder="e.g. 10" />
+            </div>
+
+            <div class="filter-section">
+              <h3 class="filter-section-title">
+                <i class="uil uil-shield-check"></i>
+                Min trust score
+              </h3>
+              <input type="range" min="0" max="100" [(ngModel)]="minTrustScore" (ngModelChange)="applySearchAndFilters()" />
+              <div style="font-size:0.8rem;color:#64748b;">{{ minTrustScore }}%</div>
+            </div>
+
             <!-- Sort By -->
             <div class="filter-section">
               <h3 class="filter-section-title">
@@ -203,9 +231,11 @@
 
           <div class="results-container">
       <!-- Loading State -->
-      <div *ngIf="isLoading" class="loading-state">
-        <div class="loading-spinner"></div>
-        <p>{{ 'search.searchingBusinesses' | t }}</p>
+      <div *ngIf="isLoading" class="search-skeleton">
+        <div class="search-sk search-sk-header"></div>
+        <div class="search-sk-grid">
+          <div class="search-sk search-sk-card" *ngFor="let _ of [1,2,3,4,5,6]"></div>
+        </div>
       </div>
 
       <!-- Error State -->
@@ -226,6 +256,9 @@
           </span>
         </h2>
         <div class="view-toggle">
+          <button type="button" class="view-toggle-btn" [disabled]="selectedCompareIds.size < 2" (click)="goToCompare()">
+            Compare ({{ selectedCompareIds.size }})
+          </button>
           <button 
             type="button"
             (click)="setViewMode('list')" 
@@ -246,6 +279,17 @@
             <i class="uil uil-map"></i>
             <span>{{ 'search.map' | t }}</span>
           </button>
+        </div>
+      </div>
+
+      <div *ngIf="localInsights && !isLoading && !error" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px;">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+          <div style="font-size:0.8rem;color:#64748b;">Nearby businesses</div>
+          <div style="font-size:1.3rem;font-weight:700;">{{ localInsights.summary?.totalNearby || 0 }}</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+          <div style="font-size:0.8rem;color:#64748b;">Area average trust</div>
+          <div style="font-size:1.3rem;font-weight:700;">{{ localInsights.summary?.averageTrustScore || 0 }}%</div>
         </div>
       </div>
 
@@ -431,6 +475,10 @@
           (keyup.enter)="viewBusiness(business.id)"
           (keyup.space)="$event.preventDefault(); viewBusiness(business.id)"
         >
+          <label style="position:absolute;top:8px;left:8px;z-index:2;background:#fff;padding:2px 6px;border-radius:999px;font-size:0.75rem;">
+            <input type="checkbox" [checked]="selectedCompareIds.has(business.id)" (click)="$event.stopPropagation()" (change)="toggleCompareSelection(business.id)" />
+            compare
+          </label>
           <!-- Card Header with Logo -->
           <div class="card-header">
             <!-- Trust Grade Badge (top-left) -->
