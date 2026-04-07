@@ -100,8 +100,10 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="card-label">{{ 'dash.user.reputationLevel' | t }}</p>
-            <p class="card-number" [class]="getReputationColor()">
-              {{ getCustomerReputationLevel() || 'New Reviewer' }}
+            <p class="card-number">
+              <span class="tier-color-tag" [ngStyle]="getCurrentTierTagStyles()">
+                {{ getCustomerReputationLevel() || 'New Reviewer' }}
+              </span>
             </p>
             <p class="card-subtitle">Your reviewer status</p>
           </div>

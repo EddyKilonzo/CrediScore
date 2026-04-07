@@ -310,6 +310,18 @@
   line-height: 1;
 }
 
+.tier-color-tag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+}
+
 /* Compact numbers on laptop */
 @media (min-width: 1024px) and (max-width: 1439px) {
   .card-number {

@@ -57,6 +57,7 @@ interface ReviewerTier {
   min: number;
   max: number;
   colorClass: string;
+  colorHex: string;
 }
 
 @Component({
@@ -96,11 +97,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // Chart data — computed from real activity after load
   reviewTrendData: { day: string; reviews: number }[] = [];
   readonly reviewerTiers: ReviewerTier[] = [
-    { name: 'Elite', min: 90, max: 100, colorClass: 'text-[#2C5270]' },
-    { name: 'Trusted', min: 75, max: 89, colorClass: 'text-[#3E6A8A]' },
-    { name: 'Reliable', min: 60, max: 74, colorClass: 'text-[#5C8BA5]' },
-    { name: 'Growing', min: 40, max: 59, colorClass: 'text-[#7EA5BD]' },
-    { name: 'New Reviewer', min: 0, max: 39, colorClass: 'text-[#94a3b8]' }
+    { name: 'Elite', min: 90, max: 100, colorClass: 'text-[#2C5270]', colorHex: '#2C5270' },
+    { name: 'Trusted', min: 75, max: 89, colorClass: 'text-[#3E6A8A]', colorHex: '#3E6A8A' },
+    { name: 'Reliable', min: 60, max: 74, colorClass: 'text-[#5C8BA5]', colorHex: '#5C8BA5' },
+    { name: 'Growing', min: 40, max: 59, colorClass: 'text-[#7EA5BD]', colorHex: '#7EA5BD' },
+    { name: 'New Reviewer', min: 0, max: 39, colorClass: 'text-[#94a3b8]', colorHex: '#94a3b8' }
   ];
 
   ngOnInit() {
@@ -504,6 +505,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.reviewerTiers.find((tier) => score >= tier.min && score <= tier.max) ??
       this.reviewerTiers[this.reviewerTiers.length - 1]
     );
+  }
+
+  getCurrentTierTagStyles() {
+    const tier = this.getCurrentReviewerTier();
+    const { r, g, b } = this.hexToRgb(tier.colorHex);
+    return {
+      color: `rgb(${r}, ${g}, ${b})`,
+      borderColor: `rgba(${r}, ${g}, ${b}, 0.45)`,
+      backgroundColor: `rgba(${r}, ${g}, ${b}, 0.18)`,
+    };
+  }
+
+  private hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const normalized = hex.replace('#', '');
+    const full = normalized.length === 3
+      ? normalized.split('').map((char) => `${char}${char}`).join('')
+      : normalized;
+    const int = Number.parseInt(full, 16);
+    return {
+      r: (int >> 16) & 255,
+      g: (int >> 8) & 255,
+      b: int & 255,
+    };
   }
 
   private mapActivityType(type: string): RecentActivity['type'] {
