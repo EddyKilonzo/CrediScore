@@ -424,14 +424,47 @@ export class ManageBusinessesComponent implements OnInit {
     return null;
   }
 
-  openVerifiedDocument(event: Event, url?: string): void {
+  async openVerifiedDocument(event: Event, url?: string): Promise<void> {
     event.stopPropagation();
     if (!url) {
+      this.toastService.warning('Document URL is unavailable');
       return;
     }
 
     const hasProtocol = /^(http|https):\/\//i.test(url);
-    const resolvedUrl = hasProtocol ? url : `${window.location.origin}${url.startsWith('/') ? url : `/${url}`}`;
-    window.open(resolvedUrl, '_blank', 'noopener');
+    const resolvedUrl = hasProtocol
+      ? url
+      : `${environment.apiUrl}${url.startsWith('/') ? url : `/${url}`}`;
+
+    // Internal API links can require bearer auth. Fetch first, then open blob in a new tab.
+    if (!hasProtocol || resolvedUrl.includes('/api/')) {
+      try {
+        const token = localStorage.getItem('token') || '';
+        const response = await fetch(resolvedUrl, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+          throw new Error(`Document request failed with status ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const win = window.open(objectUrl, '_blank', 'noopener');
+        if (!win) {
+          this.toastService.error('Popup blocked. Please allow popups and try again.');
+        }
+
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+        return;
+      } catch (error) {
+        console.error('Error opening verified document via fetch:', error);
+      }
+    }
+
+    const opened = window.open(resolvedUrl, '_blank', 'noopener');
+    if (!opened) {
+      this.toastService.error('Unable to open document. Please allow popups and try again.');
+    }
   }
 }

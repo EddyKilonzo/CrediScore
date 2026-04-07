@@ -379,8 +379,6 @@ export class AdminDashboardComponent implements OnInit {
         }
       });
       
-      console.log('Chart data - Monthly map (new registrations per month):', Array.from(monthlyMap.entries()));
-      console.log('Chart data - Raw monthly data:', monthlyData);
       
       // Find the maximum value for scaling
       let maxValue = 0;
@@ -395,7 +393,6 @@ export class AdminDashboardComponent implements OnInit {
         maxValue = 1;
       }
       
-      console.log('Chart data - Max value:', maxValue, 'Current month index:', currentMonthIndex);
       
       // Build chart data (showing new registrations per month, not cumulative)
       for (let i = 0; i < months.length; i++) {
@@ -406,8 +403,6 @@ export class AdminDashboardComponent implements OnInit {
         if (i <= currentMonthIndex) {
           // Calculate height based on new registrations (scale to max value)
           const height = maxValue > 0 ? Math.min(95, Math.max(5, (newRegistrations / maxValue) * 100)) : 0;
-          
-          console.log(`Month ${month} (index ${i}): newRegistrations=${newRegistrations}, height=${height}%`);
           
           data.push({
             month,
@@ -424,11 +419,9 @@ export class AdminDashboardComponent implements OnInit {
         }
       }
       
-      console.log('Final chart data:', data.filter(d => d.value > 0));
       return data;
     }
     
-    console.log('No monthly data available, using fallback');
     // Fallback to default if no monthly data available
     return this.getDefaultUserGrowthData();
   }
