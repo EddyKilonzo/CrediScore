@@ -131,6 +131,14 @@ export class LeaderboardComponent implements OnInit {
     return this.reputationTiers.find((t) => safe >= t.min && safe <= t.max) || this.reputationTiers[this.reputationTiers.length - 1];
   }
 
+  getCustomerListRows(): LeaderboardUser[] {
+    return this.users.length >= 3 ? this.users.slice(3) : this.users;
+  }
+
+  getBusinessListRows(): LeaderboardBusiness[] {
+    return this.businesses.length >= 3 ? this.businesses.slice(3) : this.businesses;
+  }
+
   getUserInitials(name: string): string {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
   }

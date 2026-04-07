@@ -1355,6 +1355,17 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
 
   voteReview(review: Review, voteType: 'HELPFUL' | 'NOT_HELPFUL', event: Event): void {
     event.stopPropagation();
+    if (!this.isAuthenticated()) {
+      this.toastService.info('Please sign in to vote on reviews.');
+      return;
+    }
+    const current = this.currentUser;
+    if (!current || current.id === review.userId) {
+      if (current?.id === review.userId) {
+        this.toastService.info('You cannot vote on your own review.');
+      }
+      return;
+    }
     this.reviewService.voteReview(review.id, voteType).subscribe({
       next: (result) => {
         review.helpfulCount = result.helpfulCount;

@@ -363,16 +363,20 @@
             <h2 class="section-title">Data Export</h2>
             <p class="text-gray-500 text-sm mb-4">Download data exports as CSV files for analysis.</p>
             <div class="flex gap-4 flex-wrap">
-              <a [href]="apiUrl + '/api/admin/export/users'" target="_blank" download
+              <button
+                 type="button"
+                 (click)="downloadCsvExport('users')"
                  class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5270] text-white rounded-lg hover:bg-[#1e3d54] transition-colors text-sm font-medium">
                 <i class="uil uil-download-alt"></i>
                 Export Users CSV
-              </a>
-              <a [href]="apiUrl + '/api/admin/export/reviews'" target="_blank" download
+              </button>
+              <button
+                 type="button"
+                 (click)="downloadCsvExport('reviews')"
                  class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5270] text-white rounded-lg hover:bg-[#1e3d54] transition-colors text-sm font-medium">
                 <i class="uil uil-download-alt"></i>
                 Export Reviews CSV
-              </a>
+              </button>
             </div>
           </div>
         </div>

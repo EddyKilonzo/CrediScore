@@ -80,6 +80,43 @@
       </div>
     </div>
 
+    <div class="podium" *ngIf="activeBoard === 'businesses' && businesses.length >= 3">
+      <div class="podium-item second" *ngIf="businesses[1]">
+        <div class="podium-avatar">
+          <img *ngIf="businesses[1].logo" [src]="businesses[1].logo" [alt]="businesses[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!businesses[1].logo" class="avatar-placeholder">{{ getUserInitials(businesses[1].name) }}</div>
+        </div>
+        <div class="podium-rank">🥈</div>
+        <div class="podium-name">{{ businesses[1].name }}</div>
+        <div class="podium-rep">{{ businesses[1].leadScore }} pts</div>
+        <div class="podium-level">{{ businesses[1].leadTier }}</div>
+        <div class="podium-bar second-bar"></div>
+      </div>
+      <div class="podium-item first" *ngIf="businesses[0]">
+        <div class="podium-crown">👑</div>
+        <div class="podium-avatar">
+          <img *ngIf="businesses[0].logo" [src]="businesses[0].logo" [alt]="businesses[0].name" class="avatar-img" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!businesses[0].logo" class="avatar-placeholder gold">{{ getUserInitials(businesses[0].name) }}</div>
+        </div>
+        <div class="podium-rank">🥇</div>
+        <div class="podium-name">{{ businesses[0].name }}</div>
+        <div class="podium-rep">{{ businesses[0].leadScore }} pts</div>
+        <div class="podium-level">{{ businesses[0].leadTier }}</div>
+        <div class="podium-bar first-bar"></div>
+      </div>
+      <div class="podium-item third" *ngIf="businesses[2]">
+        <div class="podium-avatar">
+          <img *ngIf="businesses[2].logo" [src]="businesses[2].logo" [alt]="businesses[2].name" class="avatar-img" (error)="$event.target.style.display='none'" />
+          <div *ngIf="!businesses[2].logo" class="avatar-placeholder">{{ getUserInitials(businesses[2].name) }}</div>
+        </div>
+        <div class="podium-rank">🥉</div>
+        <div class="podium-name">{{ businesses[2].name }}</div>
+        <div class="podium-rep">{{ businesses[2].leadScore }} pts</div>
+        <div class="podium-level">{{ businesses[2].leadTier }}</div>
+        <div class="podium-bar third-bar"></div>
+      </div>
+    </div>
+
     <!-- Full list -->
     <div class="leaderboard-table" *ngIf="activeBoard === 'customers'">
       <div class="table-header">
@@ -88,7 +125,7 @@
         <span class="col-reviews">Reviews</span>
         <span class="col-rep">Reputation</span>
       </div>
-      <div *ngFor="let user of users.slice(3)" class="table-row">
+      <div *ngFor="let user of getCustomerListRows()" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(user.rank) + '20'" [style.color]="getRankBadgeColor(user.rank)">
             {{ user.rank <= 3 ? getRankIcon(user.rank) : '#' + user.rank }}
@@ -118,7 +155,7 @@
         <span class="col-reviews">Reviews</span>
         <span class="col-rep">Lead Score</span>
       </div>
-      <div *ngFor="let business of businesses.slice(3)" class="table-row">
+      <div *ngFor="let business of getBusinessListRows()" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(business.rank) + '20'" [style.color]="getRankBadgeColor(business.rank)">
             {{ business.rank <= 3 ? getRankIcon(business.rank) : '#' + business.rank }}

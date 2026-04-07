@@ -344,7 +344,37 @@ export class AdminDashboardComponent implements OnInit {
     win.document.close();
     win.focus();
     setTimeout(() => { win.print(); }, 700);
+    this.toastService.success('Branded PDF report is ready to print/download.');
   };
+
+  async downloadCsvExport(type: 'users' | 'reviews'): Promise<void> {
+    try {
+      const token = localStorage.getItem('token') || '';
+      const endpoint = `${this.apiUrl}/api/admin/export/${type}`;
+      const response = await fetch(endpoint, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const today = new Date().toISOString().split('T')[0];
+      link.href = objectUrl;
+      link.download = `crediscore-${type}-export-${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      this.toastService.success(`${type === 'users' ? 'Users' : 'Reviews'} CSV download started.`);
+    } catch (error) {
+      console.error(`Error downloading ${type} CSV export:`, error);
+      this.toastService.error(`Failed to download ${type} CSV.`);
+    }
+  }
 
   getStats(): AdminDashboardStats | null {
     return this.dashboardStats();

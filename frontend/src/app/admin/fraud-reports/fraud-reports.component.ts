@@ -281,8 +281,13 @@ export class FraudReportsComponent implements OnInit {
         report.createdAt
       ]);
 
-      // Create CSV content
+      const generatedAt = new Date().toISOString();
+      // Branded CSV content
       const csvContent = [
+        'CrediScore Fraud Reports Export',
+        `Generated At,${generatedAt}`,
+        `Total Records,${reportsData.length}`,
+        '',
         headers.join(','),
         ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
       ].join('\n');
@@ -299,8 +304,9 @@ export class FraudReportsComponent implements OnInit {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
-      this.toastService.success(`Exported ${reportsData.length} fraud reports`);
+      this.toastService.success(`Fraud reports CSV downloaded (${reportsData.length} records).`);
     } catch (error) {
       console.error('Export error:', error);
       this.toastService.error('Failed to export data');

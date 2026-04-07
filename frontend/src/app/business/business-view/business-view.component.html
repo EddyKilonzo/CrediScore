@@ -681,8 +681,8 @@
                     </div>
                   </div>
                   <div class="review-actions-compact">
-                    <!-- Like/Dislike voting — visible to logged-in non-authors -->
-                    <div class="review-vote-actions" *ngIf="isAuthenticated() && currentUser && currentUser.id !== review.userId" (click)="$event.stopPropagation()">
+                    <!-- Like/Dislike voting — shown for everyone; guarded in handler -->
+                    <div class="review-vote-actions" (click)="$event.stopPropagation()">
                       <button
                         class="vote-btn helpful-btn"
                         [class.voted]="review.userVote === 'HELPFUL'"
@@ -970,16 +970,30 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M14 9V5a3 3 0 0 0-6 0v4M5 9h14l-1 10H6L5 9z"></path>
           </svg>
-          <span>{{ selectedReview.helpfulCount ?? 0 }} likes</span>
+          <button
+            type="button"
+            class="vote-inline-btn"
+            [class.voted]="selectedReview.userVote === 'HELPFUL'"
+            (click)="voteReview(selectedReview, 'HELPFUL', $event)"
+          >
+            {{ selectedReview.helpfulCount ?? 0 }} likes
+          </button>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:8px;">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 15v4a3 3 0 0 0 6 0v-4M5 15h14l-1-10H6L5 15z"></path>
           </svg>
-          <span>{{ selectedReview.notHelpfulCount ?? 0 }} dislikes</span>
+          <button
+            type="button"
+            class="vote-inline-btn"
+            [class.voted]="selectedReview.userVote === 'NOT_HELPFUL'"
+            (click)="voteReview(selectedReview, 'NOT_HELPFUL', $event)"
+          >
+            {{ selectedReview.notHelpfulCount ?? 0 }} dislikes
+          </button>
         </div>
       </div>
 
       <!-- Like/Dislike voting in modal -->
-      <div class="review-vote-actions modal-vote" *ngIf="isAuthenticated() && currentUser && selectedReview && currentUser.id !== selectedReview.userId" (click)="$event.stopPropagation()">
+      <div class="review-vote-actions modal-vote" *ngIf="selectedReview" (click)="$event.stopPropagation()">
         <button
           class="vote-btn helpful-btn"
           [class.voted]="selectedReview.userVote === 'HELPFUL'"

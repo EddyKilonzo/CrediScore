@@ -321,8 +321,13 @@ export class FlaggedUsersComponent implements OnInit {
         user.lastFlaggedAt || 'N/A'
       ]);
 
-      // Create CSV content
+      const generatedAt = new Date().toISOString();
+      // Branded CSV content
       const csvContent = [
+        'CrediScore Flagged Users Export',
+        `Generated At,${generatedAt}`,
+        `Total Records,${users.length}`,
+        '',
         headers.join(','),
         ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
       ].join('\n');
@@ -339,8 +344,9 @@ export class FlaggedUsersComponent implements OnInit {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
       
-      this.toastService.success(`Exported ${users.length} flagged users`);
+      this.toastService.success(`Flagged users CSV downloaded (${users.length} records).`);
     } catch (error) {
       console.error('Export error:', error);
       this.toastService.error('Failed to export data');
