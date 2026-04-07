@@ -24,10 +24,9 @@ interface LeaderboardBusiness {
   logo?: string;
   category?: string;
   trustScore: number;
+  trustGrade: string;
   reviewCount: number;
   isVerified: boolean;
-  leadScore: number;
-  leadTier: string;
 }
 
 const leaderboardListAnim = trigger('leaderboardListAnim', [
@@ -93,6 +92,16 @@ export class LeaderboardComponent implements OnInit {
     { name: 'New Reviewer', min: 0, max: 39, color: '#9FB7C9' }
   ];
 
+  /** Letter-grade bands for business trust score (0–100%), not reviewer reputation tiers. */
+  trustScoreGrades = [
+    { grade: 'A+', min: 90, max: 100, color: '#10b981' },
+    { grade: 'A', min: 80, max: 89, color: '#059669' },
+    { grade: 'B', min: 70, max: 79, color: '#3b82f6' },
+    { grade: 'C', min: 60, max: 69, color: '#f59e0b' },
+    { grade: 'D', min: 50, max: 59, color: '#f97316' },
+    { grade: 'F', min: 0, max: 49, color: '#ef4444' },
+  ];
+
   ngOnInit() {
     this.loadLeaderboard();
     this.loadTopLocalReviewers();
@@ -124,25 +133,29 @@ export class LeaderboardComponent implements OnInit {
           ? businesses
           : businesses.businesses || businesses.data || [];
         this.businesses = rawBusinesses
-          .map((b, i) => {
-            const trustScore = Number(b?.trustScore?.score ?? 0);
+          .map((b) => {
+            const trustScore = Number(b?.trustScore?.score ?? b?.trustScore ?? 0);
             const reviewCount = Number(b?.reviewCount ?? b?._count?.reviews ?? 0);
             const isVerified = !!b?.isVerified;
-            const leadScore = this.calculateBusinessLeadScore(trustScore, reviewCount, isVerified);
+            const rawGrade =
+              b?.trustScore && typeof b.trustScore === 'object'
+                ? String(b.trustScore.grade ?? '').trim()
+                : '';
+            const trustGrade =
+              rawGrade.length > 0 ? rawGrade.toUpperCase() : this.getTrustGradeFromScore(trustScore);
             return {
-              rank: i + 1,
+              rank: 0,
               id: b.id,
               name: b.name,
               logo: b.logo,
               category: b.category,
               trustScore,
+              trustGrade,
               reviewCount,
               isVerified,
-              leadScore,
-              leadTier: this.getTierByScore(leadScore).name,
             };
           })
-          .sort((a, b) => b.leadScore - a.leadScore || b.reviewCount - a.reviewCount)
+          .sort((a, b) => b.trustScore - a.trustScore || b.reviewCount - a.reviewCount)
           .map((b, idx) => ({ ...b, rank: idx + 1 }));
 
         this.isLoading = false;
@@ -174,12 +187,15 @@ export class LeaderboardComponent implements OnInit {
       .join('|')}`;
   }
 
-  private calculateBusinessLeadScore(trustScore: number, reviewCount: number, isVerified: boolean): number {
-    const trust = Math.max(0, Math.min(100, trustScore || 0));
-    const reviewVolume = Math.min((reviewCount / 30) * 100, 100);
-    const verificationBoost = isVerified ? 100 : 40;
-    const score = trust * 0.6 + reviewVolume * 0.25 + verificationBoost * 0.15;
-    return Math.max(0, Math.min(100, Math.round(score)));
+  /** Aligns with business profile trust score letter grades. */
+  private getTrustGradeFromScore(score: number): string {
+    const s = Math.max(0, Math.min(100, Math.round(score || 0)));
+    if (s >= 90) return 'A+';
+    if (s >= 80) return 'A';
+    if (s >= 70) return 'B';
+    if (s >= 60) return 'C';
+    if (s >= 50) return 'D';
+    return 'F';
   }
 
   getTierByScore(score: number) {

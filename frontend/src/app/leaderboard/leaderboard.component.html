@@ -43,11 +43,11 @@
         Customer Reputation
       </button>
       <button class="board-tab-btn" [class.active]="activeBoard === 'businesses'" (click)="setActiveBoard('businesses')">
-        Business Lead Score
+        Business Trust Score
       </button>
     </div>
 
-    <div class="tiers-card">
+    <div class="tiers-card" *ngIf="activeBoard === 'customers'">
       <h3 class="tiers-title">Reputation Tiers</h3>
       <div class="tiers-list">
         <div class="tier-item" *ngFor="let tier of reputationTiers">
@@ -58,7 +58,19 @@
       </div>
     </div>
 
-    <div class="tiers-card" *ngIf="localReviewers.length > 0">
+    <div class="tiers-card" *ngIf="activeBoard === 'businesses'">
+      <h3 class="tiers-title">Trust score grades</h3>
+      <p class="tiers-explainer">Businesses are ranked by CrediScore trust score (0–100%). Grades summarize the same scale used on business profiles.</p>
+      <div class="tiers-list">
+        <div class="tier-item" *ngFor="let g of trustScoreGrades">
+          <span class="tier-dot" [style.background]="g.color"></span>
+          <span class="tier-name">{{ g.grade }}</span>
+          <span class="tier-range">{{ g.min }}–{{ g.max }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tiers-card" *ngIf="activeBoard === 'customers' && localReviewers.length > 0">
       <h3 class="tiers-title">Top Local Reviewers</h3>
       <div class="tiers-list">
         <div class="tier-item" *ngFor="let reviewer of localReviewers">
@@ -114,8 +126,8 @@
         </div>
         <div class="podium-rank"><i class="uil uil-medal medal-silver"></i></div>
         <div class="podium-name">{{ businesses[1].name }}</div>
-        <div class="podium-rep">{{ businesses[1].leadScore }} pts</div>
-        <div class="podium-level">{{ businesses[1].leadTier }}</div>
+        <div class="podium-rep">{{ businesses[1].trustScore }}%</div>
+        <div class="podium-level">Grade {{ businesses[1].trustGrade }}</div>
         <div class="podium-bar second-bar"></div>
       </div>
       <div class="podium-item first" *ngIf="businesses[0]">
@@ -126,8 +138,8 @@
         </div>
         <div class="podium-rank"><i class="uil uil-medal medal-gold"></i></div>
         <div class="podium-name">{{ businesses[0].name }}</div>
-        <div class="podium-rep">{{ businesses[0].leadScore }} pts</div>
-        <div class="podium-level">{{ businesses[0].leadTier }}</div>
+        <div class="podium-rep">{{ businesses[0].trustScore }}%</div>
+        <div class="podium-level">Grade {{ businesses[0].trustGrade }}</div>
         <div class="podium-bar first-bar"></div>
       </div>
       <div class="podium-item third" *ngIf="businesses[2]">
@@ -137,8 +149,8 @@
         </div>
         <div class="podium-rank"><i class="uil uil-medal medal-bronze"></i></div>
         <div class="podium-name">{{ businesses[2].name }}</div>
-        <div class="podium-rep">{{ businesses[2].leadScore }} pts</div>
-        <div class="podium-level">{{ businesses[2].leadTier }}</div>
+        <div class="podium-rep">{{ businesses[2].trustScore }}%</div>
+        <div class="podium-level">Grade {{ businesses[2].trustGrade }}</div>
         <div class="podium-bar third-bar"></div>
       </div>
     </div>
@@ -184,7 +196,7 @@
         <span class="col-rank">Rank</span>
         <span class="col-user">Business</span>
         <span class="col-reviews">Reviews</span>
-        <span class="col-rep">Lead Score</span>
+        <span class="col-rep">Trust score</span>
       </div>
       <div [@leaderboardListAnim]="leaderboardBusinessesKey()">
       <div *ngFor="let business of getBusinessListRows(); trackBy: trackBusinessRow" class="table-row">
@@ -207,8 +219,8 @@
         </span>
         <span class="col-reviews">{{ business.reviewCount }}</span>
         <span class="col-rep">
-          <span class="rep-badge">{{ business.leadScore }} pts</span>
-          <small>{{ business.leadTier }}</small>
+          <span class="rep-badge">{{ business.trustScore }}%</span>
+          <small>Grade {{ business.trustGrade }}</small>
         </span>
       </div>
       </div>
@@ -220,7 +232,7 @@
     </div>
     <div *ngIf="activeBoard === 'businesses' && businesses.length === 0" class="empty-state">
       <i class="uil uil-building"></i>
-      <p>No businesses available for lead scoring yet.</p>
+      <p>No businesses with trust scores yet.</p>
     </div>
   </div>
 </div>

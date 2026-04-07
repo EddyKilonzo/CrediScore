@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router, NavigationExtras } from '@angular/router';
 import { Observable, BehaviorSubject, interval, Subscription } from 'rxjs';
-import { switchMap, tap, catchError } from 'rxjs/operators';
+import { switchMap, tap, catchError, map } from 'rxjs/operators';
 import { of } from 'rxjs';
 import { AuthService } from './auth.service';
 import { environment } from '../../../environments/environment';
@@ -14,6 +15,16 @@ export interface AppNotification {
   isRead: boolean;
   refId?: string;
   createdAt: string;
+}
+
+export interface NotificationsPageResponse {
+  notifications: AppNotification[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -92,13 +103,32 @@ export class AppNotificationsService {
       );
   }
 
+  /**
+   * Loads the first page into the shared cache (navbar bell preview).
+   * Unread badge uses the dedicated count endpoint so it stays accurate.
+   */
   loadNotifications(page = 1, limit = 20): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/notifications?page=${page}&limit=${limit}`).pipe(
-      tap(res => {
+      tap((res) => {
         const notifications: AppNotification[] = res.notifications || [];
         this.notifications$.next(notifications);
-        this.unreadCount$.next(notifications.filter(n => !n.isRead).length);
+        this.fetchUnreadCount();
       })
+    );
+  }
+
+  /** Paginated fetch without replacing the navbar preview cache (full Notification Center). */
+  fetchNotificationsPage(page = 1, limit = 20): Observable<NotificationsPageResponse> {
+    return this.http.get<any>(`${this.API_URL}/notifications?page=${page}&limit=${limit}`).pipe(
+      map((res) => ({
+        notifications: (res.notifications || []) as AppNotification[],
+        pagination: res.pagination || {
+          page,
+          limit,
+          total: (res.notifications || []).length,
+          totalPages: 1,
+        },
+      }))
     );
   }
 
@@ -106,10 +136,13 @@ export class AppNotificationsService {
     return this.http.patch<any>(`${this.API_URL}/notifications/${id}/read`, {}).pipe(
       tap(() => {
         const current = this.notifications$.value;
-        const updated = current.map(n => n.id === id ? { ...n, isRead: true } : n);
-        this.notifications$.next(updated);
-        const unread = updated.filter(n => !n.isRead).length;
-        this.unreadCount$.next(unread);
+        const ix = current.findIndex((n) => n.id === id);
+        if (ix >= 0) {
+          const updated = [...current];
+          updated[ix] = { ...updated[ix], isRead: true };
+          this.notifications$.next(updated);
+        }
+        this.fetchUnreadCount();
       })
     );
   }
@@ -117,11 +150,52 @@ export class AppNotificationsService {
   markAllRead(): Observable<any> {
     return this.http.patch<any>(`${this.API_URL}/notifications/read-all`, {}).pipe(
       tap(() => {
-        const updated = this.notifications$.value.map(n => ({ ...n, isRead: true }));
-        this.notifications$.next(updated);
-        this.unreadCount$.next(0);
+        this.notifications$.next(this.notifications$.value.map((n) => ({ ...n, isRead: true })));
+        this.fetchUnreadCount();
       })
     );
+  }
+
+  /**
+   * Router target for in-app notifications (refId semantics vary slightly by type).
+   */
+  getNotificationRouterLink(notif: AppNotification): { commands: any[]; extras?: NavigationExtras } | null {
+    const ref = notif.refId?.trim();
+    if (!ref) return null;
+    const t = notif.type;
+
+    if (t === 'REVIEW_REPLY') {
+      return { commands: ['/my-reviews'], extras: { queryParams: { review: ref } } };
+    }
+
+    if (t === 'REVIEW_VOTE') {
+      const isConversion =
+        notif.title?.toLowerCase().includes('conversion') ||
+        notif.body?.toLowerCase().includes('triggered');
+      if (isConversion) {
+        return { commands: ['/business', ref] };
+      }
+      return { commands: ['/my-reviews'], extras: { queryParams: { review: ref } } };
+    }
+
+    if (
+      t === 'CLAIM_APPROVED' ||
+      t === 'CLAIM_REJECTED' ||
+      t === 'ALERT_TRIGGERED' ||
+      t === 'BUSINESS_VERIFIED' ||
+      t === 'BUSINESS_REJECTED'
+    ) {
+      return { commands: ['/business', ref] };
+    }
+
+    return null;
+  }
+
+  openNotification(router: Router, notif: AppNotification): boolean {
+    const spec = this.getNotificationRouterLink(notif);
+    if (!spec) return false;
+    router.navigate(spec.commands, spec.extras || {});
+    return true;
   }
 
   getNotificationIcon(type: string): string {
@@ -134,6 +208,9 @@ export class AppNotificationsService {
       CLAIM_REJECTED: 'uil-building',
       REVIEW_FLAGGED: 'uil-flag',
       DISPUTE_UPDATE: 'uil-shield',
+      ALERT_TRIGGERED: 'uil-chart-line',
+      WEEKLY_DIGEST: 'uil-envelope-alt',
+      RECOMMENDATION: 'uil-star',
     };
     return icons[type] || 'uil-bell';
   }

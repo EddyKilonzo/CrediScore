@@ -101,6 +101,14 @@ export const routes: Routes = [
     canActivate: [AuthGuard]
   },
 
+  // In-app notifications (bell → view all)
+  {
+    path: 'notifications',
+    loadComponent: () =>
+      import('./notifications/notification-center.component').then((m) => m.NotificationCenterComponent),
+    canActivate: [AuthGuard],
+  },
+
   // Report a business (trust & safety → admin fraud queue)
   {
     path: 'report-business',

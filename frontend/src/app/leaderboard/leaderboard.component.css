@@ -89,6 +89,13 @@
   color: #2C5270;
 }
 
+.tiers-explainer {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
 .tiers-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

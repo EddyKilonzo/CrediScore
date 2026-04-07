@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { ReviewService, Review, ReviewReply } from '../../core/services/review.service';
 import { TPipe } from '../../shared/pipes/t.pipe';
 
@@ -14,6 +14,7 @@ import { TPipe } from '../../shared/pipes/t.pipe';
 })
 export class MyReviewsComponent implements OnInit {
   private reviewService = inject(ReviewService);
+  private route = inject(ActivatedRoute);
 
   reviews: Review[] = [];
   filteredReviews: Review[] = [];
@@ -77,6 +78,14 @@ export class MyReviewsComponent implements OnInit {
     this.loadReviews();
   }
 
+  private scrollToReviewCard(reviewId: string): void {
+    const el = document.getElementById(`review-${reviewId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('review-card--highlight');
+    window.setTimeout(() => el.classList.remove('review-card--highlight'), 2800);
+  }
+
   loadReviews() {
     this.isLoading = true;
     this.error = null;
@@ -105,6 +114,11 @@ export class MyReviewsComponent implements OnInit {
             this.loadReviewReplies(review.id);
           }
         });
+
+        const highlightId = this.route.snapshot.queryParamMap.get('review');
+        if (highlightId) {
+          requestAnimationFrame(() => this.scrollToReviewCard(highlightId));
+        }
 
         this.isLoading = false;
       },

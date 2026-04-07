@@ -1,0 +1,85 @@
+<div class="nc-wrap">
+  <div class="nc-inner">
+    <header class="nc-header">
+      <div class="nc-header-text">
+        <h1 class="nc-title">
+          <i class="uil uil-bell"></i>
+          Notification center
+        </h1>
+        <p class="nc-sub">Updates on reviews, your business, and alerts — all in one place.</p>
+      </div>
+      <div class="nc-header-actions">
+        <button type="button" class="nc-btn nc-btn-secondary" routerLink="/">
+          <i class="uil uil-estate"></i>
+          Home
+        </button>
+        <button
+          type="button"
+          class="nc-btn nc-btn-primary"
+          (click)="markAll()"
+          [disabled]="markingAll || items.length === 0 || allRead">
+          <i class="uil uil-check-circle"></i>
+          Mark all read
+        </button>
+      </div>
+    </header>
+
+    <div *ngIf="loading" class="nc-loading">
+      <div class="nc-spinner"></div>
+      <span>Loading notifications…</span>
+    </div>
+
+    <div *ngIf="error && !loading" class="nc-error">
+      <i class="uil uil-exclamation-triangle"></i>
+      <p>{{ error }}</p>
+      <button type="button" class="nc-btn nc-btn-primary" (click)="loadPage(page)">Try again</button>
+    </div>
+
+    <div *ngIf="!loading && !error" class="nc-card">
+      <div *ngIf="items.length === 0" class="nc-empty">
+        <div class="nc-empty-icon">
+          <i class="uil uil-bell-slash"></i>
+        </div>
+        <p class="nc-empty-title">No notifications yet</p>
+        <p class="nc-empty-sub">When something needs your attention, it will show up here and in the bell menu.</p>
+      </div>
+
+      <ul *ngIf="items.length > 0" class="nc-list">
+        <li
+          *ngFor="let notif of items"
+          class="nc-item nc-item-interactive"
+          [class.nc-item-unread]="!notif.isRead"
+          (click)="onItemClick(notif)">
+          <div class="nc-item-icon" [class.unread]="!notif.isRead">
+            <i [class]="'uil ' + icon(notif.type)"></i>
+          </div>
+          <div class="nc-item-main">
+            <div class="nc-item-top">
+              <span class="nc-item-title">{{ notif.title }}</span>
+              <span class="nc-item-time">{{ timeLabel(notif.createdAt) }}</span>
+            </div>
+            <p class="nc-item-body">{{ notif.body }}</p>
+            <span *ngIf="hasLink(notif)" class="nc-item-hint">
+              <i class="uil uil-arrow-right"></i>
+              Open related page
+            </span>
+          </div>
+          <span *ngIf="!notif.isRead" class="nc-unread-dot" aria-hidden="true"></span>
+        </li>
+      </ul>
+
+      <footer *ngIf="items.length > 0 && totalPages > 1" class="nc-pager">
+        <button type="button" class="nc-btn nc-btn-ghost" (click)="prevPage()" [disabled]="page <= 1">
+          <i class="uil uil-arrow-left"></i>
+          Previous
+        </button>
+        <span class="nc-page-label">Page {{ page }} of {{ totalPages }}</span>
+        <span class="nc-total muted">{{ total }} total</span>
+        <button type="button" class="nc-btn nc-btn-ghost" (click)="nextPage()" [disabled]="page >= totalPages">
+          Next
+          <i class="uil uil-arrow-right"></i>
+        </button>
+      </footer>
+    </div>
+  </div>
+</div>

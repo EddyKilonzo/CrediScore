@@ -1,5 +1,5 @@
 import { Component, signal, inject, OnInit, OnDestroy, HostListener, ViewChild, ElementRef } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { ToastService } from '../toast/toast.service';
@@ -19,6 +19,7 @@ export class Navbar implements OnInit, OnDestroy {
   private toastService = inject(ToastService) as ToastService;
   public imageService = inject(ImageService) as ImageService;
   public notifService = inject(AppNotificationsService);
+  private router = inject(Router);
 
   @ViewChild('notifContainer') notifContainer?: ElementRef<HTMLElement>;
 
@@ -81,8 +82,12 @@ export class Navbar implements OnInit, OnDestroy {
     this.notifService.markAllRead().subscribe();
   }
 
-  markRead(id: string) {
-    this.notifService.markRead(id).subscribe();
+  onNavbarNotifClick(notif: AppNotification): void {
+    this.notifService.markRead(notif.id).subscribe(() => {
+      if (this.notifService.openNotification(this.router, notif)) {
+        this.showNotifPanel = false;
+      }
+    });
   }
 
   getNotifIcon(type: string): string {

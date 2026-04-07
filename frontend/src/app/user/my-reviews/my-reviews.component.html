@@ -252,6 +252,7 @@
               <div
                 *ngFor="let review of filteredReviews"
                 class="review-card"
+                [attr.id]="'review-' + review.id"
               >
                 <!-- Card Header -->
                 <div class="card-header">

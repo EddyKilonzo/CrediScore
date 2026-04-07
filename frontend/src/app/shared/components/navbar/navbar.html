@@ -174,7 +174,7 @@
                   <i class="uil uil-bell"></i>
                 </div>
                 <div>
-                  <h3 class="notif-panel-title">Notifications</h3>
+                  <h3 class="notif-panel-title">Notification center</h3>
                   <p class="notif-panel-subtitle" *ngIf="(notifService.unreadCount | async) as count">
                     {{ count }} unread
                   </p>
@@ -206,11 +206,12 @@
                 </div>
                 <p class="notif-empty-title">No notifications yet</p>
                 <p class="notif-empty-sub">You're all caught up! Check back later.</p>
+                <a routerLink="/notifications" (click)="showNotifPanel = false" class="notif-empty-link">Open notification center</a>
               </div>
 
               <!-- Notification items -->
               <div *ngFor="let notif of notifications"
-                   (click)="markRead(notif.id)"
+                   (click)="onNavbarNotifClick(notif)"
                    class="notif-item"
                    [class.notif-item-unread]="!notif.isRead">
                 <div class="notif-item-icon" [class.notif-item-icon-unread]="!notif.isRead" [class.notif-item-icon-read]="notif.isRead">
@@ -227,10 +228,10 @@
 
             <!-- Footer -->
             <div *ngIf="!notifLoading && notifications.length > 0" class="notif-panel-footer">
-              <button type="button" (click)="showNotifPanel = false" class="notif-view-all">
-                View all notifications
+              <a routerLink="/notifications" (click)="showNotifPanel = false" class="notif-view-all">
+                Notification center
                 <i class="uil uil-arrow-right ml-1"></i>
-              </button>
+              </a>
             </div>
             </div>
           </div>
@@ -421,6 +422,13 @@
                   class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                   <i class="uil uil-shield-question w-4 h-4 mr-3" style="font-size:1rem;"></i>
                   {{ 'nav.flagsAndDisputes' | t }}
+                </a>
+
+                <a
+                  routerLink="/notifications"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                  <i class="uil uil-bell w-4 h-4 mr-3" style="font-size:1rem;"></i>
+                  {{ 'nav.notifications' | t }}
                 </a>
 
                 <a

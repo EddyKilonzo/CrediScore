@@ -569,6 +569,14 @@
   border-color: rgba(62, 106, 138, 0.2);
 }
 
+.review-card.review-card--highlight {
+  outline: 2px solid rgba(62, 106, 138, 0.7);
+  box-shadow:
+    rgba(50, 50, 93, 0.35) 0px 60px 120px -20px,
+    rgba(0, 0, 0, 0.4) 0px 40px 80px -30px,
+    0 0 0 4px rgba(62, 106, 138, 0.2);
+}
+
 /* Card Header */
 .card-header {
   display: flex;
