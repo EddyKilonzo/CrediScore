@@ -21,6 +21,8 @@ export interface UserDashboardActivityResponse {
   businessName?: string | null;
   rating?: number | null;
   credibility?: number | null;
+  helpfulCount?: number | null;
+  notHelpfulCount?: number | null;
 }
 
 export interface UserDashboardBusinessResponse {

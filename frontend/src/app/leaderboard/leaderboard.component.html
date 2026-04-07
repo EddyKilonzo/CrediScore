@@ -22,6 +22,16 @@
 
   <!-- Leaderboard Table -->
   <div *ngIf="!isLoading && !error" class="leaderboard-content">
+    <div class="tiers-card">
+      <h3 class="tiers-title">Reputation Tiers</h3>
+      <div class="tiers-list">
+        <div class="tier-item" *ngFor="let tier of reputationTiers">
+          <span class="tier-dot" [style.background]="tier.color"></span>
+          <span class="tier-name">{{ tier.name }}</span>
+          <span class="tier-range">{{ tier.min }}-{{ tier.max }} pts</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Top 3 podium -->
     <div class="podium" *ngIf="users.length >= 3">

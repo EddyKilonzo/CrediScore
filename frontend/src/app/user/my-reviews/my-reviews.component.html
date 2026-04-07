@@ -345,11 +345,15 @@
                       <span>Credibility: {{ review.credibility }}%</span>
                     </div>
                     <div class="detail-item">
-                      <i class="uil uil-thumbs-up"></i>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 9V5a3 3 0 0 0-6 0v4M5 9h14l-1 10H6L5 9z"></path>
+                      </svg>
                       <span>{{ review.helpfulCount ?? 0 }} likes</span>
                     </div>
                     <div class="detail-item">
-                      <i class="uil uil-thumbs-down"></i>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 15v4a3 3 0 0 0 6 0v-4M5 15h14l-1-10H6L5 15z"></path>
+                      </svg>
                       <span>{{ review.notHelpfulCount ?? 0 }} dislikes</span>
                     </div>
                   </div>

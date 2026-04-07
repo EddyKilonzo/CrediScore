@@ -272,61 +272,33 @@
           <div class="dashboard-card">
             <h2 class="section-title">Recent Activity</h2>
             <div class="space-y-4">
+              @if (recentActivities().length === 0) {
               <div class="activity-item">
                 <div class="flex items-center gap-3 p-3 rounded-lg">
                   <div class="activity-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+                    <i class="uil uil-history text-xl"></i>
                   </div>
                   <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">New user registered</p>
-                    <p class="text-xs text-gray-500">2 minutes ago</p>
+                    <p class="text-sm font-medium text-gray-900">No recent platform activity</p>
+                    <p class="text-xs text-gray-500">Activity will appear here when available</p>
                   </div>
                 </div>
               </div>
-
+              } @else {
+              @for (activity of recentActivities(); track activity.id) {
               <div class="activity-item">
                 <div class="flex items-center gap-3 p-3 rounded-lg">
                   <div class="activity-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <i [class]="getRecentActivityIcon(activity.type) + ' text-xl'"></i>
                   </div>
                   <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">Business verified</p>
-                    <p class="text-xs text-gray-500">15 minutes ago</p>
+                    <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                    <p class="text-xs text-gray-500">{{ formatTimeAgo(activity.timestamp) }}</p>
                   </div>
                 </div>
               </div>
-
-              <div class="activity-item">
-                <div class="flex items-center gap-3 p-3 rounded-lg">
-                  <div class="activity-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">Fraud report submitted</p>
-                    <p class="text-xs text-gray-500">1 hour ago</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="activity-item">
-                <div class="flex items-center gap-3 p-3 rounded-lg">
-                  <div class="activity-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">Profile updated</p>
-                    <p class="text-xs text-gray-500">2 hours ago</p>
-                  </div>
-                </div>
-              </div>
+              }
+              }
             </div>
           </div>
 

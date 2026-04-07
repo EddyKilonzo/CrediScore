@@ -160,6 +160,35 @@
   transform: scale(1.05);
 }
 
+.tier-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #dbe5ef;
+  background: #f8fbff;
+  border-radius: 9999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.tier-chip-active {
+  border-color: #3E6A8A;
+  background: #E8EEF3;
+  color: #2C5270;
+  font-weight: 700;
+}
+
+.tier-range {
+  opacity: 0.85;
+}
+
 /* Dashboard Cards - Enhanced Style */
 .dashboard-card {
   background: white;

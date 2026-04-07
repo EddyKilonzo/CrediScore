@@ -222,19 +222,72 @@
 
 /* Grade and rating trend chart */
 .grade-rating-trend-chart {
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  border: 1px solid #dbe7f0;
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+  background: linear-gradient(180deg, #f4f9ff 0%, #ffffff 100%);
   animation: chartSectionFadeIn 0.6s ease-out;
+}
+
+.trend-card {
+  background:
+    radial-gradient(circle at top right, rgba(45, 90, 135, 0.06), transparent 36%),
+    #ffffff;
+}
+
+.trend-chart-shell {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.trend-plot-area {
+  position: relative;
+  flex: 1;
+}
+
+.trend-grid-lines {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.trend-grid-lines span {
+  display: block;
+  width: 100%;
+  border-top: 1px dashed rgba(148, 163, 184, 0.35);
 }
 
 .trend-svg {
   width: 100%;
   height: 180px;
   display: block;
-  border-bottom: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.78);
   margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.trend-axis-line {
+  stroke: #94a3b8;
+  stroke-width: 1.3;
+}
+
+.trend-axis-tick {
+  stroke: #94a3b8;
+  stroke-width: 1;
+}
+
+.trend-axis-label {
+  fill: #94a3b8;
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: end;
 }
 
 .trend-line {
@@ -300,10 +353,10 @@
 }
 
 .trend-value-item {
-  background: #f9fafb;
-  border: 1px solid #f1f5f9;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
-  padding: 0.45rem 0.55rem;
+  padding: 0.5rem 0.6rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -321,6 +374,13 @@
   font-weight: 600;
 }
 
+.trend-legend-pill {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #dbe5ef;
+  background: #f8fbff;
+  border-radius: 9999px;
+}
+
 .trend-dot {
   width: 0.55rem;
   height: 0.55rem;
@@ -330,10 +390,12 @@
 
 .trend-dot-rating {
   background: #2D5A87;
+  box-shadow: 0 0 0 3px rgba(45, 90, 135, 0.15);
 }
 
 .trend-dot-grade {
   background: #5C8BA5;
+  box-shadow: 0 0 0 3px rgba(92, 139, 165, 0.16);
 }
 
 /* Staggered delay for trend points */

@@ -4,6 +4,8 @@ import { RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { BusinessService, Business } from '../../core/services/business.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
+import { I18nService } from '../../core/services/i18n.service';
+import { TPipe } from '../../shared/pipes/t.pipe';
 import { environment } from '../../../environments/environment';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -31,7 +33,7 @@ interface RatingDistribution {
 @Component({
     selector: 'app-analytics',
     standalone: true,
-    imports: [CommonModule, RouterModule],
+    imports: [CommonModule, RouterModule, TPipe],
     templateUrl: './analytics.component.html',
     styleUrl: './analytics.component.css'
 })
@@ -42,6 +44,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     private authService = inject(AuthService);
     private businessService = inject(BusinessService);
     private toastService = inject(ToastService);
+    private i18n = inject(I18nService);
 
     // Authentication state
     currentUser = this.authService.currentUser;
@@ -68,6 +71,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     // UI state
     isLoading = true;
     selectedPeriod: 'week' | 'month' | '3months' | '6months' | 'year' = '6months';
+    readonly trendAxisTicks = [14, 52, 90, 128, 166];
+    readonly trendAxisLabels = ['5.0', '4.0', '3.0', '2.0', '1.0'];
 
     ngOnInit() {
         this.loadBusinessData();
@@ -224,7 +229,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     }
 
     formatDate(date: string): string {
-        return new Date(date).toLocaleDateString('en-US', {
+        return new Date(date).toLocaleDateString(this.i18n.getLocaleFor(this.i18n.currentLanguage()), {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
@@ -241,11 +246,11 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
     getReputationLevel(): string {
         const score = this.summary.trustScore;
-        if (score >= 80) return 'Excellent';
-        if (score >= 60) return 'Good';
-        if (score >= 40) return 'Fair';
-        if (score >= 20) return 'Poor';
-        return 'New Business';
+        if (score >= 80) return this.i18n.t('analytics.reputation.excellent');
+        if (score >= 60) return this.i18n.t('analytics.reputation.good');
+        if (score >= 40) return this.i18n.t('analytics.reputation.fair');
+        if (score >= 20) return this.i18n.t('analytics.reputation.poor');
+        return this.i18n.t('analytics.reputation.newBusiness');
     }
 
     getReputationColor(): string {
@@ -543,14 +548,17 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     getRatingTrendPoints(width = 580, height = 180): string {
         const validTrends = this.reviewTrends.filter(t => t.count > 0);
         if (validTrends.length === 0) return '';
+        const layout = this.getTrendLayout(width, height);
 
         if (validTrends.length === 1) {
+            const x = layout.left + layout.plotWidth / 2;
             const y = this.getTrendY(validTrends[0].averageRating, height, 5);
-            return `${Math.round(width / 2)},${Math.round(y)}`;
+            // Draw a short horizontal segment so single-point data still appears as a line chart.
+            return `${Math.round(x - 24)},${Math.round(y)} ${Math.round(x + 24)},${Math.round(y)}`;
         }
 
         return validTrends.map((trend, index) => {
-            const x = (index / (validTrends.length - 1)) * width;
+            const x = layout.left + (index / (validTrends.length - 1)) * layout.plotWidth;
             const y = this.getTrendY(trend.averageRating, height, 5);
             return `${Math.round(x)},${Math.round(y)}`;
         }).join(' ');
@@ -559,15 +567,17 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     getGradeTrendPoints(width = 580, height = 180): string {
         const validTrends = this.reviewTrends.filter(t => t.count > 0);
         if (validTrends.length === 0) return '';
+        const layout = this.getTrendLayout(width, height);
 
         if (validTrends.length === 1) {
+            const x = layout.left + layout.plotWidth / 2;
             const gradeScore = validTrends[0].averageRating * 20;
             const y = this.getTrendY(gradeScore, height, 100);
-            return `${Math.round(width / 2)},${Math.round(y)}`;
+            return `${Math.round(x - 24)},${Math.round(y)} ${Math.round(x + 24)},${Math.round(y)}`;
         }
 
         return validTrends.map((trend, index) => {
-            const x = (index / (validTrends.length - 1)) * width;
+            const x = layout.left + (index / (validTrends.length - 1)) * layout.plotWidth;
             const gradeScore = trend.averageRating * 20;
             const y = this.getTrendY(gradeScore, height, 100);
             return `${Math.round(x)},${Math.round(y)}`;
@@ -577,9 +587,12 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     getTrendPointData(width = 580, height = 180): Array<{ month: string; x: number; ratingY: number; gradeY: number; rating: number; grade: string }> {
         const validTrends = this.reviewTrends.filter(t => t.count > 0);
         if (validTrends.length === 0) return [];
+        const layout = this.getTrendLayout(width, height);
 
         return validTrends.map((trend, index) => {
-            const x = validTrends.length === 1 ? width / 2 : (index / (validTrends.length - 1)) * width;
+            const x = validTrends.length === 1
+                ? layout.left + layout.plotWidth / 2
+                : layout.left + (index / (validTrends.length - 1)) * layout.plotWidth;
             const ratingY = this.getTrendY(trend.averageRating, height, 5);
             const gradeScore = trend.averageRating * 20;
             const gradeY = this.getTrendY(gradeScore, height, 100);
@@ -597,9 +610,15 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
     private getTrendY(value: number, height: number, max: number): number {
         const clamped = Math.max(0, Math.min(value, max));
-        const topPadding = 12;
-        const bottomPadding = 12;
+        const topPadding = 14;
+        const bottomPadding = 14;
         const chartHeight = height - topPadding - bottomPadding;
         return topPadding + (1 - clamped / max) * chartHeight;
+    }
+
+    private getTrendLayout(width: number, _height: number): { left: number; right: number; plotWidth: number } {
+        const left = 44;
+        const right = width - 16;
+        return { left, right, plotWidth: right - left };
     }
 }

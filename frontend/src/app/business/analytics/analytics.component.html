@@ -16,7 +16,7 @@
           <div class="welcome-separator" style="width: 100%; height: 1px; background-color: #E5E7EB; margin: 1rem 0;"></div>
           
           <p class="welcome-subtitle" style="color: #6B7280; font-size: 1.1rem; margin-bottom: 1.5rem;">
-            Track your performance and insights for {{ currentBusiness?.name || 'your business' }}
+            {{ 'analytics.trackPerformance' | t }} {{ currentBusiness?.name || ('analytics.yourBusiness' | t) }}
           </p>
         </div>
         
@@ -25,12 +25,12 @@
           <button (click)="downloadCSV()"
                   class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5270] text-white rounded-lg hover:bg-[#1e3d54] transition-colors text-sm font-medium">
             <i class="uil uil-file-download-alt"></i>
-            Export CSV
+            {{ 'analytics.exportCsv' | t }}
           </button>
           <button (click)="downloadPDF()"
                   class="inline-flex items-center gap-2 px-4 py-2 bg-[#1e3d54] text-white rounded-lg hover:bg-[#152d40] transition-colors text-sm font-medium">
             <i class="uil uil-file-pdf-alt"></i>
-            Download PDF
+            {{ 'analytics.downloadPdf' | t }}
           </button>
         </div>
 
@@ -41,28 +41,28 @@
                   [class.text-white]="selectedPeriod === 'month'"
                   [class.text-gray-600]="selectedPeriod !== 'month'"
                   class="px-4 py-2 rounded-md text-sm font-medium transition-all">
-            Month
+            {{ 'analytics.period.month' | t }}
           </button>
           <button (click)="changePeriod('3months')" 
                   [class.bg-[#2D5A87]]="selectedPeriod === '3months'"
                   [class.text-white]="selectedPeriod === '3months'"
                   [class.text-gray-600]="selectedPeriod !== '3months'"
                   class="px-4 py-2 rounded-md text-sm font-medium transition-all">
-            3 Months
+            {{ 'analytics.period.threeMonths' | t }}
           </button>
           <button (click)="changePeriod('6months')" 
                   [class.bg-[#2D5A87]]="selectedPeriod === '6months'"
                   [class.text-white]="selectedPeriod === '6months'"
                   [class.text-gray-600]="selectedPeriod !== '6months'"
                   class="px-4 py-2 rounded-md text-sm font-medium transition-all">
-            6 Months
+            {{ 'analytics.period.sixMonths' | t }}
           </button>
           <button (click)="changePeriod('year')" 
                   [class.bg-[#2D5A87]]="selectedPeriod === 'year'"
                   [class.text-white]="selectedPeriod === 'year'"
                   [class.text-gray-600]="selectedPeriod !== 'year'"
                   class="px-4 py-2 rounded-md text-sm font-medium transition-all">
-            Year
+            {{ 'analytics.period.year' | t }}
           </button>
         </div>
       </div>
@@ -72,7 +72,7 @@
     @if (isLoading) {
       <div class="flex items-center justify-center py-12">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D5A87]"></div>
-        <span class="ml-2 text-gray-600">Loading analytics...</span>
+        <span class="ml-2 text-gray-600">{{ 'analytics.loading' | t }}</span>
       </div>
     }
 
@@ -86,7 +86,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-600">Total Reviews</p>
+              <p class="text-sm font-medium text-gray-600">{{ 'analytics.totalReviews' | t }}</p>
               <h3 class="text-3xl font-bold text-gray-900 mt-2">{{ summary.totalReviews }}</h3>
             </div>
             <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -99,7 +99,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-600">Average Rating</p>
+              <p class="text-sm font-medium text-gray-600">{{ 'analytics.averageRating' | t }}</p>
               <div class="flex items-center mt-2">
                 <h3 class="text-3xl font-bold text-gray-900">{{ summary.averageRating | number:'1.1-1' }}</h3>
                 <div class="ml-2 flex">
@@ -120,7 +120,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-600">Trust Score</p>
+              <p class="text-sm font-medium text-gray-600">{{ 'analytics.trustScore' | t }}</p>
               <h3 class="text-3xl font-bold mt-2" [ngClass]="getReputationColor()">
                 {{ summary.trustScore | number:'1.0-0' }}
               </h3>
@@ -136,8 +136,10 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-600">Status</p>
-              <h3 class="text-lg font-bold text-gray-900 mt-2">{{ summary.verificationStatus }}</h3>
+              <p class="text-sm font-medium text-gray-600">{{ 'analytics.status' | t }}</p>
+              <h3 class="text-lg font-bold text-gray-900 mt-2">
+                {{ summary.verificationStatus === 'Verified' ? ('analytics.verified' | t) : ('analytics.pending' | t) }}
+              </h3>
               <p class="text-xs text-gray-500 mt-1">
                 {{ summary.totalDocuments }} docs, {{ summary.totalPayments }} payment methods
               </p>
@@ -163,10 +165,10 @@
           <div class="flex items-center justify-between mb-5">
             <h2 class="text-lg font-semibold text-gray-900">
               <i class="uil uil-chart-bar mr-2 text-[#2D5A87]"></i>
-              Review Trends
+              {{ 'analytics.reviewTrends' | t }}
             </h2>
             <span *ngIf="reviewTrends.length > 0" class="text-sm font-semibold text-[#2D5A87] bg-[#E8EEF3] px-3 py-1 rounded-full">
-              {{ getTotalTrendReviews() }} total
+              {{ getTotalTrendReviews() }} {{ 'analytics.total' | t }}
             </span>
           </div>
 
@@ -192,7 +194,7 @@
           <ng-template #noTrendsChart>
             <div class="analytics-chart-empty">
               <i class="uil uil-chart-bar"></i>
-              <p>No review data available for this period</p>
+              <p>{{ 'analytics.noReviewData' | t }}</p>
             </div>
           </ng-template>
         </div>
@@ -201,7 +203,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <h2 class="text-lg font-semibold text-gray-900 mb-5">
             <i class="uil uil-sliders-v-alt mr-2 text-[#5C8BA5]"></i>
-            Rating Distribution
+            {{ 'analytics.ratingDistribution' | t }}
           </h2>
           <div class="space-y-4">
             <div *ngFor="let dist of ratingDistribution; let i = index" class="space-y-1">
@@ -225,55 +227,78 @@
 
             <div *ngIf="ratingDistribution.length === 0" class="text-center py-8 text-gray-500">
               <i class="uil uil-sliders-v-alt text-3xl mb-2"></i>
-              <p>No rating data available</p>
+              <p>{{ 'analytics.noRatingData' | t }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Grade and Rating Trend -->
-      <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
+      <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8 trend-card">
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-lg font-semibold text-gray-900">
             <i class="uil uil-chart-growth mr-2 text-[#2D5A87]"></i>
-            Grade and Rating Trend
+            {{ 'analytics.gradeRatingTrend' | t }}
           </h2>
-          <div class="flex items-center gap-4 text-xs">
-            <span class="trend-legend">
-              <i class="trend-dot trend-dot-rating"></i> Rating
+          <div class="flex items-center gap-2 text-xs">
+            <span class="trend-legend trend-legend-pill">
+              <i class="trend-dot trend-dot-rating"></i> {{ 'analytics.rating' | t }}
             </span>
-            <span class="trend-legend">
-              <i class="trend-dot trend-dot-grade"></i> Grade
+            <span class="trend-legend trend-legend-pill">
+              <i class="trend-dot trend-dot-grade"></i> {{ 'analytics.grade' | t }}
             </span>
           </div>
         </div>
 
         <div *ngIf="getTrendPointData().length > 0; else noGradeRatingTrend" class="grade-rating-trend-chart">
-          <svg viewBox="0 0 580 180" preserveAspectRatio="none" class="trend-svg">
-            <polyline
-              [attr.points]="getRatingTrendPoints()"
-              class="trend-line trend-line-rating">
-            </polyline>
-            <polyline
-              [attr.points]="getGradeTrendPoints()"
-              class="trend-line trend-line-grade">
-            </polyline>
+          <div class="trend-chart-shell">
+            <div class="trend-plot-area">
+              <div class="trend-grid-lines" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <svg viewBox="0 0 580 180" preserveAspectRatio="none" class="trend-svg">
+                <g class="trend-axes">
+                  <line x1="44" y1="14" x2="44" y2="166" class="trend-axis-line"></line>
+                  <line x1="44" y1="166" x2="564" y2="166" class="trend-axis-line"></line>
+                  <line *ngFor="let y of trendAxisTicks" x1="38" [attr.y1]="y" x2="44" [attr.y2]="y" class="trend-axis-tick"></line>
+                  <line *ngFor="let point of getTrendPointData()" [attr.x1]="point.x" y1="166" [attr.x2]="point.x" y2="171" class="trend-axis-tick"></line>
+                  <text *ngFor="let y of trendAxisTicks; let i = index"
+                        x="34"
+                        [attr.y]="y + 3"
+                        class="trend-axis-label">
+                    {{ trendAxisLabels[i] }}
+                  </text>
+                </g>
+                <polyline
+                  [attr.points]="getRatingTrendPoints()"
+                  class="trend-line trend-line-rating">
+                </polyline>
+                <polyline
+                  [attr.points]="getGradeTrendPoints()"
+                  class="trend-line trend-line-grade">
+                </polyline>
 
-            <g *ngFor="let point of getTrendPointData()">
-              <circle
-                [attr.cx]="point.x"
-                [attr.cy]="point.ratingY"
-                r="4"
-                class="trend-point trend-point-rating">
-              </circle>
-              <circle
-                [attr.cx]="point.x"
-                [attr.cy]="point.gradeY"
-                r="4"
-                class="trend-point trend-point-grade">
-              </circle>
-            </g>
-          </svg>
+                <g *ngFor="let point of getTrendPointData()">
+                  <circle
+                    [attr.cx]="point.x"
+                    [attr.cy]="point.ratingY"
+                    r="4.5"
+                    class="trend-point trend-point-rating">
+                  </circle>
+                  <circle
+                    [attr.cx]="point.x"
+                    [attr.cy]="point.gradeY"
+                    r="4.5"
+                    class="trend-point trend-point-grade">
+                  </circle>
+                </g>
+              </svg>
+            </div>
+          </div>
 
           <div class="trend-x-labels">
             <span *ngFor="let point of getTrendPointData()">{{ point.month }}</span>
@@ -282,8 +307,8 @@
           <div class="trend-values-grid">
             <div *ngFor="let point of getTrendPointData()" class="trend-value-item">
               <div class="text-sm font-semibold text-gray-900">{{ point.month }}</div>
-              <div class="text-xs text-gray-500">Rating: {{ point.rating | number:'1.1-1' }}/5</div>
-              <div class="text-xs text-[#5C8BA5]">Grade: {{ point.grade }}</div>
+              <div class="text-xs text-gray-500">{{ 'analytics.rating' | t }}: {{ point.rating | number:'1.1-1' }}/5</div>
+              <div class="text-xs text-[#5C8BA5]">{{ 'analytics.grade' | t }}: {{ point.grade }}</div>
             </div>
           </div>
         </div>
@@ -291,7 +316,7 @@
         <ng-template #noGradeRatingTrend>
           <div class="analytics-chart-empty">
             <i class="uil uil-chart-growth"></i>
-            <p>No rating trend data available for this period</p>
+            <p>{{ 'analytics.noRatingTrendData' | t }}</p>
           </div>
         </ng-template>
       </div>
@@ -300,7 +325,7 @@
       <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">
           <i class="fas fa-comments mr-2 text-[#10B981]"></i>
-          Recent Reviews
+          {{ 'analytics.recentReviews' | t }}
         </h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -324,15 +349,15 @@
               </div>
             </div>
             <p class="text-sm text-gray-700 review-comment-preview" *ngIf="review.comment">{{ review.comment }}</p>
-            <p class="text-sm text-gray-400 italic" *ngIf="!review.comment">No comment provided</p>
+            <p class="text-sm text-gray-400 italic" *ngIf="!review.comment">{{ 'analytics.noComment' | t }}</p>
             <p class="mt-2 text-xs text-[#2D5A87] font-medium">
-              Click to view details
+              {{ 'analytics.clickToViewDetails' | t }}
             </p>
           </button>
           
           <div *ngIf="recentReviews.length === 0" class="text-center py-8 text-gray-500">
             <i class="fas fa-inbox text-3xl mb-2"></i>
-            <p>No recent reviews</p>
+            <p>{{ 'analytics.noRecentReviews' | t }}</p>
           </div>
         </div>
       </div>
@@ -369,7 +394,7 @@
             <div>
               <p class="text-sm font-semibold text-gray-900 mb-1">Review</p>
               <p class="text-sm text-gray-700 whitespace-pre-line" *ngIf="selectedReview.comment">{{ selectedReview.comment }}</p>
-              <p class="text-sm text-gray-400 italic" *ngIf="!selectedReview.comment">No comment provided</p>
+              <p class="text-sm text-gray-400 italic" *ngIf="!selectedReview.comment">{{ 'analytics.noComment' | t }}</p>
             </div>
           </div>
         </div>
@@ -380,12 +405,12 @@
         <a routerLink="/business/my-business" 
            class="inline-flex items-center px-6 py-3 bg-[#2D5A87] text-white rounded-lg hover:bg-[#3E6A8A] transition-all shadow-sm">
           <i class="fas fa-arrow-left mr-2"></i>
-          Back to My Business
+          {{ 'analytics.backToMyBusiness' | t }}
         </a>
         <a routerLink="/business/dashboard" 
            class="inline-flex items-center px-6 py-3 bg-white text-[#2D5A87] border-2 border-[#2D5A87] rounded-lg hover:bg-[#E8EEF3] transition-all">
           <i class="fas fa-tachometer-alt mr-2"></i>
-          View Dashboard
+          {{ 'analytics.viewDashboard' | t }}
         </a>
       </div>
     </ng-container>

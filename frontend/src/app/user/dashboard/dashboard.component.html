@@ -14,8 +14,17 @@
       <div *ngIf="currentUser()?.role === 'user' || currentUser()?.role === 'CUSTOMER'" class="mt-4">
         <span class="reputation-badge inline-flex items-center px-4 py-2 rounded-full text-sm font-medium transition-all duration-300">
           <i class="uil uil-star mr-2"></i>
-          {{ getCustomerReputationLevel() }}
+          {{ getCustomerReputationLevel() }} ({{ getCurrentReviewerScore() }})
         </span>
+        <div class="tier-guide mt-3">
+          <div
+            *ngFor="let tier of reviewerTiers"
+            class="tier-chip"
+            [class.tier-chip-active]="tier.name === getCurrentReviewerTier().name">
+            <span class="tier-name">{{ tier.name }}</span>
+            <span class="tier-range">{{ tier.min }}-{{ tier.max }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -74,7 +83,7 @@
           <div>
             <p class="card-label">{{ 'dash.user.reputationLevel' | t }}</p>
             <p class="card-number" [class]="getReputationColor()">
-              {{ getCustomerReputationLevel() }}
+              {{ getCustomerReputationLevel() || 'New Reviewer' }}
             </p>
             <p class="card-subtitle">Your reviewer status</p>
           </div>
@@ -171,6 +180,23 @@
                   <span *ngIf="activity.businessName" class="text-xs text-gray-500">{{ activity.businessName }}</span>
                   <span *ngIf="activity.rating" class="text-xs text-yellow-600">
                     <i class="uil uil-star"></i> {{ activity.rating }}
+                  </span>
+                </div>
+                <div
+                  *ngIf="activity.type === 'review'"
+                  class="flex items-center space-x-3 mt-2 text-xs text-gray-600"
+                >
+                  <span class="inline-flex items-center gap-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14 9V5a3 3 0 0 0-6 0v4M5 9h14l-1 10H6L5 9z"></path>
+                    </svg>
+                    {{ activity.helpfulCount ?? 0 }}
+                  </span>
+                  <span class="inline-flex items-center gap-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M10 15v4a3 3 0 0 0 6 0v-4M5 15h14l-1-10H6L5 15z"></path>
+                    </svg>
+                    {{ activity.notHelpfulCount ?? 0 }}
                   </span>
                 </div>
               </div>

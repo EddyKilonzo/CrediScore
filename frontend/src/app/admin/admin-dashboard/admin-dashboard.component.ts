@@ -6,6 +6,16 @@ import { AdminService, AdminDashboardStats, HistoricalData, MonthlyData } from '
 import { ToastService } from '../../shared/components/toast/toast.service';
 import { environment } from '../../../environments/environment';
 import { TPipe } from '../../shared/pipes/t.pipe';
+import { firstValueFrom } from 'rxjs';
+
+type AdminActivityType = 'user_registered' | 'business_verified' | 'fraud_report';
+
+interface AdminRecentActivity {
+  id: string;
+  type: AdminActivityType;
+  title: string;
+  timestamp: Date;
+}
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -28,6 +38,7 @@ export class AdminDashboardComponent implements OnInit {
   isLoading = signal(false);
   error = signal<string | null>(null);
   monthlyUserRegistrations = signal<{ month: string; count: number }[]>([]);
+  recentActivities = signal<AdminRecentActivity[]>([]);
 
   ngOnInit() {
     // Scroll to top when component loads
@@ -41,6 +52,7 @@ export class AdminDashboardComponent implements OnInit {
     }
 
     this.loadDashboardStats();
+    this.loadRecentActivities();
   }
 
   private isAdmin(): boolean {
@@ -88,6 +100,50 @@ export class AdminDashboardComponent implements OnInit {
 
   async refreshStats(): Promise<void> {
     await this.loadDashboardStats();
+    await this.loadRecentActivities();
+  }
+
+  private async loadRecentActivities(): Promise<void> {
+    try {
+      const [usersResponse, businessesResponse, reportsResponse] = await Promise.all([
+        firstValueFrom(this.adminService.getAllUsers(1, 8)),
+        firstValueFrom(this.adminService.getAllBusinesses(1, 8)),
+        firstValueFrom(this.adminService.getAllFraudReports(1, 8)),
+      ]);
+
+      const userEvents: AdminRecentActivity[] = (usersResponse.users ?? []).map((user) => ({
+        id: `user-${user.id}`,
+        type: 'user_registered',
+        title: user.name ? `${user.name} registered` : 'New user registered',
+        timestamp: new Date(user.createdAt),
+      }));
+
+      const businessEvents: AdminRecentActivity[] = (businessesResponse.data ?? [])
+        .filter((business) => business.isVerified)
+        .map((business) => ({
+          id: `business-${business.id}`,
+          type: 'business_verified',
+          title: `${business.name} verified`,
+          timestamp: new Date(business.reviewedAt ?? business.updatedAt),
+        }));
+
+      const fraudEvents: AdminRecentActivity[] = (reportsResponse.data ?? []).map((report) => ({
+        id: `fraud-${report.id}`,
+        type: 'fraud_report',
+        title: `Fraud report submitted for ${report.business?.name ?? 'a business'}`,
+        timestamp: new Date(report.createdAt),
+      }));
+
+      const merged = [...userEvents, ...businessEvents, ...fraudEvents]
+        .filter((event) => !Number.isNaN(event.timestamp.getTime()))
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, 8);
+
+      this.recentActivities.set(merged);
+    } catch (error) {
+      console.error('Error loading recent admin activities:', error);
+      this.recentActivities.set([]);
+    }
   }
 
   /** Print-friendly HTML report (user saves as PDF from the print dialog). */
@@ -436,5 +492,27 @@ export class AdminDashboardComponent implements OnInit {
     }
     
     return data;
+  }
+
+  getRecentActivityIcon(activityType: AdminActivityType): string {
+    switch (activityType) {
+      case 'user_registered':
+        return 'uil uil-user-plus';
+      case 'business_verified':
+        return 'uil uil-check-circle';
+      case 'fraud_report':
+        return 'uil uil-shield-exclamation';
+      default:
+        return 'uil uil-bell';
+    }
+  }
+
+  formatTimeAgo(date: Date): string {
+    const diffInSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
   }
 }

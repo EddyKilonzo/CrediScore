@@ -25,6 +25,8 @@ export class AppNotificationsService {
   private unreadCount$ = new BehaviorSubject<number>(0);
   private notifications$ = new BehaviorSubject<AppNotification[]>([]);
   private pollSub: Subscription | null = null;
+  private failureCount = 0;
+  private pausedUntil = 0;
 
   readonly unreadCount = this.unreadCount$.asObservable();
   readonly notifications = this.notifications$.asObservable();
@@ -33,7 +35,18 @@ export class AppNotificationsService {
     this.stopPolling();
     this.fetchUnreadCount();
     this.pollSub = interval(intervalMs).pipe(
-      switchMap(() => this.authService.isAuthenticated() ? this.fetchUnreadCountObs() : of({ unread: 0 }))
+      switchMap(() => {
+        if (!this.authService.isAuthenticated()) {
+          return of({ unread: 0 });
+        }
+
+        // Back off polling briefly when backend is unavailable.
+        if (Date.now() < this.pausedUntil) {
+          return of({ unread: this.unreadCount$.value });
+        }
+
+        return this.fetchUnreadCountObs();
+      })
     ).subscribe(res => this.unreadCount$.next(res.unread));
   }
 
@@ -49,6 +62,10 @@ export class AppNotificationsService {
 
   private fetchUnreadCountObs(): Observable<{ unread: number }> {
     return this.http.get<{ unread: number }>(`${this.API_URL}/notifications/count`).pipe(
+      tap(() => {
+        this.failureCount = 0;
+        this.pausedUntil = 0;
+      }),
       catchError(() => this.fetchUnreadFromNotifications())
     );
   }
@@ -59,11 +76,19 @@ export class AppNotificationsService {
       .pipe(
         tap(res => this.notifications$.next(res.notifications || [])),
         switchMap((res) => {
+          this.failureCount = 0;
+          this.pausedUntil = 0;
           const notifications = res?.notifications || [];
           const unread = notifications.filter((n: AppNotification) => !n.isRead).length;
           return of({ unread });
         }),
-        catchError(() => of({ unread: this.unreadCount$.value }))
+        catchError(() => {
+          this.failureCount += 1;
+          if (this.failureCount >= 3) {
+            this.pausedUntil = Date.now() + 5 * 60 * 1000; // 5 minutes
+          }
+          return of({ unread: this.unreadCount$.value });
+        })
       );
   }
 

@@ -29,6 +29,8 @@ interface RecentActivity {
   businessName?: string;
   rating?: number;
   credibility?: number;
+  helpfulCount?: number;
+  notHelpfulCount?: number;
 }
 
 interface BusinessCard {
@@ -48,6 +50,13 @@ interface QuickAction {
   icon: string;
   route: string;
   color: string;
+}
+
+interface ReviewerTier {
+  name: string;
+  min: number;
+  max: number;
+  colorClass: string;
 }
 
 @Component({
@@ -86,6 +95,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Chart data — computed from real activity after load
   reviewTrendData: { day: string; reviews: number }[] = [];
+  readonly reviewerTiers: ReviewerTier[] = [
+    { name: 'Elite', min: 90, max: 100, colorClass: 'text-[#2C5270]' },
+    { name: 'Trusted', min: 75, max: 89, colorClass: 'text-[#3E6A8A]' },
+    { name: 'Reliable', min: 60, max: 74, colorClass: 'text-[#5C8BA5]' },
+    { name: 'Growing', min: 40, max: 59, colorClass: 'text-[#7EA5BD]' },
+    { name: 'New Reviewer', min: 0, max: 39, colorClass: 'text-[#94a3b8]' }
+  ];
 
   ngOnInit() {
     // Check if user is a business owner and redirect to business dashboard
@@ -227,6 +243,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       businessName: activity.businessName ?? undefined,
       rating: activity.rating ?? undefined,
       credibility: activity.credibility ?? undefined,
+      helpfulCount: activity.helpfulCount ?? 0,
+      notHelpfulCount: activity.notHelpfulCount ?? 0,
     }));
   }
 
@@ -445,13 +463,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getCustomerReputationLevel(): string {
     const user = this.currentUser();
-    if (!user || (user.role !== 'user' && user.role !== 'CUSTOMER')) return '';
-    const effectiveRep = this.getEffectiveReviewerScore();
-    if (effectiveRep >= 300) return 'Legendary Reviewer';
-    if (effectiveRep >= 200) return 'Elite Reviewer';
-    if (effectiveRep >= 120) return 'Trusted Reviewer';
-    if (effectiveRep >= 60) return 'Rising Reviewer';
-    return 'New Reviewer';
+    const role = (user?.role ?? '').toString().trim().toUpperCase();
+    if (!user || (role !== 'USER' && role !== 'CUSTOMER')) return 'New Reviewer';
+    return this.getCurrentReviewerTier().name;
   }
 
   getReviewedBusinessesCount(): number {
@@ -473,32 +487,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getReputationColor(): string {
     const user = this.currentUser();
-    if (!user || (user.role !== 'user' && user.role !== 'CUSTOMER')) return '';
-    const effectiveRep = this.getEffectiveReviewerScore();
-    if (effectiveRep >= 200) return 'text-blue-600';
-    if (effectiveRep >= 120) return 'text-green-600';
-    if (effectiveRep >= 60) return 'text-yellow-600';
-    return 'text-gray-600';
+    const role = (user?.role ?? '').toString().trim().toUpperCase();
+    if (!user || (role !== 'USER' && role !== 'CUSTOMER')) return 'text-gray-600';
+    return this.getCurrentReviewerTier().colorClass;
   }
 
-  private getEffectiveReviewerScore(): number {
+  getCurrentReviewerScore(): number {
     const user = this.currentUser();
-    const baseReputation = user?.reputation ?? 0;
-    const reviewCount = this.dashboardStats.totalReviews ?? 0;
-    const avgCredibility = this.getAverageReviewCredibility();
-    const score = Math.round(
-      baseReputation + reviewCount * 4 + avgCredibility * 0.2,
-    );
-    return Math.max(0, score);
+    const score = Number(user?.reputation ?? 0);
+    return Math.max(0, Math.min(100, Math.round(score)));
   }
 
-  private getAverageReviewCredibility(): number {
-    const credibilityValues = this.recentActivities
-      .filter((activity) => activity.type === 'review')
-      .map((activity) => activity.credibility ?? 0);
-    if (credibilityValues.length === 0) return 0;
-    const sum = credibilityValues.reduce((acc, val) => acc + val, 0);
-    return sum / credibilityValues.length;
+  getCurrentReviewerTier(): ReviewerTier {
+    const score = this.getCurrentReviewerScore();
+    return (
+      this.reviewerTiers.find((tier) => score >= tier.min && score <= tier.max) ??
+      this.reviewerTiers[this.reviewerTiers.length - 1]
+    );
   }
 
   private mapActivityType(type: string): RecentActivity['type'] {

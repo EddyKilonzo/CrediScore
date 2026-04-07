@@ -224,6 +224,8 @@ export class UserService {
         businessName: review.business?.name ?? undefined,
         rating: review.rating,
         credibility: review.credibility ?? 0,
+        helpfulCount: review.helpfulCount ?? 0,
+        notHelpfulCount: review.notHelpfulCount ?? 0,
       }));
 
       // Map businesses for dashboard cards
@@ -1610,70 +1612,77 @@ export class UserService {
       throw new ForbiddenException('You cannot vote on your own review');
     }
 
-    const existing = await this.prisma.reviewVote.findUnique({
-      where: { reviewId_userId: { reviewId, userId } },
-    });
+    const voteResult = await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.reviewVote.findUnique({
+        where: { reviewId_userId: { reviewId, userId } },
+      });
 
-    let newVote: string | null = vote;
-    if (existing) {
-      if (existing.vote === vote) {
-        // Toggle off
-        await this.prisma.reviewVote.delete({ where: { reviewId_userId: { reviewId, userId } } });
-        newVote = null;
+      let newVote: string | null = vote;
+      if (existing) {
+        if (existing.vote === vote) {
+          // Toggle off
+          await tx.reviewVote.delete({
+            where: { reviewId_userId: { reviewId, userId } },
+          });
+          newVote = null;
+        } else {
+          // Switch vote
+          await tx.reviewVote.update({
+            where: { reviewId_userId: { reviewId, userId } },
+            data: { vote },
+          });
+        }
       } else {
-        // Switch vote
-        await this.prisma.reviewVote.update({
-          where: { reviewId_userId: { reviewId, userId } },
-          data: { vote },
-        });
+        await tx.reviewVote.create({ data: { reviewId, userId, vote } });
       }
-    } else {
-      await this.prisma.reviewVote.create({ data: { reviewId, userId, vote } });
-    }
 
-    const [helpfulCount, notHelpfulCount] = await Promise.all([
-      this.prisma.reviewVote.count({ where: { reviewId, vote: 'HELPFUL' } }),
-      this.prisma.reviewVote.count({ where: { reviewId, vote: 'NOT_HELPFUL' } }),
-    ]);
+      const [helpfulCount, notHelpfulCount] = await Promise.all([
+        tx.reviewVote.count({ where: { reviewId, vote: 'HELPFUL' } }),
+        tx.reviewVote.count({ where: { reviewId, vote: 'NOT_HELPFUL' } }),
+      ]);
 
-    const total = helpfulCount + notHelpfulCount;
-    const ratio = total > 0 ? helpfulCount / total : 0.5;
-    const existingCredibility = review.credibility ?? 0;
-    const strongPositiveSignal = total >= 3 && ratio >= 0.8 ? 5 : 0;
-    const strongNegativeSignal = total >= 3 && ratio <= 0.2 ? -5 : 0;
-    const newCredibility = Math.max(
-      0,
-      Math.min(
-        100,
-        Math.round(
-          existingCredibility * 0.6 +
-            ratio * 100 * 0.4 +
-            strongPositiveSignal +
-            strongNegativeSignal,
+      const total = helpfulCount + notHelpfulCount;
+      const ratio = total > 0 ? helpfulCount / total : 0.5;
+      const existingCredibility = review.credibility ?? 0;
+      const strongPositiveSignal = total >= 3 && ratio >= 0.8 ? 5 : 0;
+      const strongNegativeSignal = total >= 3 && ratio <= 0.2 ? -5 : 0;
+      const newCredibility = Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            existingCredibility * 0.6 +
+              ratio * 100 * 0.4 +
+              strongPositiveSignal +
+              strongNegativeSignal,
+          ),
         ),
-      ),
-    );
-    await this.prisma.review.update({
-      where: { id: reviewId },
-      data: {
-        helpfulCount,
-        notHelpfulCount,
-        credibility: newCredibility,
-      },
+      );
+
+      await tx.review.update({
+        where: { id: reviewId },
+        data: {
+          helpfulCount,
+          notHelpfulCount,
+          credibility: newCredibility,
+        },
+      });
+
+      return { helpfulCount, notHelpfulCount, userVote: newVote };
     });
 
     // Notify review author when someone votes on their review
-    if (newVote !== null) {
+    if (voteResult.userVote !== null) {
       await this.notificationsService.create(
         review.userId,
         'REVIEW_VOTE',
         'New vote on your review',
-        `Someone found your review ${newVote === 'HELPFUL' ? 'helpful' : 'not helpful'}.`,
+        `Someone found your review ${voteResult.userVote === 'HELPFUL' ? 'helpful' : 'not helpful'}.`,
         reviewId,
       );
     }
 
-    return { helpfulCount, notHelpfulCount, userVote: newVote };
+    return voteResult;
   }
 
   // Fraud Report Management

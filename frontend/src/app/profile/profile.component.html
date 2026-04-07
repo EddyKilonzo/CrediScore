@@ -2,11 +2,11 @@
 <div class="profile-dashboard">
   <!-- Header -->
   <div class="profile-header fade-in-up">
-    <h1 class="profile-title slide-in-left">Profile</h1>
+    <h1 class="profile-title slide-in-left">{{ 'profile.title' | t }}</h1>
     @if (currentUser()?.role === 'admin') {
       <button class="add-employee-btn slide-in-right">
         <i class="fas fa-plus"></i>
-        Add Employee
+        {{ 'profile.addEmployee' | t }}
       </button>
     }
   </div>
@@ -19,7 +19,7 @@
         class="tab-button animated-tab"
         [class.active]="tab.active">
         <i [class]="tab.icon"></i>
-        {{ tab.label }}
+        {{ getTabLabel(tab.id) }}
       </button>
     }
   </div>
@@ -47,11 +47,11 @@
               @if (isLoading()) {
                 <div class="upload-progress">
                   <div class="spinner"></div>
-                  <span>Uploading...</span>
+                  <span>{{ 'profile.uploading' | t }}</span>
                 </div>
               } @else {
                 <i class="fas fa-camera"></i>
-                <span>Edit Photo</span>
+                <span>{{ 'profile.editPhoto' | t }}</span>
               }
             </div>
             <input
@@ -70,7 +70,7 @@
 
       <!-- About Section -->
       <div class="info-section animated-section">
-        <h3 class="section-title">About</h3>
+        <h3 class="section-title">{{ 'profile.about' | t }}</h3>
         <div class="info-item animated-item">
           <i class="fas fa-envelope info-icon"></i>
           <span>{{ currentUser()?.email }}</span>
@@ -91,7 +91,7 @@
 
       <!-- Address Section -->
       <div class="info-section animated-section">
-        <h3 class="section-title">Address</h3>
+        <h3 class="section-title">{{ 'profile.address' | t }}</h3>
         <div class="info-item animated-item">
           <i class="fas fa-map-marker-alt info-icon"></i>
           <span>{{ getUserAddress() }}</span>
@@ -108,10 +108,10 @@
 
       <!-- User Details Section -->
       <div class="info-section animated-section">
-        <h3 class="section-title">User Details</h3>
+        <h3 class="section-title">{{ 'profile.userDetails' | t }}</h3>
         <div class="info-item">
           <i class="fas fa-calendar-alt info-icon"></i>
-          <span>Joined {{ getJoinDate() }}</span>
+          <span>{{ 'profile.joined' | t }} {{ getJoinDate() }}</span>
         </div>
         <div class="info-item">
           <i class="fas fa-id-card info-icon"></i>
@@ -133,7 +133,7 @@
         @if (isAdmin()) {
           <div class="content-panel animated-panel">
             <div class="panel-header">
-              <h3 class="panel-title">Platform Overview</h3>
+              <h3 class="panel-title">{{ 'profile.platformOverview' | t }}</h3>
             </div>
             
             <!-- Admin Quick Stats -->
@@ -144,7 +144,7 @@
                 </div>
                 <div class="stat-content">
                   <h4>{{ getAdminStats().platformOverview?.totalUsers || 0 }}</h4>
-                  <p>Total Users</p>
+                  <p>{{ 'dash.admin.totalUsers' | t }}</p>
                 </div>
               </div>
               
@@ -154,7 +154,7 @@
                 </div>
                 <div class="stat-content">
                   <h4>{{ getAdminStats().platformBusinesses?.totalBusinesses || 0 }}</h4>
-                  <p>Total Businesses</p>
+                  <p>{{ 'dash.admin.totalBusinesses' | t }}</p>
                 </div>
               </div>
               
@@ -164,7 +164,7 @@
                 </div>
                 <div class="stat-content">
                   <h4>{{ getAdminStats().securityModeration?.pendingFraudReports || 0 }}</h4>
-                  <p>Pending Reports</p>
+                  <p>{{ 'profile.pendingReports' | t }}</p>
                 </div>
               </div>
               
@@ -174,14 +174,14 @@
                 </div>
                 <div class="stat-content">
                   <h4>{{ getAdminStats().securityModeration?.flaggedUsers || 0 }}</h4>
-                  <p>Flagged Users</p>
+                  <p>{{ 'profile.flaggedUsers' | t }}</p>
                 </div>
               </div>
             </div>
 
             <!-- Admin Quick Actions -->
             <div class="admin-actions">
-              <h4>Quick Actions</h4>
+              <h4>{{ 'common.quickActions' | t }}</h4>
               <div class="action-buttons">
                 @for (action of getAdminQuickActions(); track action.action) {
                   <button 
@@ -206,11 +206,11 @@
         @if (isBusinessOwner() && !isAdmin()) {
           <div class="content-panel animated-panel">
           <div class="panel-header">
-            <h3 class="panel-title">Business Information</h3>
+            <h3 class="panel-title">{{ 'profile.businessInformation' | t }}</h3>
             @if (canRegisterBusiness()) {
-              <button class="add-info-btn hover-lift" (click)="navigateToMyBusiness()">+ Register Business</button>
+              <button class="add-info-btn hover-lift" (click)="navigateToMyBusiness()">+ {{ 'profile.registerBusiness' | t }}</button>
             } @else {
-              <button class="manage-business-btn hover-lift" (click)="navigateToMyBusiness()">Manage Business</button>
+              <button class="manage-business-btn hover-lift" (click)="navigateToMyBusiness()">{{ 'profile.manageBusiness' | t }}</button>
             }
           </div>
           @if (getUserBusinesses().length > 0) {
@@ -230,7 +230,7 @@
                 <div class="table-cell">{{ business.trustScore }}% ({{ business.trustGrade }})</div>
                 <div class="table-cell">
                   <span class="status-badge" [class.verified]="business.isVerified">
-                    {{ business.isVerified ? 'Verified' : 'Pending' }}
+                    {{ business.isVerified ? ('analytics.verified' | t) : ('analytics.pending' | t) }}
                   </span>
                 </div>
                 <div class="table-cell">{{ business.totalReviews }}</div>
@@ -243,9 +243,9 @@
           } @else {
             <div class="empty-state">
               <i class="fas fa-building"></i>
-              <h4>No Business Registered</h4>
-              <p>You can register one business per account. Start by registering your business to manage your profile.</p>
-              <button class="btn-primary" (click)="navigateToMyBusiness()">Register Your Business</button>
+              <h4>{{ 'profile.noBusinessRegistered' | t }}</h4>
+              <p>{{ 'profile.noBusinessDescription' | t }}</p>
+              <button class="btn-primary" (click)="navigateToMyBusiness()">{{ 'profile.registerYourBusiness' | t }}</button>
             </div>
           }
         </div>
@@ -254,7 +254,7 @@
         <!-- Activity Panel -->
         <div class="content-panel">
           <div class="panel-header">
-            <h3 class="panel-title">Recent Activity</h3>
+            <h3 class="panel-title">{{ 'dash.user.recentActivity' | t }}</h3>
           </div>
           @if (getRecentActivity().length > 0) {
             <div class="activity-list">
@@ -287,10 +287,10 @@
           } @else {
             <div class="empty-state">
               <i class="fas fa-history"></i>
-              <p>No recent activity</p>
+              <p>{{ 'profile.noRecentActivity' | t }}</p>
             </div>
           }
-          <a href="#" class="view-all-link">View all activity</a>
+          <a href="#" class="view-all-link">{{ 'profile.viewAllActivity' | t }}</a>
         </div>
 
         <!-- Trust Score Panel -->
@@ -298,11 +298,11 @@
           <div class="panel-header">
             <h3 class="panel-title">
               @if (isBusinessOwner()) {
-                Business Trust Score
+                {{ 'profile.businessTrustScore' | t }}
               } @else if (isCustomer()) {
-                Reviewer Credibility
+                {{ 'profile.reviewerCredibility' | t }}
               } @else {
-                Trust Score
+                {{ 'analytics.trustScore' | t }}
               }
             </h3>
           </div>
@@ -310,41 +310,41 @@
             @if (isBusinessOwner()) {
               <div class="score-item">
                 <span class="score-value">{{ getTrustScore() | number:'1.0-0' }}%</span>
-                <span class="score-label">Average Business Trust Score</span>
+                <span class="score-label">{{ 'profile.averageBusinessTrustScore' | t }}</span>
               </div>
               <div class="score-item">
                 <span class="score-value">{{ getUserStats().totalBusinesses }}</span>
-                <span class="score-label">Total Businesses</span>
+                <span class="score-label">{{ 'dash.admin.totalBusinesses' | t }}</span>
               </div>
               <div class="score-item">
                 <span class="score-value">{{ getVerifiedBusinessesCount() }}</span>
-                <span class="score-label">Verified Businesses</span>
+                <span class="score-label">{{ 'profile.verifiedBusinesses' | t }}</span>
               </div>
             } @else if (isCustomer()) {
               <div class="score-item">
                 <span class="score-value">{{ getTrustScore() | number:'1.0-0' }}</span>
-                <span class="score-label">Credibility Score</span>
+                <span class="score-label">{{ 'profile.credibilityScore' | t }}</span>
               </div>
               <div class="score-item">
                 <span class="score-value">{{ getAverageRating() | number:'1.1-1' }}/5</span>
-                <span class="score-label">Average Rating Given</span>
+                <span class="score-label">{{ 'profile.averageRatingGiven' | t }}</span>
               </div>
               <div class="score-item">
                 <span class="score-value">{{ getVerifiedReviewsCount() }}</span>
-                <span class="score-label">Verified Reviews</span>
+                <span class="score-label">{{ 'profile.verifiedReviews' | t }}</span>
               </div>
             } @else {
               <div class="score-item">
                 <span class="score-value">{{ getTrustScore() | number:'1.0-0' }}</span>
-                <span class="score-label">Overall Score</span>
+                <span class="score-label">{{ 'profile.overallScore' | t }}</span>
               </div>
             }
             <div class="score-item">
               <span class="score-value">{{ getUserStats().totalReviews }}</span>
-              <span class="score-label">Total Reviews</span>
+              <span class="score-label">{{ 'analytics.totalReviews' | t }}</span>
             </div>
           </div>
-          <a href="#" class="view-all-link">View detailed breakdown</a>
+          <a href="#" class="view-all-link">{{ 'profile.viewDetailedBreakdown' | t }}</a>
         </div>
       </div>
       }
@@ -637,17 +637,17 @@
       @if (activeTab() === 'settings') {
         <div class="tab-content animated-content fade-in-up">
         <div class="content-panel">
-          <h3 class="panel-title">Account Settings</h3>
+          <h3 class="panel-title">{{ 'profile.accountSettings' | t }}</h3>
           <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="settings-form">
             <!-- Two-column layout for name and contact fields -->
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">First Name</label>
+                <label class="form-label">{{ 'auth.register.firstName' | t }}</label>
                 <input
                   formControlName="firstName"
                   type="text"
                   class="form-input"
-                  placeholder="Enter first name">
+                  [placeholder]="'profile.placeholder.firstName' | t">
                 @if (getFieldError('firstName')) {
                   <div class="form-error">
                     {{ getFieldError('firstName') }}
@@ -656,12 +656,12 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Last Name</label>
+                <label class="form-label">{{ 'auth.register.lastName' | t }}</label>
                 <input
                   formControlName="lastName"
                   type="text"
                   class="form-input"
-                  placeholder="Enter last name">
+                  [placeholder]="'profile.placeholder.lastName' | t">
                 @if (getFieldError('lastName')) {
                   <div class="form-error">
                     {{ getFieldError('lastName') }}
@@ -672,12 +672,12 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Email Address</label>
+                <label class="form-label">{{ 'auth.login.email' | t }}</label>
                 <input
                   formControlName="email"
                   type="email"
                   class="form-input"
-                  placeholder="Enter email address"
+                  [placeholder]="'profile.placeholder.email' | t"
                   readonly>
                 @if (getFieldError('email')) {
                   <div class="form-error">
@@ -687,12 +687,12 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Phone Number</label>
+                <label class="form-label">{{ 'auth.register.phone' | t }}</label>
                 <input
                   formControlName="phone"
                   type="tel"
                   class="form-input"
-                  placeholder="Enter phone number">
+                  [placeholder]="'profile.placeholder.phone' | t">
                 @if (getFieldError('phone')) {
                   <div class="form-error">
                     {{ getFieldError('phone') }}
@@ -703,11 +703,11 @@
 
             <!-- Full-width bio field -->
             <div class="form-group">
-              <label class="form-label">Bio</label>
+              <label class="form-label">{{ 'profile.bio' | t }}</label>
               <textarea
                 formControlName="bio"
                 class="form-textarea"
-                placeholder="Tell us about yourself"
+                [placeholder]="'profile.placeholder.bio' | t"
                 rows="4"></textarea>
               @if (getFieldError('bio')) {
                 <div class="form-error">
@@ -723,13 +723,13 @@
               @if (isLoading()) {
                 <div class="btn-loading">
                   <div class="spinner"></div>
-                  Saving...
+                  {{ 'profile.saving' | t }}
                 </div>
               }
               @if (!isLoading()) {
                 <div class="btn-content">
                   <i class="fas fa-save"></i>
-                  Save Changes
+                  {{ 'profile.saveChanges' | t }}
                 </div>
               }
             </button>

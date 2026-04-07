@@ -372,11 +372,28 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getBusinessHoursForDisplay(): BusinessHourRow[] {
-    const raw = (this.business as any)?.businessHours;
+    const anyBusiness = this.business as any;
+    const raw =
+      anyBusiness?.businessHours ??
+      anyBusiness?.openingHours ??
+      anyBusiness?.operatingHours ??
+      anyBusiness?.hours;
     if (!raw) return [];
 
-    if (Array.isArray(raw)) {
-      return raw
+    const normalizedRaw =
+      typeof raw === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(raw);
+            } catch {
+              return null;
+            }
+          })()
+        : raw;
+    if (!normalizedRaw) return [];
+
+    if (Array.isArray(normalizedRaw)) {
+      return normalizedRaw
         .filter((h: any) => h && h.day != null)
         .map((h: any) => ({
           day: String(h.day).toLowerCase(),
@@ -386,7 +403,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
         }));
     }
 
-    if (typeof raw === 'object') {
+    if (typeof normalizedRaw === 'object') {
       const order = [
         'monday',
         'tuesday',
@@ -398,7 +415,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
       ];
       const out: BusinessHourRow[] = [];
       for (const day of order) {
-        const slot = raw[day];
+        const slot = normalizedRaw[day];
         if (!slot || typeof slot !== 'object') continue;
         out.push({
           day,

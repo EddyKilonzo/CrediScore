@@ -30,6 +30,13 @@ export class LeaderboardComponent implements OnInit {
   isLoading = true;
   error: string | null = null;
   limit = 50;
+  reputationTiers = [
+    { name: 'Elite', min: 90, max: 100, color: '#2C5270' },
+    { name: 'Trusted', min: 75, max: 89, color: '#3E6A8A' },
+    { name: 'Reliable', min: 60, max: 74, color: '#5C8BA5' },
+    { name: 'Growing', min: 40, max: 59, color: '#7EA5BD' },
+    { name: 'New Reviewer', min: 0, max: 39, color: '#9FB7C9' }
+  ];
 
   ngOnInit() {
     this.loadLeaderboard();
@@ -64,9 +71,9 @@ export class LeaderboardComponent implements OnInit {
   }
 
   getRankBadgeColor(rank: number): string {
-    if (rank === 1) return '#f59e0b';
-    if (rank === 2) return '#9ca3af';
-    if (rank === 3) return '#b45309';
+    if (rank === 1) return '#2C5270';
+    if (rank === 2) return '#3E6A8A';
+    if (rank === 3) return '#5C8BA5';
     return '#2C5270';
   }
 

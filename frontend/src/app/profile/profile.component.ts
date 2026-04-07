@@ -14,7 +14,6 @@ import { environment } from '../../environments/environment';
 
 interface Tab {
   id: string;
-  label: string;
   icon: string;
   active: boolean;
 }
@@ -107,11 +106,11 @@ export class ProfileComponent implements OnInit {
 
   // Available tabs
   allTabs: Tab[] = [
-    { id: 'overview', label: 'Overview', icon: 'fas fa-chart-pie', active: true },
-    { id: 'business', label: this.isAdmin() ? 'Management' : 'Business', icon: this.isAdmin() ? 'fas fa-cogs' : 'fas fa-building', active: false },
-    { id: 'reviews', label: 'Reviews', icon: 'fas fa-star', active: false },
-    { id: 'trust', label: 'Trust Score', icon: 'fas fa-shield-alt', active: false },
-    { id: 'settings', label: 'Settings', icon: 'fas fa-cog', active: false }
+    { id: 'overview', icon: 'fas fa-chart-pie', active: true },
+    { id: 'business', icon: this.isAdmin() ? 'fas fa-cogs' : 'fas fa-building', active: false },
+    { id: 'reviews', icon: 'fas fa-star', active: false },
+    { id: 'trust', icon: 'fas fa-shield-alt', active: false },
+    { id: 'settings', icon: 'fas fa-cog', active: false }
   ];
 
   // Computed property for visible tabs based on user role
@@ -253,22 +252,22 @@ export class ProfileComponent implements OnInit {
 
   getUserAddress(): string {
     // For now, return a placeholder - would need address fields in user model
-    return 'Address not provided';
+    return this.i18n.t('profile.addressNotProvided');
   }
 
   getUserCity(): string {
     // For now, return a placeholder - would need location fields in user model
-    return 'Location not provided';
+    return this.i18n.t('profile.locationNotProvided');
   }
 
   getUserPostalCode(): string {
     // For now, return a placeholder - would need postal code in user model
-    return 'Not provided';
+    return this.i18n.t('profile.notProvided');
   }
 
   getJoinDate(): string {
     const user = this.currentUser();
-    if (!user?.createdAt) return 'Unknown';
+    if (!user?.createdAt) return this.i18n.t('profile.unknown');
     
     const date = new Date(user.createdAt);
     const locale = this.i18n.getLocaleFor(this.selectedLanguage());
@@ -581,16 +580,16 @@ export class ProfileComponent implements OnInit {
     const field = this.profileForm.get(fieldName);
     if (field?.errors && field.touched) {
       if (field.errors['required']) {
-        return `${fieldName} is required`;
+        return this.i18n.t('profile.validation.required', { field: fieldName });
       }
       if (field.errors['minlength']) {
-        return `${fieldName} must be at least ${field.errors['minlength'].requiredLength} characters`;
+        return this.i18n.t('profile.validation.minlength', { field: fieldName, min: field.errors['minlength'].requiredLength });
       }
       if (field.errors['maxlength']) {
-        return `${fieldName} must be less than ${field.errors['maxlength'].requiredLength} characters`;
+        return this.i18n.t('profile.validation.maxlength', { field: fieldName, max: field.errors['maxlength'].requiredLength });
       }
       if (field.errors['pattern']) {
-        return `Please enter a valid ${fieldName}`;
+        return this.i18n.t('profile.validation.pattern', { field: fieldName });
       }
     }
     return '';
@@ -604,35 +603,35 @@ export class ProfileComponent implements OnInit {
     // Apply theme to document
     document.documentElement.setAttribute('data-theme', theme);
     
-    this.toastService.success(`Theme changed to ${theme}`);
+    this.toastService.success(this.i18n.t('profile.toast.themeChanged', { theme }));
   }
 
   toggleEmailNotifications(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.emailNotifications.set(checked);
     localStorage.setItem('emailNotifications', checked.toString());
-    this.toastService.success(`Email notifications ${checked ? 'enabled' : 'disabled'}`);
+    this.toastService.success(this.i18n.t(checked ? 'profile.toast.emailEnabled' : 'profile.toast.emailDisabled'));
   }
 
   togglePushNotifications(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.pushNotifications.set(checked);
     localStorage.setItem('pushNotifications', checked.toString());
-    this.toastService.success(`Push notifications ${checked ? 'enabled' : 'disabled'}`);
+    this.toastService.success(this.i18n.t(checked ? 'profile.toast.pushEnabled' : 'profile.toast.pushDisabled'));
   }
 
   toggleReviewReminders(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.reviewReminders.set(checked);
     localStorage.setItem('reviewReminders', checked.toString());
-    this.toastService.success(`Review reminders ${checked ? 'enabled' : 'disabled'}`);
+    this.toastService.success(this.i18n.t(checked ? 'profile.toast.remindersEnabled' : 'profile.toast.remindersDisabled'));
   }
 
   togglePublicProfile(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.publicProfile.set(checked);
     localStorage.setItem('publicProfile', checked.toString());
-    this.toastService.success(`Public profile ${checked ? 'enabled' : 'disabled'}`);
+    this.toastService.success(this.i18n.t(checked ? 'profile.toast.publicEnabled' : 'profile.toast.publicDisabled'));
   }
 
   onLanguageChange(event: Event): void {
@@ -724,5 +723,16 @@ export class ProfileComponent implements OnInit {
       'system_maintenance': 'fas fa-cogs'
     };
     return iconMap[action] || 'fas fa-cog';
+  }
+
+  getTabLabel(tabId: string): string {
+    const map: Record<string, string> = {
+      overview: 'profile.tab.overview',
+      business: this.isAdmin() ? 'profile.tab.management' : 'profile.tab.business',
+      reviews: 'profile.tab.reviews',
+      trust: 'profile.tab.trust',
+      settings: 'profile.tab.settings'
+    };
+    return this.i18n.t(map[tabId] || 'profile.tab.overview');
   }
 }
