@@ -704,19 +704,10 @@
                     </div>
                     <!-- Sentiment Tags (Feature 4) -->
                     <ng-container *ngFor="let tag of getSentimentTags(review)">
-                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                            [style.color]="tag.color" [style.background-color]="tag.bg">
+                      <span class="sentiment-chip" [style.color]="tag.color" [style.background-color]="tag.bg">
                         {{ tag.label }}
                       </span>
                     </ng-container>
-                    <div class="review-badge-compact">
-                      <i class="uil uil-thumbs-up"></i>
-                      <span>{{ review.helpfulCount ?? 0 }}</span>
-                    </div>
-                    <div class="review-badge-compact">
-                      <i class="uil uil-thumbs-down"></i>
-                      <span>{{ review.notHelpfulCount ?? 0 }}</span>
-                    </div>
                   </div>
                   <div class="review-actions-compact">
                     <!-- Like/Dislike voting — shown for everyone; guarded in handler -->
@@ -739,10 +730,6 @@
                         <i class="uil uil-thumbs-down"></i>
                         <span>{{ review.notHelpfulCount ?? 0 }}</span>
                       </button>
-                    </div>
-                    <div class="review-click-hint">
-                      <i class="uil uil-eye"></i>
-                      <span>Click to view details</span>
                     </div>
                     <div class="review-owner-actions" *ngIf="isReviewOwner(review)">
                       <button

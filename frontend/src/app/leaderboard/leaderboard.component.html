@@ -69,7 +69,7 @@
     </div>
 
     <!-- Top 3 podium -->
-    <div class="podium" *ngIf="activeBoard === 'customers' && users.length >= 3">
+    <div class="podium" *ngIf="activeBoard === 'customers' && users.length >= 1">
       <div class="podium-item second" *ngIf="users[1]">
         <div class="podium-avatar">
           <img *ngIf="users[1].avatar" [src]="users[1].avatar" [alt]="users[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />
@@ -106,7 +106,7 @@
       </div>
     </div>
 
-    <div class="podium" *ngIf="activeBoard === 'businesses' && businesses.length >= 3">
+    <div class="podium" *ngIf="activeBoard === 'businesses' && businesses.length >= 1">
       <div class="podium-item second" *ngIf="businesses[1]">
         <div class="podium-avatar">
           <img *ngIf="businesses[1].logo" [src]="businesses[1].logo" [alt]="businesses[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />

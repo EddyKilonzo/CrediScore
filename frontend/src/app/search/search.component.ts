@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { BusinessService, Business } from '../core/services/business.service';
@@ -84,6 +85,9 @@ export class SearchComponent implements OnInit, OnDestroy {
   userLat: number | null = null;
   userLng: number | null = null;
   localInsights: any = null;
+  private localInsightsEndpointUnavailable = false;
+  private localInsightsTrigger$ = new Subject<void>();
+  private localInsightsSub?: Subscription;
   selectedCompareIds = new Set<string>();
   /** Markers for embedded map — always matches sidebar filters + search */
   mapLocationsForChild: BusinessLocation[] = [];
@@ -120,11 +124,16 @@ export class SearchComponent implements OnInit, OnDestroy {
         this.showAutocomplete = false;
       }
     });
+
+    this.localInsightsSub = this.localInsightsTrigger$
+      .pipe(debounceTime(300))
+      .subscribe(() => this.loadLocalInsights());
     this.tryGetUserLocation();
   }
 
   ngOnDestroy() {
     this.searchSub?.unsubscribe();
+    this.localInsightsSub?.unsubscribe();
   }
 
   onSearchInput() {
@@ -441,7 +450,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     this.filteredBusinesses = filtered;
     this.mapLocationsForChild = this.buildMapLocations(filtered);
-    this.loadLocalInsights();
+    this.scheduleLocalInsightsLoad();
   }
 
   private buildMapLocations(list: BusinessWithRating[]): BusinessLocation[] {
@@ -580,7 +589,7 @@ export class SearchComponent implements OnInit, OnDestroy {
       (position) => {
         this.userLat = position.coords.latitude;
         this.userLng = position.coords.longitude;
-        this.loadLocalInsights();
+        this.scheduleLocalInsightsLoad();
       },
       () => {},
       { enableHighAccuracy: false, timeout: 5000 },
@@ -599,7 +608,7 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   private loadLocalInsights(): void {
-    if (this.userLat == null || this.userLng == null) return;
+    if (this.userLat == null || this.userLng == null || this.localInsightsEndpointUnavailable) return;
     this.businessService
       .getLocalInsights({
         lat: this.userLat,
@@ -613,8 +622,18 @@ export class SearchComponent implements OnInit, OnDestroy {
         next: (res) => {
           this.localInsights = res;
         },
-        error: () => {},
+        error: (err: HttpErrorResponse) => {
+          if (err?.status === 404) {
+            this.localInsightsEndpointUnavailable = true;
+            this.localInsights = null;
+          }
+        },
       });
+  }
+
+  private scheduleLocalInsightsLoad(): void {
+    if (this.localInsightsEndpointUnavailable) return;
+    this.localInsightsTrigger$.next();
   }
 
   toggleCompareSelection(id: string): void {

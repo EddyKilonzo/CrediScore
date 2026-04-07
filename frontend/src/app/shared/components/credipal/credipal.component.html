@@ -1,0 +1,62 @@
+<div class="credipal-widget" [class.expanded]="isExpanded">
+  <button
+    type="button"
+    class="credipal-toggle-btn"
+    [class.pulse]="!isOpen"
+    (click)="toggle()"
+    [attr.aria-expanded]="isOpen"
+    aria-label="Open CrediPal assistant"
+  >
+    <i class="uil" [ngClass]="isOpen ? 'uil-times' : 'uil-comment-question'"></i>
+  </button>
+
+  <div class="credipal-panel" *ngIf="isOpen">
+    <div class="credipal-header">
+      <div class="credipal-header-copy">
+        <h4>CrediPal</h4>
+        <p>Your site interaction guide</p>
+      </div>
+      <div class="credipal-header-actions">
+        <button
+          type="button"
+          class="credipal-header-btn"
+          (click)="toggleExpanded()"
+          [attr.aria-label]="isExpanded ? 'Collapse CrediPal panel' : 'Expand CrediPal panel'"
+        >
+          <i class="uil" [ngClass]="isExpanded ? 'uil-compress' : 'uil-expand-arrows'"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="credipal-messages">
+      <div *ngFor="let message of messages" class="credipal-message" [class.user]="message.role === 'user'">
+        {{ message.text }}
+      </div>
+      <div *ngIf="isTyping" class="credipal-typing">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="credipal-prompts">
+      <button type="button" *ngFor="let prompt of prompts" (click)="ask(prompt)">
+        {{ prompt.label }}
+      </button>
+    </div>
+
+    <div class="credipal-actions">
+      <button type="button" (click)="goTo('/search')">Open Search</button>
+      <button type="button" (click)="goTo('/dashboard')">Open Dashboard</button>
+      <button type="button" (click)="goTo('/leaderboard')">Open Leaderboard</button>
+    </div>
+
+    <form class="credipal-input" (submit)="$event.preventDefault(); askQuestion()">
+      <input
+        type="text"
+        [(ngModel)]="question"
+        name="credipal-question"
+        placeholder="Ask CrediPal anything about the system..."
+      />
+      <button type="submit">Ask</button>
+    </form>
+  </div>
+</div>

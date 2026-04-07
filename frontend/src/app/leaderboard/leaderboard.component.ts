@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { NgClass, NgFor, NgIf } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
@@ -32,7 +32,7 @@ interface LeaderboardBusiness {
 @Component({
   selector: 'app-leaderboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [NgIf, NgFor, NgClass, RouterModule],
   templateUrl: './leaderboard.component.html',
   styleUrl: './leaderboard.component.css'
 })
@@ -141,11 +141,15 @@ export class LeaderboardComponent implements OnInit {
   }
 
   getCustomerListRows(): LeaderboardUser[] {
-    return this.users.length >= 3 ? this.users.slice(3) : this.users;
+    if (this.users.length === 0) return [];
+    const podiumCount = Math.min(3, this.users.length);
+    return this.users.slice(podiumCount);
   }
 
   getBusinessListRows(): LeaderboardBusiness[] {
-    return this.businesses.length >= 3 ? this.businesses.slice(3) : this.businesses;
+    if (this.businesses.length === 0) return [];
+    const podiumCount = Math.min(3, this.businesses.length);
+    return this.businesses.slice(podiumCount);
   }
 
   getUserInitials(name: string): string {

@@ -158,7 +158,9 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   trustScoreHistory: TrustScoreHistoryPoint[] = [];
 
   // Review Form
-  reviewForm: FormGroup = new FormGroup({});
+  reviewForm: FormGroup = this.fb.group({
+    comment: ['', [Validators.maxLength(1000)]]
+  });
   selectedRating: number = 0;
   hoveredRating: number = 0;
   uploadedImages: UploadedImage[] = [];
@@ -185,16 +187,6 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   isSubmittingClaim = false;
 
   ngOnInit() {
-    // Initialize review form
-    this.reviewForm = this.fb.group({
-      comment: ['', [Validators.maxLength(1000)]]
-    });
-
-    // Initialize edit review form
-    this.editReviewForm = this.fb.group({
-      comment: ['', [Validators.maxLength(1000)]]
-    });
-
     const businessId = this.route.snapshot.paramMap.get('id');
     if (businessId) {
       this.loadBusiness(businessId);
@@ -1216,7 +1208,9 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   
   // Edit Review
   editingReview: Review | null = null;
-  editReviewForm: FormGroup = new FormGroup({});
+  editReviewForm: FormGroup = this.fb.group({
+    comment: ['', [Validators.maxLength(1000)]]
+  });
   editSelectedRating: number = 0;
   isUpdating: boolean = false;
   

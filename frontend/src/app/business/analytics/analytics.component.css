@@ -13,6 +13,31 @@
   --lighter-bg: #F5F8FA;
 }
 
+.analytics-skeleton {
+  padding: 0.5rem 0.25rem 1.5rem;
+}
+
+.ask {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: analyticsSkShimmer 1.4s linear infinite;
+  border-radius: 12px;
+}
+
+.ask-title { height: 34px; width: 280px; margin-bottom: 10px; }
+.ask-subtitle { height: 16px; width: 500px; max-width: 100%; margin-bottom: 16px; }
+.ask-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.ask-card { height: 105px; }
+.ask-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.ask-chart { height: 240px; }
+.ask-panel { height: 240px; }
+.ask-wide { height: 180px; }
+
+@keyframes analyticsSkShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Card box-shadow styling */
 :host ::ng-deep .bg-white.rounded-xl.shadow-sm,
 :host ::ng-deep .bg-white.rounded-xl {

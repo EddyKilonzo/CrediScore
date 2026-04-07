@@ -70,9 +70,17 @@
 
     <!-- Loading State -->
     @if (isLoading) {
-      <div class="flex items-center justify-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D5A87]"></div>
-        <span class="ml-2 text-gray-600">{{ 'analytics.loading' | t }}</span>
+      <div class="analytics-skeleton">
+        <div class="ask ask-title"></div>
+        <div class="ask ask-subtitle"></div>
+        <div class="ask-stats">
+          <div class="ask ask-card" *ngFor="let item of [1,2,3,4]"></div>
+        </div>
+        <div class="ask-grid">
+          <div class="ask ask-chart"></div>
+          <div class="ask ask-panel"></div>
+        </div>
+        <div class="ask ask-wide"></div>
       </div>
     }
 

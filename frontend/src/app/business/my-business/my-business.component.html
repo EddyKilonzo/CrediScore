@@ -40,10 +40,17 @@
 
     <!-- Loading State -->
     @if (isLoading) {
-      <div class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2D5A87]"></div>
-      <span class="ml-2 text-gray-600">Loading your business dashboard...</span>
-    </div>
+      <div class="my-business-skeleton">
+        <div class="mbsk mbsk-title"></div>
+        <div class="mbsk mbsk-subtitle"></div>
+        <div class="mbsk-stats">
+          <div class="mbsk mbsk-card" *ngFor="let item of [1,2,3,4]"></div>
+        </div>
+        <div class="mbsk-layout">
+          <div class="mbsk mbsk-main"></div>
+          <div class="mbsk mbsk-side"></div>
+        </div>
+      </div>
     }
 
     <!-- Dashboard Content -->

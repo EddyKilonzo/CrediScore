@@ -8,6 +8,30 @@
   margin-top: 5rem;
 }
 
+.my-business-skeleton {
+  padding: 1rem 0.25rem 1.5rem;
+}
+
+.mbsk {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: myBusinessSkShimmer 1.4s linear infinite;
+  border-radius: 12px;
+}
+
+.mbsk-title { height: 36px; width: 280px; margin-bottom: 12px; }
+.mbsk-subtitle { height: 16px; width: 520px; max-width: 100%; margin-bottom: 18px; }
+.mbsk-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.mbsk-card { height: 108px; }
+.mbsk-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+.mbsk-main { height: 420px; }
+.mbsk-side { height: 420px; }
+
+@keyframes myBusinessSkShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Dashboard Cards - Enhanced Style matching user dashboard */
 .dashboard-card {
   background: white;

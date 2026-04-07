@@ -3,13 +3,14 @@ import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { Navbar } from './shared/components/navbar/navbar';
 import { Footer } from './shared/components/footer/footer';
 import { ToastComponent } from './shared/components/toast/toast.component';
+import { CrediPalComponent } from './shared/components/credipal/credipal.component';
 import { isLoading } from './core/services/loading.interceptor';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Navbar, Footer, ToastComponent, CommonModule],
+  imports: [RouterOutlet, Navbar, Footer, ToastComponent, CrediPalComponent, CommonModule],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
