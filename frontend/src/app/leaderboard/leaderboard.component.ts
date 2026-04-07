@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
+import { forkJoin } from 'rxjs';
 
 interface LeaderboardUser {
   rank: number;
@@ -13,6 +14,19 @@ interface LeaderboardUser {
   reputationLevel?: string;
   reviewCount?: number;
   verifiedReviews?: number;
+}
+
+interface LeaderboardBusiness {
+  rank: number;
+  id: string;
+  name: string;
+  logo?: string;
+  category?: string;
+  trustScore: number;
+  reviewCount: number;
+  isVerified: boolean;
+  leadScore: number;
+  leadTier: string;
 }
 
 @Component({
@@ -27,9 +41,11 @@ export class LeaderboardComponent implements OnInit {
   private readonly API_URL = `${environment.apiUrl}/api`;
 
   users: LeaderboardUser[] = [];
+  businesses: LeaderboardBusiness[] = [];
   isLoading = true;
   error: string | null = null;
   limit = 50;
+  activeBoard: 'customers' | 'businesses' = 'customers';
   reputationTiers = [
     { name: 'Elite', min: 90, max: 100, color: '#2C5270' },
     { name: 'Trusted', min: 75, max: 89, color: '#3E6A8A' },
@@ -44,26 +60,75 @@ export class LeaderboardComponent implements OnInit {
 
   loadLeaderboard() {
     this.isLoading = true;
-    this.http.get<any>(`${this.API_URL}/user/leaderboard?limit=${this.limit}`).subscribe({
-      next: (data) => {
-        const raw: any[] = Array.isArray(data) ? data : (data.users || data.leaderboard || []);
-        this.users = raw.map((u, i) => ({
+    this.error = null;
+    forkJoin({
+      users: this.http.get<any>(`${this.API_URL}/user/leaderboard?limit=${this.limit}`),
+      businesses: this.http.get<any>(`${this.API_URL}/user/top-trusted?limit=${this.limit}`),
+    }).subscribe({
+      next: ({ users, businesses }) => {
+        const rawUsers: any[] = Array.isArray(users)
+          ? users
+          : users.users || users.leaderboard || [];
+        this.users = rawUsers.map((u, i) => ({
           rank: i + 1,
           id: u.id,
           name: u.name,
           avatar: u.avatar,
           reputation: u.reputation ?? 0,
-          reputationLevel: u.reputationLevel ?? 'New Reviewer',
+          reputationLevel: u.reputationLevel ?? this.getTierByScore(u.reputation ?? 0).name,
           reviewCount: u._count?.reviews ?? u.reviewCount ?? 0,
           verifiedReviews: u.verifiedReviews ?? 0,
         }));
+
+        const rawBusinesses: any[] = Array.isArray(businesses)
+          ? businesses
+          : businesses.businesses || businesses.data || [];
+        this.businesses = rawBusinesses
+          .map((b, i) => {
+            const trustScore = Number(b?.trustScore?.score ?? 0);
+            const reviewCount = Number(b?.reviewCount ?? b?._count?.reviews ?? 0);
+            const isVerified = !!b?.isVerified;
+            const leadScore = this.calculateBusinessLeadScore(trustScore, reviewCount, isVerified);
+            return {
+              rank: i + 1,
+              id: b.id,
+              name: b.name,
+              logo: b.logo,
+              category: b.category,
+              trustScore,
+              reviewCount,
+              isVerified,
+              leadScore,
+              leadTier: this.getTierByScore(leadScore).name,
+            };
+          })
+          .sort((a, b) => b.leadScore - a.leadScore || b.reviewCount - a.reviewCount)
+          .map((b, idx) => ({ ...b, rank: idx + 1 }));
+
         this.isLoading = false;
       },
       error: () => {
         this.error = 'Failed to load leaderboard.';
         this.isLoading = false;
-      }
+      },
     });
+  }
+
+  setActiveBoard(board: 'customers' | 'businesses'): void {
+    this.activeBoard = board;
+  }
+
+  private calculateBusinessLeadScore(trustScore: number, reviewCount: number, isVerified: boolean): number {
+    const trust = Math.max(0, Math.min(100, trustScore || 0));
+    const reviewVolume = Math.min((reviewCount / 30) * 100, 100);
+    const verificationBoost = isVerified ? 100 : 40;
+    const score = trust * 0.6 + reviewVolume * 0.25 + verificationBoost * 0.15;
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  getTierByScore(score: number) {
+    const safe = Math.max(0, Math.min(100, Math.round(score || 0)));
+    return this.reputationTiers.find((t) => safe >= t.min && safe <= t.max) || this.reputationTiers[this.reputationTiers.length - 1];
   }
 
   getUserInitials(name: string): string {

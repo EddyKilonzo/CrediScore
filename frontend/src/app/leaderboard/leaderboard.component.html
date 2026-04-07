@@ -22,6 +22,15 @@
 
   <!-- Leaderboard Table -->
   <div *ngIf="!isLoading && !error" class="leaderboard-content">
+    <div class="board-tabs">
+      <button class="board-tab-btn" [class.active]="activeBoard === 'customers'" (click)="setActiveBoard('customers')">
+        Customer Reputation
+      </button>
+      <button class="board-tab-btn" [class.active]="activeBoard === 'businesses'" (click)="setActiveBoard('businesses')">
+        Business Lead Score
+      </button>
+    </div>
+
     <div class="tiers-card">
       <h3 class="tiers-title">Reputation Tiers</h3>
       <div class="tiers-list">
@@ -34,7 +43,7 @@
     </div>
 
     <!-- Top 3 podium -->
-    <div class="podium" *ngIf="users.length >= 3">
+    <div class="podium" *ngIf="activeBoard === 'customers' && users.length >= 3">
       <div class="podium-item second" *ngIf="users[1]">
         <div class="podium-avatar">
           <img *ngIf="users[1].avatar" [src]="users[1].avatar" [alt]="users[1].name" class="avatar-img" (error)="$event.target.style.display='none'" />
@@ -72,14 +81,14 @@
     </div>
 
     <!-- Full list -->
-    <div class="leaderboard-table">
+    <div class="leaderboard-table" *ngIf="activeBoard === 'customers'">
       <div class="table-header">
         <span class="col-rank">Rank</span>
         <span class="col-user">User</span>
         <span class="col-reviews">Reviews</span>
         <span class="col-rep">Reputation</span>
       </div>
-      <div *ngFor="let user of users" class="table-row" [class.top-three]="user.rank <= 3">
+      <div *ngFor="let user of users.slice(3)" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(user.rank) + '20'" [style.color]="getRankBadgeColor(user.rank)">
             {{ user.rank <= 3 ? getRankIcon(user.rank) : '#' + user.rank }}
@@ -102,9 +111,43 @@
       </div>
     </div>
 
-    <div *ngIf="users.length === 0" class="empty-state">
+    <div class="leaderboard-table" *ngIf="activeBoard === 'businesses'">
+      <div class="table-header">
+        <span class="col-rank">Rank</span>
+        <span class="col-user">Business</span>
+        <span class="col-reviews">Reviews</span>
+        <span class="col-rep">Lead Score</span>
+      </div>
+      <div *ngFor="let business of businesses.slice(3)" class="table-row">
+        <span class="col-rank">
+          <span class="rank-badge" [style.background-color]="getRankBadgeColor(business.rank) + '20'" [style.color]="getRankBadgeColor(business.rank)">
+            {{ business.rank <= 3 ? getRankIcon(business.rank) : '#' + business.rank }}
+          </span>
+        </span>
+        <span class="col-user">
+          <div class="user-info">
+            <div class="user-avatar-sm">
+              <img *ngIf="business.logo" [src]="business.logo" [alt]="business.name" (error)="$event.target.style.display='none'" />
+              <span *ngIf="!business.logo">{{ getUserInitials(business.name) }}</span>
+            </div>
+            <span class="user-name">{{ business.name }}</span>
+          </div>
+        </span>
+        <span class="col-reviews">{{ business.reviewCount }}</span>
+        <span class="col-rep">
+          <span class="rep-badge">{{ business.leadScore }} pts</span>
+          <small>{{ business.leadTier }}</small>
+        </span>
+      </div>
+    </div>
+
+    <div *ngIf="activeBoard === 'customers' && users.length === 0" class="empty-state">
       <i class="uil uil-trophy"></i>
       <p>No reviewers yet. Be the first to write a review!</p>
+    </div>
+    <div *ngIf="activeBoard === 'businesses' && businesses.length === 0" class="empty-state">
+      <i class="uil uil-building"></i>
+      <p>No businesses available for lead scoring yet.</p>
     </div>
   </div>
 </div>

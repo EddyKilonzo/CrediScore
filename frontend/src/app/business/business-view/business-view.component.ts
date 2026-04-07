@@ -89,6 +89,13 @@ interface BusinessHourRow {
   isClosed: boolean;
 }
 
+interface ReputationTier {
+  name: string;
+  min: number;
+  max: number;
+  color: string;
+}
+
 @Component({
   selector: 'app-business-view',
   standalone: true,
@@ -121,6 +128,7 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
   averageRating: number = 0;
   totalReviews: number = 0;
   isAuthenticated = this.authService.isAuthenticated;
+  activeScoreTab: 'trust' | 'customer' | 'lead' = 'trust';
 
   // Review Form
   reviewForm: FormGroup = new FormGroup({});
@@ -319,6 +327,107 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     if (score >= 60) return 'C';
     if (score >= 50) return 'D';
     return 'F';
+  }
+
+  private readonly reputationTiers: ReputationTier[] = [
+    { name: 'Elite', min: 90, max: 100, color: '#0f766e' },
+    { name: 'Trusted', min: 75, max: 89, color: '#0369a1' },
+    { name: 'Reliable', min: 60, max: 74, color: '#2563eb' },
+    { name: 'Growing', min: 40, max: 59, color: '#d97706' },
+    { name: 'New Reviewer', min: 0, max: 39, color: '#6b7280' },
+  ];
+
+  setScoreTab(tab: 'trust' | 'customer' | 'lead'): void {
+    this.activeScoreTab = tab;
+  }
+
+  getReputationTiers(): ReputationTier[] {
+    return this.reputationTiers;
+  }
+
+  getTierByScore(score: number): ReputationTier {
+    const normalized = this.clampScore(score);
+    return (
+      this.reputationTiers.find((tier) => normalized >= tier.min && normalized <= tier.max) ??
+      this.reputationTiers[this.reputationTiers.length - 1]
+    );
+  }
+
+  private clampScore(score: number): number {
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  /**
+   * Customer reputation score for this business page.
+   * Mixes reviewer credibility, verification, and review sentiment quality.
+   */
+  getCustomerReputationScore(): number {
+    if (!this.reviews?.length) return 0;
+
+    const total = this.reviews.length;
+    const avgCredibility =
+      this.reviews.reduce((sum, review) => {
+        const credibility = Number(review.credibility ?? 0);
+        return sum + (Number.isFinite(credibility) ? credibility : 0);
+      }, 0) / total;
+    const verifiedRate =
+      (this.reviews.filter((review) => review.isVerified).length / total) * 100;
+    const positiveRate =
+      (this.reviews.filter((review) => review.rating >= 4).length / total) * 100;
+    const helpfulRate =
+      (this.reviews.filter((review) => (review.helpfulCount ?? 0) >= (review.notHelpfulCount ?? 0)).length /
+        total) *
+      100;
+
+    const score =
+      avgCredibility * 0.4 +
+      verifiedRate * 0.2 +
+      positiveRate * 0.25 +
+      helpfulRate * 0.15;
+
+    return this.clampScore(score);
+  }
+
+  /**
+   * Lead score for business visibility/readiness.
+   * Uses trust score + engagement + profile completeness + response behavior.
+   */
+  getBusinessLeadScore(): number {
+    if (!this.business) return 0;
+
+    const trust = this.getBusinessScore();
+    const ratingNormalized = (this.averageRating / 5) * 100;
+    const volumeNormalized = Math.min((this.totalReviews / 30) * 100, 100);
+    const responseRate = this.getResponseRate();
+    const completeness = this.getBusinessProfileCompleteness();
+
+    const score =
+      trust * 0.35 +
+      ratingNormalized * 0.2 +
+      volumeNormalized * 0.15 +
+      responseRate * 0.15 +
+      completeness * 0.15;
+
+    return this.clampScore(score);
+  }
+
+  getBusinessProfileCompleteness(): number {
+    if (!this.business) return 0;
+    const b: any = this.business;
+    const checks = [
+      !!b.logo,
+      !!b.description,
+      !!b.phone,
+      !!b.email,
+      !!b.website,
+      !!(b.location || b.address),
+      this.getBusinessHoursForDisplay().length > 0,
+      this.hasSocialLinks(),
+      !!this.getBusinessCategoryLabel(),
+      this.isBusinessVerified(),
+    ];
+    const passed = checks.filter(Boolean).length;
+    return this.clampScore((passed / checks.length) * 100);
   }
 
   getGradeColor(grade: string): string {

@@ -2,6 +2,13 @@
   max-width: 1040px;
   margin: 80px auto 40px;
   padding: 0 16px;
+  min-height: calc(100vh - 180px);
+  display: flex;
+  flex-direction: column;
+}
+
+.leaderboard-content {
+  flex: 1;
 }
 
 .leaderboard-header {
@@ -33,6 +40,29 @@
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 20px;
+}
+
+.board-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.board-tab-btn {
+  border: 1px solid #d7e2ec;
+  background: #f8fbff;
+  color: #2c5270;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.board-tab-btn.active {
+  background: #2c5270;
+  border-color: #2c5270;
+  color: #fff;
 }
 
 .tiers-title {

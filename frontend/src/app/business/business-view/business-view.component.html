@@ -95,16 +95,72 @@
 
     <!-- Trust Score and Rating Section -->
     <div class="trust-rating-section">
-      <div class="trust-score-card">
-        <div class="score-header">
-          <h3>Trust Score</h3>
-          <div class="grade-badge-large" [style.background-color]="getGradeColor(getBusinessGrade()) + '20'" [style.color]="getGradeColor(getBusinessGrade())">
-            <span class="grade-text">{{ getBusinessGrade() }}</span>
+      <div class="score-tabs-card">
+        <div class="score-tabs">
+          <button class="score-tab-btn" [class.active]="activeScoreTab === 'trust'" (click)="setScoreTab('trust')">
+            Trust Score
+          </button>
+          <button class="score-tab-btn" [class.active]="activeScoreTab === 'customer'" (click)="setScoreTab('customer')">
+            Customer Reputation
+          </button>
+          <button class="score-tab-btn" [class.active]="activeScoreTab === 'lead'" (click)="setScoreTab('lead')">
+            Business Lead Score
+          </button>
+        </div>
+
+        <div class="trust-score-card" *ngIf="activeScoreTab === 'trust'">
+          <div class="score-header">
+            <h3>Trust Score</h3>
+            <div class="grade-badge-large" [style.background-color]="getGradeColor(getBusinessGrade()) + '20'" [style.color]="getGradeColor(getBusinessGrade())">
+              <span class="grade-text">{{ getBusinessGrade() }}</span>
+            </div>
+          </div>
+          <div class="score-value">{{ getBusinessScore() }}%</div>
+          <div class="score-bar">
+            <div class="score-bar-fill" [style.width.%]="getBusinessScore()" [style.background]="'linear-gradient(90deg, ' + getGradeColor(getBusinessGrade()) + ', ' + getGradeColor(getBusinessGrade()) + 'CC)'"></div>
           </div>
         </div>
-        <div class="score-value">{{ getBusinessScore() }}%</div>
-        <div class="score-bar">
-          <div class="score-bar-fill" [style.width.%]="getBusinessScore()" [style.background]="'linear-gradient(90deg, ' + getGradeColor(getBusinessGrade()) + ', ' + getGradeColor(getBusinessGrade()) + 'CC)'"></div>
+
+        <div class="trust-score-card" *ngIf="activeScoreTab === 'customer'">
+          <div class="score-header">
+            <h3>Customer Reputation Score</h3>
+            <div class="grade-badge-large"
+                 [style.background-color]="getTierByScore(getCustomerReputationScore()).color + '20'"
+                 [style.color]="getTierByScore(getCustomerReputationScore()).color">
+              <span class="grade-text">{{ getTierByScore(getCustomerReputationScore()).name }}</span>
+            </div>
+          </div>
+          <div class="score-value">{{ getCustomerReputationScore() }} pts</div>
+          <div class="score-bar">
+            <div class="score-bar-fill"
+                 [style.width.%]="getCustomerReputationScore()"
+                 [style.background]="'linear-gradient(90deg, ' + getTierByScore(getCustomerReputationScore()).color + ', ' + getTierByScore(getCustomerReputationScore()).color + 'CC)'"></div>
+          </div>
+        </div>
+
+        <div class="trust-score-card" *ngIf="activeScoreTab === 'lead'">
+          <div class="score-header">
+            <h3>Business Lead Score</h3>
+            <div class="grade-badge-large"
+                 [style.background-color]="getTierByScore(getBusinessLeadScore()).color + '20'"
+                 [style.color]="getTierByScore(getBusinessLeadScore()).color">
+              <span class="grade-text">{{ getTierByScore(getBusinessLeadScore()).name }}</span>
+            </div>
+          </div>
+          <div class="score-value">{{ getBusinessLeadScore() }} pts</div>
+          <div class="score-bar">
+            <div class="score-bar-fill"
+                 [style.width.%]="getBusinessLeadScore()"
+                 [style.background]="'linear-gradient(90deg, ' + getTierByScore(getBusinessLeadScore()).color + ', ' + getTierByScore(getBusinessLeadScore()).color + 'CC)'"></div>
+          </div>
+        </div>
+
+        <div class="tier-legend">
+          <div class="tier-pill" *ngFor="let tier of getReputationTiers()">
+            <span class="tier-dot" [style.background]="tier.color"></span>
+            <span>{{ tier.name }}</span>
+            <span class="tier-range">{{ tier.min }}-{{ tier.max }} pts</span>
+          </div>
         </div>
       </div>
 
