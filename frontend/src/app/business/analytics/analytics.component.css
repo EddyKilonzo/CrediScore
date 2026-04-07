@@ -42,6 +42,22 @@
   transform: translateX(4px);
 }
 
+.review-small-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.review-small-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(45, 90, 135, 0.12);
+}
+
+.review-comment-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* Period selector active state */
 .period-btn-active {
   background-color: var(--primary-blue);
@@ -72,6 +88,7 @@
 /* ===== ANALYTICS CHART STYLES ===== */
 .analytics-chart-wrapper {
   padding-top: 0.25rem;
+  animation: chartSectionFadeIn 0.5s ease-out;
 }
 
 .analytics-chart-bars {
@@ -88,6 +105,7 @@
     transparent 0px, transparent 39px,
     rgba(0,0,0,0.04) 39px, rgba(0,0,0,0.04) 40px
   );
+  animation: chartAreaSlideUp 0.55s ease-out;
 }
 
 .analytics-chart-col {
@@ -200,6 +218,165 @@
 
 .analytics-chart-empty p {
   font-size: 0.875rem;
+}
+
+/* Grade and rating trend chart */
+.grade-rating-trend-chart {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+  animation: chartSectionFadeIn 0.6s ease-out;
+}
+
+.trend-svg {
+  width: 100%;
+  height: 180px;
+  display: block;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.5rem;
+}
+
+.trend-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: trendLineDraw 1.2s ease-out forwards;
+}
+
+.trend-line-rating {
+  stroke: #2D5A87;
+}
+
+.trend-line-grade {
+  stroke: #5C8BA5;
+  stroke-dasharray: 6 4, 1000;
+  animation-delay: 0.15s;
+}
+
+.trend-point {
+  stroke: #fff;
+  stroke-width: 1.5;
+  transform-origin: center;
+  opacity: 0;
+  animation: trendPointPop 0.35s ease-out forwards, trendPointPulse 2.2s ease-in-out 1.2s infinite;
+}
+
+.trend-point-rating {
+  fill: #2D5A87;
+}
+
+.trend-point-grade {
+  fill: #5C8BA5;
+}
+
+.trend-x-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.65rem;
+  color: #6b7280;
+  font-weight: 600;
+  animation: chartLabelsFadeIn 0.45s ease-out 0.25s both;
+}
+
+.trend-x-labels span {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  animation: chartLabelsFadeIn 0.5s ease-out 0.45s both;
+}
+
+.trend-value-item {
+  background: #f9fafb;
+  border: 1px solid #f1f5f9;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.trend-value-item:hover {
+  transform: translateY(-2px);
+  border-color: #d7e2ec;
+  box-shadow: 0 8px 18px rgba(45, 90, 135, 0.12);
+}
+
+.trend-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.trend-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+.trend-dot-rating {
+  background: #2D5A87;
+}
+
+.trend-dot-grade {
+  background: #5C8BA5;
+}
+
+/* Staggered delay for trend points */
+.grade-rating-trend-chart g:nth-child(1) .trend-point { animation-delay: 0.65s, 1.5s; }
+.grade-rating-trend-chart g:nth-child(2) .trend-point { animation-delay: 0.72s, 1.57s; }
+.grade-rating-trend-chart g:nth-child(3) .trend-point { animation-delay: 0.79s, 1.64s; }
+.grade-rating-trend-chart g:nth-child(4) .trend-point { animation-delay: 0.86s, 1.71s; }
+.grade-rating-trend-chart g:nth-child(5) .trend-point { animation-delay: 0.93s, 1.78s; }
+.grade-rating-trend-chart g:nth-child(6) .trend-point { animation-delay: 1s, 1.85s; }
+.grade-rating-trend-chart g:nth-child(7) .trend-point { animation-delay: 1.07s, 1.92s; }
+.grade-rating-trend-chart g:nth-child(8) .trend-point { animation-delay: 1.14s, 1.99s; }
+.grade-rating-trend-chart g:nth-child(9) .trend-point { animation-delay: 1.21s, 2.06s; }
+.grade-rating-trend-chart g:nth-child(10) .trend-point { animation-delay: 1.28s, 2.13s; }
+.grade-rating-trend-chart g:nth-child(11) .trend-point { animation-delay: 1.35s, 2.2s; }
+.grade-rating-trend-chart g:nth-child(12) .trend-point { animation-delay: 1.42s, 2.27s; }
+
+@keyframes chartSectionFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chartAreaSlideUp {
+  from { opacity: 0; transform: translateY(10px) scaleY(0.96); }
+  to { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+@keyframes trendLineDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes trendPointPop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes trendPointPulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(45, 90, 135, 0)); }
+  50% { filter: drop-shadow(0 0 5px rgba(45, 90, 135, 0.32)); }
+}
+
+@keyframes chartLabelsFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Rating bar animation */

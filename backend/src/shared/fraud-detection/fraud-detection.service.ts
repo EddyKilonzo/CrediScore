@@ -455,6 +455,15 @@ export class FraudDetectionService {
         riskScore += flagCount * 10;
       }
 
+      // Pattern 11: Repeated reviews to the same business in a short window
+      const repeatedBusinessBursts = this.detectRepeatedBusinessBursts(reviews);
+      if (repeatedBusinessBursts > 0) {
+        suspiciousPatterns.push(
+          `${repeatedBusinessBursts} rapid repeat reviews on the same business`,
+        );
+        riskScore += repeatedBusinessBursts * 12;
+      }
+
       return {
         totalReviews,
         unverifiedReviews,
@@ -675,6 +684,32 @@ export class FraudDetectionService {
     }
 
     return quickSuccessionCount;
+  }
+
+  /**
+   * Helper: Detect repeated same-business reviews posted rapidly.
+   */
+  private detectRepeatedBusinessBursts(
+    reviews: Array<{ businessId: string; createdAt: Date }>,
+  ): number {
+    let burstCount = 0;
+    const thresholdMs = 24 * 60 * 60 * 1000; // 24 hours
+    const sorted = [...reviews].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+
+    for (let i = 1; i < sorted.length; i++) {
+      const current = sorted[i - 1];
+      const previous = sorted[i];
+      if (
+        current.businessId === previous.businessId &&
+        current.createdAt.getTime() - previous.createdAt.getTime() <= thresholdMs
+      ) {
+        burstCount++;
+      }
+    }
+
+    return burstCount;
   }
 
   /**

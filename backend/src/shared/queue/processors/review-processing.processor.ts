@@ -182,29 +182,50 @@ export class ReviewProcessingProcessor extends WorkerHost {
       });
 
       if (reviews.length > 0) {
-        const totalWeight = reviews.reduce((sum, r) => sum + (r.credibility || 50), 0);
+        const totalWeight = reviews.reduce(
+          (sum, r) => sum + (r.credibility || 50),
+          0,
+        );
         const weightedScore = reviews.reduce(
           (sum, r) => sum + r.rating * (r.credibility || 50),
           0,
         ) / totalWeight;
 
         const verifiedRatio = reviews.filter((r) => r.isVerified).length / reviews.length;
-        const score = Math.round(weightedScore * 20 * (0.6 + 0.4 * verifiedRatio));
+        const averageCredibility =
+          reviews.reduce((sum, r) => sum + (r.credibility || 0), 0) /
+          reviews.length;
+        const highCredibilityRatio =
+          reviews.filter((r) => (r.credibility || 0) >= 80).length /
+          reviews.length;
+        const credibilityMultiplier = Math.min(
+          1.35,
+          0.85 + averageCredibility * 0.003 + highCredibilityRatio * 0.15,
+        );
+        const score = Math.round(
+          weightedScore *
+            20 *
+            (0.6 + 0.4 * verifiedRatio) *
+            credibilityMultiplier,
+        );
+        const boundedScore = Math.max(0, Math.min(100, score));
 
         let grade = 'F';
-        if (score >= 90) grade = 'A+';
-        else if (score >= 80) grade = 'A';
-        else if (score >= 70) grade = 'B';
-        else if (score >= 60) grade = 'C';
-        else if (score >= 50) grade = 'D';
+        if (boundedScore >= 90) grade = 'A+';
+        else if (boundedScore >= 80) grade = 'A';
+        else if (boundedScore >= 70) grade = 'B';
+        else if (boundedScore >= 60) grade = 'C';
+        else if (boundedScore >= 50) grade = 'D';
 
         await this.prisma.trustScore.upsert({
           where: { businessId },
-          create: { businessId, score, grade },
-          update: { score, grade },
+          create: { businessId, score: boundedScore, grade },
+          update: { score: boundedScore, grade },
         });
 
-        this.logger.log(`${tag} Trust score updated for business ${businessId}: ${score} (${grade})`);
+        this.logger.log(
+          `${tag} Trust score updated for business ${businessId}: ${boundedScore} (${grade})`,
+        );
       }
     } catch (error) {
       this.logger.error(`${tag} Trust score update failed: ${(error as Error).message}`);

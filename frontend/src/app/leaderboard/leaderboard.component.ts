@@ -10,6 +10,7 @@ interface LeaderboardUser {
   name: string;
   avatar?: string;
   reputation: number;
+  reputationLevel?: string;
   reviewCount?: number;
   verifiedReviews?: number;
 }
@@ -45,6 +46,7 @@ export class LeaderboardComponent implements OnInit {
           name: u.name,
           avatar: u.avatar,
           reputation: u.reputation ?? 0,
+          reputationLevel: u.reputationLevel ?? 'New Reviewer',
           reviewCount: u._count?.reviews ?? u.reviewCount ?? 0,
           verifiedReviews: u.verifiedReviews ?? 0,
         }));

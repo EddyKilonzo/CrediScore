@@ -231,6 +231,71 @@
         </div>
       </div>
 
+      <!-- Grade and Rating Trend -->
+      <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-8">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-semibold text-gray-900">
+            <i class="uil uil-chart-growth mr-2 text-[#2D5A87]"></i>
+            Grade and Rating Trend
+          </h2>
+          <div class="flex items-center gap-4 text-xs">
+            <span class="trend-legend">
+              <i class="trend-dot trend-dot-rating"></i> Rating
+            </span>
+            <span class="trend-legend">
+              <i class="trend-dot trend-dot-grade"></i> Grade
+            </span>
+          </div>
+        </div>
+
+        <div *ngIf="getTrendPointData().length > 0; else noGradeRatingTrend" class="grade-rating-trend-chart">
+          <svg viewBox="0 0 580 180" preserveAspectRatio="none" class="trend-svg">
+            <polyline
+              [attr.points]="getRatingTrendPoints()"
+              class="trend-line trend-line-rating">
+            </polyline>
+            <polyline
+              [attr.points]="getGradeTrendPoints()"
+              class="trend-line trend-line-grade">
+            </polyline>
+
+            <g *ngFor="let point of getTrendPointData()">
+              <circle
+                [attr.cx]="point.x"
+                [attr.cy]="point.ratingY"
+                r="4"
+                class="trend-point trend-point-rating">
+              </circle>
+              <circle
+                [attr.cx]="point.x"
+                [attr.cy]="point.gradeY"
+                r="4"
+                class="trend-point trend-point-grade">
+              </circle>
+            </g>
+          </svg>
+
+          <div class="trend-x-labels">
+            <span *ngFor="let point of getTrendPointData()">{{ point.month }}</span>
+          </div>
+
+          <div class="trend-values-grid">
+            <div *ngFor="let point of getTrendPointData()" class="trend-value-item">
+              <div class="text-sm font-semibold text-gray-900">{{ point.month }}</div>
+              <div class="text-xs text-gray-500">Rating: {{ point.rating | number:'1.1-1' }}/5</div>
+              <div class="text-xs text-[#5C8BA5]">Grade: {{ point.grade }}</div>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noGradeRatingTrend>
+          <div class="analytics-chart-empty">
+            <i class="uil uil-chart-growth"></i>
+            <p>No rating trend data available for this period</p>
+          </div>
+        </ng-template>
+      </div>
+
       <!-- Recent Reviews -->
       <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">
@@ -238,31 +303,74 @@
           Recent Reviews
         </h2>
         
-        <div class="space-y-4">
-          <div *ngFor="let review of recentReviews" 
-               class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-[#2D5A87] transition-all">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <button *ngFor="let review of recentReviews"
+                  type="button"
+                  class="review-small-card text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-[#2D5A87] transition-all"
+                  (click)="openReviewDetails(review)">
             <div class="flex items-start justify-between mb-2">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-[#2D5A87] rounded-full flex items-center justify-center text-white font-semibold">
+              <div class="flex items-center space-x-2 min-w-0">
+                <div class="w-8 h-8 bg-[#2D5A87] rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                   {{ review.user?.name?.charAt(0) || 'U' }}
                 </div>
-                <div>
-                  <p class="font-medium text-gray-900">{{ review.user?.name || 'Anonymous' }}</p>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ review.user?.name || 'Anonymous' }}</p>
                   <p class="text-xs text-gray-500">{{ formatDate(review.createdAt) }}</p>
                 </div>
               </div>
-              <div class="flex">
-                <i *ngFor="let star of getStarArray(review.rating)" 
-                   class="fas fa-star text-yellow-400 text-sm"></i>
+              <div class="flex flex-shrink-0">
+                <i *ngFor="let star of getStarArray(review.rating)"
+                   class="fas fa-star text-yellow-400 text-xs"></i>
               </div>
             </div>
-            <p class="text-sm text-gray-700" *ngIf="review.comment">{{ review.comment }}</p>
+            <p class="text-sm text-gray-700 review-comment-preview" *ngIf="review.comment">{{ review.comment }}</p>
             <p class="text-sm text-gray-400 italic" *ngIf="!review.comment">No comment provided</p>
-          </div>
+            <p class="mt-2 text-xs text-[#2D5A87] font-medium">
+              Click to view details
+            </p>
+          </button>
           
           <div *ngIf="recentReviews.length === 0" class="text-center py-8 text-gray-500">
             <i class="fas fa-inbox text-3xl mb-2"></i>
             <p>No recent reviews</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review Details Modal -->
+      <div *ngIf="selectedReview"
+           class="fixed inset-0 z-50 overflow-y-auto"
+           (click)="closeReviewDetails()">
+        <div class="fixed inset-0 bg-black bg-opacity-40"></div>
+        <div class="flex min-h-screen items-center justify-center p-4">
+          <div class="relative w-full max-w-lg bg-white rounded-xl shadow-xl border border-gray-200 p-6"
+               (click)="$event.stopPropagation()">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-[#2D5A87] rounded-full flex items-center justify-center text-white font-semibold">
+                  {{ selectedReview.user?.name?.charAt(0) || 'U' }}
+                </div>
+                <div>
+                  <p class="font-semibold text-gray-900">{{ selectedReview.user?.name || 'Anonymous' }}</p>
+                  <p class="text-xs text-gray-500">{{ formatDate(selectedReview.createdAt) }}</p>
+                </div>
+              </div>
+              <button type="button" class="text-gray-500 hover:text-gray-700" (click)="closeReviewDetails()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <div class="flex items-center mb-4">
+              <i *ngFor="let star of getStarArray(selectedReview.rating)"
+                 class="fas fa-star text-yellow-400 mr-1"></i>
+              <span class="text-sm text-gray-700 ml-1">{{ selectedReview.rating }}/5</span>
+            </div>
+
+            <div>
+              <p class="text-sm font-semibold text-gray-900 mb-1">Review</p>
+              <p class="text-sm text-gray-700 whitespace-pre-line" *ngIf="selectedReview.comment">{{ selectedReview.comment }}</p>
+              <p class="text-sm text-gray-400 italic" *ngIf="!selectedReview.comment">No comment provided</p>
+            </div>
           </div>
         </div>
       </div>

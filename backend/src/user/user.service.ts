@@ -223,6 +223,7 @@ export class UserService {
         status: review.isVerified ? 'verified' : 'pending',
         businessName: review.business?.name ?? undefined,
         rating: review.rating,
+        credibility: review.credibility ?? 0,
       }));
 
       // Map businesses for dashboard cards
@@ -1310,15 +1311,6 @@ export class UserService {
         throw new NotFoundException('Business not found');
       }
 
-      // Check if user already reviewed this business
-      const existingReview = await this.prisma.review.findFirst({
-        where: { userId, businessId: reviewData.businessId },
-      });
-
-      if (existingReview) {
-        throw new BadRequestException('You have already reviewed this business');
-      }
-
       if (reviewData.rating < 1 || reviewData.rating > 5) {
         throw new BadRequestException('Rating must be between 1 and 5');
       }
@@ -1647,8 +1639,28 @@ export class UserService {
     const total = helpfulCount + notHelpfulCount;
     const ratio = total > 0 ? helpfulCount / total : 0.5;
     const existingCredibility = review.credibility ?? 0;
-    const newCredibility = Math.round((existingCredibility * 0.7) + (ratio * 100 * 0.3));
-    await this.prisma.review.update({ where: { id: reviewId }, data: { credibility: newCredibility } });
+    const strongPositiveSignal = total >= 3 && ratio >= 0.8 ? 5 : 0;
+    const strongNegativeSignal = total >= 3 && ratio <= 0.2 ? -5 : 0;
+    const newCredibility = Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          existingCredibility * 0.6 +
+            ratio * 100 * 0.4 +
+            strongPositiveSignal +
+            strongNegativeSignal,
+        ),
+      ),
+    );
+    await this.prisma.review.update({
+      where: { id: reviewId },
+      data: {
+        helpfulCount,
+        notHelpfulCount,
+        credibility: newCredibility,
+      },
+    });
 
     // Notify review author when someone votes on their review
     if (newVote !== null) {
@@ -2400,28 +2412,79 @@ export class UserService {
 
   async getLeaderboard(limit: number = 20) {
     try {
+      const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+
       const users = await this.prisma.user.findMany({
-        where: { isActive: true },
-        orderBy: { reputation: 'desc' },
-        take: limit,
+        where: {
+          isActive: true,
+          reviews: {
+            some: { isActive: true },
+          },
+        },
         select: {
           id: true,
           name: true,
           avatar: true,
           reputation: true,
           createdAt: true,
-          _count: { select: { reviews: true } },
+          reviews: {
+            where: { isActive: true },
+            select: {
+              rating: true,
+              credibility: true,
+              isVerified: true,
+            },
+          },
         },
       });
 
-      return users.map((user, index) => ({
+      const leaderboard = users
+        .map((user) => {
+          const reviewCount = user.reviews.length;
+          const verifiedReviews = user.reviews.filter((r) => r.isVerified).length;
+          const avgRating =
+            reviewCount > 0
+              ? user.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+              : 0;
+          const avgCredibility =
+            reviewCount > 0
+              ? user.reviews.reduce((sum, r) => sum + (r.credibility || 0), 0) /
+                reviewCount
+              : 0;
+
+          // Real, activity-based score so leaderboard reflects actual behavior.
+          const derivedReputation = Math.round(
+            user.reputation +
+              reviewCount * 4 +
+              verifiedReviews * 8 +
+              avgRating * 10 +
+              avgCredibility * 0.2,
+          );
+          const effectiveReputation = Math.max(0, derivedReputation);
+
+          let reputationLevel = 'New Reviewer';
+          if (effectiveReputation >= 300) reputationLevel = 'Legendary Reviewer';
+          else if (effectiveReputation >= 200) reputationLevel = 'Elite Reviewer';
+          else if (effectiveReputation >= 120) reputationLevel = 'Trusted Reviewer';
+          else if (effectiveReputation >= 60) reputationLevel = 'Rising Reviewer';
+
+          return {
+            id: user.id,
+            name: user.name,
+            avatar: user.avatar,
+            reputation: effectiveReputation,
+            reputationLevel,
+            reviewCount,
+            verifiedReviews,
+            memberSince: user.createdAt,
+          };
+        })
+        .sort((a, b) => b.reputation - a.reputation || b.reviewCount - a.reviewCount)
+        .slice(0, safeLimit);
+
+      return leaderboard.map((user, index) => ({
         rank: index + 1,
-        id: user.id,
-        name: user.name,
-        avatar: user.avatar,
-        reputation: user.reputation,
-        reviewCount: user._count.reviews,
-        memberSince: user.createdAt,
+        ...user,
       }));
     } catch (error) {
       this.logger.error('Error fetching leaderboard:', error);

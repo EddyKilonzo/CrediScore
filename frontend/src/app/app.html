@@ -3,3 +3,15 @@
 <router-outlet></router-outlet>
 <app-footer *ngIf="showFooter"></app-footer>
 <app-toast></app-toast>
+<button
+  type="button"
+  class="app-back-to-top"
+  [class.show]="showBackToTop"
+  (click)="scrollToTop()"
+  aria-label="Back to top"
+  title="Back to top"
+>
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+  </svg>
+</button>

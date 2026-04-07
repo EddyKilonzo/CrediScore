@@ -33,6 +33,7 @@
         <div class="podium-rank">🥈</div>
         <div class="podium-name">{{ users[1].name }}</div>
         <div class="podium-rep">{{ users[1].reputation }} pts</div>
+        <div class="podium-level">{{ users[1].reputationLevel }}</div>
         <div class="podium-bar second-bar"></div>
       </div>
       <div class="podium-item first" *ngIf="users[0]">
@@ -44,6 +45,7 @@
         <div class="podium-rank">🥇</div>
         <div class="podium-name">{{ users[0].name }}</div>
         <div class="podium-rep">{{ users[0].reputation }} pts</div>
+        <div class="podium-level">{{ users[0].reputationLevel }}</div>
         <div class="podium-bar first-bar"></div>
       </div>
       <div class="podium-item third" *ngIf="users[2]">
@@ -54,6 +56,7 @@
         <div class="podium-rank">🥉</div>
         <div class="podium-name">{{ users[2].name }}</div>
         <div class="podium-rep">{{ users[2].reputation }} pts</div>
+        <div class="podium-level">{{ users[2].reputationLevel }}</div>
         <div class="podium-bar third-bar"></div>
       </div>
     </div>
@@ -84,6 +87,7 @@
         <span class="col-reviews">{{ user.reviewCount ?? 0 }}</span>
         <span class="col-rep">
           <span class="rep-badge">{{ user.reputation }} pts</span>
+          <small>{{ user.reputationLevel }}</small>
         </span>
       </div>
     </div>

@@ -123,6 +123,8 @@ model Review {
   comment          String?
   userId           String
   businessId       String
+  helpfulCount     Int            @default(0)
+  notHelpfulCount  Int            @default(0)
   credibility      Int            @default(0)
   isVerified       Boolean        @default(false)
   isActive         Boolean        @default(true)

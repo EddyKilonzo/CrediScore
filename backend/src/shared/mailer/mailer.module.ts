@@ -11,18 +11,41 @@ import { MailerService } from './mailer.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const smtpHost = configService.get<string>('SMTP_HOST') || 'smtp-relay.brevo.com';
-        const smtpPort = parseInt(configService.get<string>('SMTP_PORT') || '587', 10);
-        const smtpUser = configService.get<string>('SMTP_USER') || '';
-        const smtpPass = configService.get<string>('SMTP_PASS') || '';
+        const smtpHost =
+          configService.get<string>('SMTP_HOST') ||
+          configService.get<string>('MAIL_HOST') ||
+          'smtp-relay.brevo.com';
+        const smtpPort = parseInt(
+          configService.get<string>('SMTP_PORT') ||
+            configService.get<string>('MAIL_PORT') ||
+            '587',
+          10,
+        );
+        const secureOverride = configService.get<string>('SMTP_SECURE') ||
+          configService.get<string>('MAIL_SECURE');
+        const smtpSecure = secureOverride
+          ? secureOverride.toLowerCase() === 'true'
+          : smtpPort === 465;
+        const smtpUser =
+          configService.get<string>('SMTP_USER') ||
+          configService.get<string>('MAIL_USER') ||
+          '';
+        const smtpPass =
+          configService.get<string>('SMTP_PASS') ||
+          configService.get<string>('MAIL_PASSWORD') ||
+          '';
         const smtpFrom = configService.get<string>('SMTP_FROM') ||
+          (configService.get<string>('MAIL_FROM_NAME') &&
+          configService.get<string>('MAIL_FROM_ADDRESS')
+            ? `${configService.get<string>('MAIL_FROM_NAME')} <${configService.get<string>('MAIL_FROM_ADDRESS')}>`
+            : undefined) ||
           `CrediScore <${configService.get<string>('SENDER_EMAIL') || 'noreply@crediscore.com'}>`;
 
         return {
         transport: {
           host: smtpHost,
           port: smtpPort,
-          secure: smtpPort === 465,
+          secure: smtpSecure,
           auth: {
             user: smtpUser,
             pass: smtpPass,

@@ -63,6 +63,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     reviewTrends: ReviewTrend[] = [];
     ratingDistribution: RatingDistribution[] = [];
     recentReviews: any[] = [];
+    selectedReview: any | null = null;
 
     // UI state
     isLoading = true;
@@ -228,6 +229,14 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
             month: 'short',
             day: 'numeric'
         });
+    }
+
+    openReviewDetails(review: any): void {
+        this.selectedReview = review;
+    }
+
+    closeReviewDetails(): void {
+        this.selectedReview = null;
     }
 
     getReputationLevel(): string {
@@ -520,5 +529,77 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
     getTotalTrendReviews(): number {
         return this.reviewTrends.reduce((s, t) => s + t.count, 0);
+    }
+
+    getGradeFromRating(rating: number): string {
+        const gradeScore = rating * 20;
+        if (gradeScore >= 90) return 'A';
+        if (gradeScore >= 80) return 'B';
+        if (gradeScore >= 70) return 'C';
+        if (gradeScore >= 60) return 'D';
+        return 'E';
+    }
+
+    getRatingTrendPoints(width = 580, height = 180): string {
+        const validTrends = this.reviewTrends.filter(t => t.count > 0);
+        if (validTrends.length === 0) return '';
+
+        if (validTrends.length === 1) {
+            const y = this.getTrendY(validTrends[0].averageRating, height, 5);
+            return `${Math.round(width / 2)},${Math.round(y)}`;
+        }
+
+        return validTrends.map((trend, index) => {
+            const x = (index / (validTrends.length - 1)) * width;
+            const y = this.getTrendY(trend.averageRating, height, 5);
+            return `${Math.round(x)},${Math.round(y)}`;
+        }).join(' ');
+    }
+
+    getGradeTrendPoints(width = 580, height = 180): string {
+        const validTrends = this.reviewTrends.filter(t => t.count > 0);
+        if (validTrends.length === 0) return '';
+
+        if (validTrends.length === 1) {
+            const gradeScore = validTrends[0].averageRating * 20;
+            const y = this.getTrendY(gradeScore, height, 100);
+            return `${Math.round(width / 2)},${Math.round(y)}`;
+        }
+
+        return validTrends.map((trend, index) => {
+            const x = (index / (validTrends.length - 1)) * width;
+            const gradeScore = trend.averageRating * 20;
+            const y = this.getTrendY(gradeScore, height, 100);
+            return `${Math.round(x)},${Math.round(y)}`;
+        }).join(' ');
+    }
+
+    getTrendPointData(width = 580, height = 180): Array<{ month: string; x: number; ratingY: number; gradeY: number; rating: number; grade: string }> {
+        const validTrends = this.reviewTrends.filter(t => t.count > 0);
+        if (validTrends.length === 0) return [];
+
+        return validTrends.map((trend, index) => {
+            const x = validTrends.length === 1 ? width / 2 : (index / (validTrends.length - 1)) * width;
+            const ratingY = this.getTrendY(trend.averageRating, height, 5);
+            const gradeScore = trend.averageRating * 20;
+            const gradeY = this.getTrendY(gradeScore, height, 100);
+
+            return {
+                month: trend.month,
+                x: Math.round(x),
+                ratingY: Math.round(ratingY),
+                gradeY: Math.round(gradeY),
+                rating: trend.averageRating,
+                grade: this.getGradeFromRating(trend.averageRating)
+            };
+        });
+    }
+
+    private getTrendY(value: number, height: number, max: number): number {
+        const clamped = Math.max(0, Math.min(value, max));
+        const topPadding = 12;
+        const bottomPadding = 12;
+        const chartHeight = height - topPadding - bottomPadding;
+        return topPadding + (1 - clamped / max) * chartHeight;
     }
 }

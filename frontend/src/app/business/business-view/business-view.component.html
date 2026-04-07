@@ -150,6 +150,12 @@
             <div class="info-item-content">
               <span class="info-item-label">Phone</span>
               <a [href]="'tel:' + business.phone" class="info-item-value">{{ business.phone }}</a>
+              <div class="info-item-actions">
+                <a [href]="'tel:' + business.phone" class="info-action-chip">
+                  <i class="uil uil-phone"></i>
+                  Call now
+                </a>
+              </div>
             </div>
           </div>
 
@@ -160,6 +166,12 @@
             <div class="info-item-content">
               <span class="info-item-label">Email</span>
               <a [href]="'mailto:' + business.email" class="info-item-value">{{ business.email }}</a>
+              <div class="info-item-actions">
+                <a [href]="'mailto:' + business.email" class="info-action-chip">
+                  <i class="uil uil-envelope-upload"></i>
+                  Send email
+                </a>
+              </div>
             </div>
           </div>
 
@@ -173,6 +185,12 @@
                 {{ business.website }}
                 <i class="uil uil-external-link-alt"></i>
               </a>
+              <div class="info-item-actions">
+                <a [href]="business.website" target="_blank" rel="noopener noreferrer" class="info-action-chip">
+                  <i class="uil uil-external-link-alt"></i>
+                  Open website
+                </a>
+              </div>
             </div>
           </div>
 
@@ -183,6 +201,12 @@
             <div class="info-item-content">
               <span class="info-item-label">Location</span>
               <span class="info-item-value">{{ business.location || business.address }}</span>
+              <div class="info-item-actions">
+                <a [href]="getOsmDirectionsUrl()" target="_blank" rel="noopener noreferrer" class="info-action-chip">
+                  <i class="uil uil-directions"></i>
+                  Get directions
+                </a>
+              </div>
             </div>
           </div>
 
@@ -215,22 +239,21 @@
             <div class="info-item-content">
               <span class="info-item-label">Verification</span>
               <span class="info-item-value verified-text">
-                <img src="/images/verfied.png" alt="Verified" class="verified-badge-small"
-                     (error)="$event.target.style.display='none'" />
+                <i class="uil uil-check-circle"></i>
                 Verified Business
               </span>
             </div>
           </div>
 
           <!-- Business Hours -->
-          <div class="business-info-item" *ngIf="business.businessHours && business.businessHours.length" style="grid-column: 1 / -1;">
+          <div class="business-info-item" *ngIf="getBusinessHoursForDisplay().length" style="grid-column: 1 / -1;">
             <div class="info-item-icon">
               <i class="uil uil-clock"></i>
             </div>
             <div class="info-item-content" style="width: 100%;">
               <span class="info-item-label">Business Hours</span>
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 16px; margin-top: 4px;">
-                <div *ngFor="let h of business.businessHours" style="display: flex; justify-content: space-between; font-size: 0.8rem; padding: 2px 0;">
+                <div *ngFor="let h of getBusinessHoursForDisplay()" style="display: flex; justify-content: space-between; font-size: 0.8rem; padding: 2px 0;">
                   <span style="color: #374151; font-weight: 500; text-transform: capitalize;">{{ h.day.slice(0,3) }}</span>
                   <span *ngIf="!h.isClosed" style="color: #6B7280;">{{ h.open }} &ndash; {{ h.close }}</span>
                   <span *ngIf="h.isClosed" style="color: #EF4444; font-size: 0.75rem;">Closed</span>
@@ -594,25 +617,25 @@
                     </ng-container>
                   </div>
                   <div class="review-actions-compact">
-                    <!-- Helpfulness voting — visible to logged-in non-authors -->
+                    <!-- Like/Dislike voting — visible to logged-in non-authors -->
                     <div class="review-vote-actions" *ngIf="currentUser && currentUser.id !== review.userId" (click)="$event.stopPropagation()">
                       <button
                         class="vote-btn helpful-btn"
                         [class.voted]="review.userVote === 'HELPFUL'"
                         (click)="voteReview(review, 'HELPFUL', $event)"
-                        title="Helpful"
+                        title="Like"
                       >
                         <i class="uil uil-thumbs-up"></i>
-                        <span *ngIf="review.helpfulCount">{{ review.helpfulCount }}</span>
+                        <span>{{ review.helpfulCount ?? 0 }}</span>
                       </button>
                       <button
                         class="vote-btn not-helpful-btn"
                         [class.voted]="review.userVote === 'NOT_HELPFUL'"
                         (click)="voteReview(review, 'NOT_HELPFUL', $event)"
-                        title="Not helpful"
+                        title="Dislike"
                       >
                         <i class="uil uil-thumbs-down"></i>
-                        <span *ngIf="review.notHelpfulCount">{{ review.notHelpfulCount }}</span>
+                        <span>{{ review.notHelpfulCount ?? 0 }}</span>
                       </button>
                     </div>
                     <div class="review-click-hint">
@@ -881,29 +904,29 @@
         </div>
         <div class="review-detail-item" *ngIf="(selectedReview.helpfulCount ?? 0) > 0 || (selectedReview.notHelpfulCount ?? 0) > 0">
           <i class="uil uil-thumbs-up"></i>
-          <span>{{ selectedReview.helpfulCount ?? 0 }} helpful <i class="uil uil-thumbs-down text-xs"></i> {{ selectedReview.notHelpfulCount ?? 0 }} not helpful</span>
+          <span>{{ selectedReview.helpfulCount ?? 0 }} likes <i class="uil uil-thumbs-down text-xs"></i> {{ selectedReview.notHelpfulCount ?? 0 }} dislikes</span>
         </div>
       </div>
 
-      <!-- Helpfulness voting in modal -->
+      <!-- Like/Dislike voting in modal -->
       <div class="review-vote-actions modal-vote" *ngIf="currentUser && selectedReview && currentUser.id !== selectedReview.userId" (click)="$event.stopPropagation()">
         <button
           class="vote-btn helpful-btn"
           [class.voted]="selectedReview.userVote === 'HELPFUL'"
           (click)="voteReview(selectedReview, 'HELPFUL', $event)"
-          title="Helpful"
+          title="Like"
         >
           <i class="uil uil-thumbs-up"></i>
-          <span>Helpful{{ (selectedReview.helpfulCount ?? 0) > 0 ? ' (' + selectedReview.helpfulCount + ')' : '' }}</span>
+          <span>Like ({{ selectedReview.helpfulCount ?? 0 }})</span>
         </button>
         <button
           class="vote-btn not-helpful-btn"
           [class.voted]="selectedReview.userVote === 'NOT_HELPFUL'"
           (click)="voteReview(selectedReview, 'NOT_HELPFUL', $event)"
-          title="Not helpful"
+          title="Dislike"
         >
           <i class="uil uil-thumbs-down"></i>
-          <span>Not helpful{{ (selectedReview.notHelpfulCount ?? 0) > 0 ? ' (' + selectedReview.notHelpfulCount + ')' : '' }}</span>
+          <span>Dislike ({{ selectedReview.notHelpfulCount ?? 0 }})</span>
         </button>
       </div>
 

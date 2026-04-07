@@ -6,6 +6,12 @@
   background-color: #f9fafb;
 }
 
+.business-map-view:not(.embedded) {
+  padding-top: 4.5rem;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
 /* Header */
 .map-header {
   display: flex;
@@ -497,6 +503,11 @@
 }
 
 @media (max-width: 768px) {
+  .business-map-view:not(.embedded) {
+    padding-top: 4rem;
+    height: 100vh;
+  }
+
   .map-header {
     flex-direction: column;
     gap: 1rem;

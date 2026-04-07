@@ -104,7 +104,8 @@ export const routes: Routes = [
       import('./user/report-business/report-business.component').then(
         (m) => m.ReportBusinessComponent,
       ),
-    canActivate: [AuthGuard],
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['CUSTOMER', 'user'] },
   },
 
   // Leaderboard (public)

@@ -426,7 +426,7 @@ export class UserController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Invalid rating or already reviewed',
+    description: 'Bad request - Invalid rating',
   })
   @ApiResponse({
     status: 404,

@@ -20,6 +20,7 @@ export interface UserDashboardActivityResponse {
   status?: string | null;
   businessName?: string | null;
   rating?: number | null;
+  credibility?: number | null;
 }
 
 export interface UserDashboardBusinessResponse {

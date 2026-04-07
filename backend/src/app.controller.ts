@@ -90,36 +90,44 @@ export class AppController {
     issues: string[];
   } {
     const issues: string[] = [];
+    const smtpHost = process.env.SMTP_HOST || process.env.MAIL_HOST;
+    const smtpPort = process.env.SMTP_PORT || process.env.MAIL_PORT;
+    const smtpSecure = process.env.SMTP_SECURE || process.env.MAIL_SECURE;
+    const smtpUser = process.env.SMTP_USER || process.env.MAIL_USER;
+    const smtpPass = process.env.SMTP_PASS || process.env.MAIL_PASSWORD;
+    const smtpFrom =
+      process.env.SMTP_FROM ||
+      (process.env.MAIL_FROM_NAME && process.env.MAIL_FROM_ADDRESS
+        ? `${process.env.MAIL_FROM_NAME} <${process.env.MAIL_FROM_ADDRESS}>`
+        : undefined);
+
     const config = {
-      MAIL_HOST: process.env.MAIL_HOST,
-      MAIL_PORT: process.env.MAIL_PORT,
-      MAIL_SECURE: process.env.MAIL_SECURE,
-      MAIL_USER: process.env.MAIL_USER,
-      MAIL_PASSWORD: process.env.MAIL_PASSWORD ? '***hidden***' : 'NOT_SET',
-      MAIL_FROM_NAME: process.env.MAIL_FROM_NAME,
-      MAIL_FROM_ADDRESS: process.env.MAIL_FROM_ADDRESS,
+      SMTP_HOST: smtpHost,
+      SMTP_PORT: smtpPort,
+      SMTP_SECURE: smtpSecure,
+      SMTP_USER: smtpUser,
+      SMTP_PASS: smtpPass ? '***hidden***' : 'NOT_SET',
+      SMTP_FROM: smtpFrom,
       APP_URL: process.env.APP_URL,
     };
 
     // Check for missing configuration
-    if (!process.env.MAIL_HOST) issues.push('MAIL_HOST is not set');
-    if (!process.env.MAIL_PORT) issues.push('MAIL_PORT is not set');
-    if (!process.env.MAIL_USER) issues.push('MAIL_USER is not set');
-    if (!process.env.MAIL_PASSWORD) issues.push('MAIL_PASSWORD is not set');
-    if (!process.env.MAIL_FROM_NAME) issues.push('MAIL_FROM_NAME is not set');
-    if (!process.env.MAIL_FROM_ADDRESS)
-      issues.push('MAIL_FROM_ADDRESS is not set');
+    if (!smtpHost) issues.push('SMTP_HOST (or MAIL_HOST) is not set');
+    if (!smtpPort) issues.push('SMTP_PORT (or MAIL_PORT) is not set');
+    if (!smtpUser) issues.push('SMTP_USER (or MAIL_USER) is not set');
+    if (!smtpPass) issues.push('SMTP_PASS (or MAIL_PASSWORD) is not set');
+    if (!smtpFrom)
+      issues.push(
+        'SMTP_FROM is not set (or MAIL_FROM_NAME + MAIL_FROM_ADDRESS)',
+      );
     if (!process.env.APP_URL) issues.push('APP_URL is not set');
 
     // Check for common configuration issues
-    if (process.env.MAIL_SECURE === 'true' && process.env.MAIL_PORT !== '465') {
-      issues.push('MAIL_SECURE is true but MAIL_PORT is not 465');
+    if (smtpSecure === 'true' && smtpPort !== '465') {
+      issues.push('SMTP_SECURE is true but SMTP_PORT is not 465');
     }
-    if (
-      process.env.MAIL_SECURE === 'false' &&
-      process.env.MAIL_PORT !== '587'
-    ) {
-      issues.push('MAIL_SECURE is false but MAIL_PORT is not 587');
+    if (smtpSecure === 'false' && smtpPort !== '587' && smtpPort !== '2525') {
+      issues.push('SMTP_SECURE is false and SMTP_PORT is unusual (expected 587 or 2525)');
     }
 
     return {

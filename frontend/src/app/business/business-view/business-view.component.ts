@@ -82,6 +82,13 @@ interface UploadedImage {
   size: number;
 }
 
+interface BusinessHourRow {
+  day: string;
+  open: string;
+  close: string;
+  isClosed: boolean;
+}
+
 @Component({
   selector: 'app-business-view',
   standalone: true,
@@ -223,8 +230,14 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
             .filter((r: any) => r.isActive)
             .map((r: any) => ({
               ...r,
-              helpfulCount: r.votes?.filter((v: any) => v.vote === 'HELPFUL').length ?? 0,
-              notHelpfulCount: r.votes?.filter((v: any) => v.vote === 'NOT_HELPFUL').length ?? 0,
+              helpfulCount:
+                r.helpfulCount ??
+                r.votes?.filter((v: any) => v.vote === 'HELPFUL').length ??
+                0,
+              notHelpfulCount:
+                r.notHelpfulCount ??
+                r.votes?.filter((v: any) => v.vote === 'NOT_HELPFUL').length ??
+                0,
               userVote: currentUserId
                 ? (r.votes?.find((v: any) => v.userId === currentUserId)?.vote ?? null)
                 : null,
@@ -356,6 +369,48 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.reviews || this.reviews.length === 0) return 0;
     const replied = this.reviews.filter(r => r.replies && r.replies.length > 0).length;
     return Math.round((replied / this.reviews.length) * 100);
+  }
+
+  getBusinessHoursForDisplay(): BusinessHourRow[] {
+    const raw = (this.business as any)?.businessHours;
+    if (!raw) return [];
+
+    if (Array.isArray(raw)) {
+      return raw
+        .filter((h: any) => h && h.day != null)
+        .map((h: any) => ({
+          day: String(h.day).toLowerCase(),
+          open: String(h.open ?? '09:00'),
+          close: String(h.close ?? '17:00'),
+          isClosed: !!(h.isClosed ?? h.closed),
+        }));
+    }
+
+    if (typeof raw === 'object') {
+      const order = [
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+        'sunday',
+      ];
+      const out: BusinessHourRow[] = [];
+      for (const day of order) {
+        const slot = raw[day];
+        if (!slot || typeof slot !== 'object') continue;
+        out.push({
+          day,
+          open: String(slot.open ?? '09:00'),
+          close: String(slot.close ?? '17:00'),
+          isClosed: !!(slot.closed ?? slot.isClosed),
+        });
+      }
+      return out;
+    }
+
+    return [];
   }
 
   goBack() {

@@ -49,13 +49,31 @@ export class AppNotificationsService {
 
   private fetchUnreadCountObs(): Observable<{ unread: number }> {
     return this.http.get<{ unread: number }>(`${this.API_URL}/notifications/count`).pipe(
-      catchError(() => of({ unread: 0 }))
+      catchError(() => this.fetchUnreadFromNotifications())
     );
+  }
+
+  private fetchUnreadFromNotifications(limit = 50): Observable<{ unread: number }> {
+    return this.http
+      .get<any>(`${this.API_URL}/notifications?page=1&limit=${limit}`)
+      .pipe(
+        tap(res => this.notifications$.next(res.notifications || [])),
+        switchMap((res) => {
+          const notifications = res?.notifications || [];
+          const unread = notifications.filter((n: AppNotification) => !n.isRead).length;
+          return of({ unread });
+        }),
+        catchError(() => of({ unread: this.unreadCount$.value }))
+      );
   }
 
   loadNotifications(page = 1, limit = 20): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/notifications?page=${page}&limit=${limit}`).pipe(
-      tap(res => this.notifications$.next(res.notifications || []))
+      tap(res => {
+        const notifications: AppNotification[] = res.notifications || [];
+        this.notifications$.next(notifications);
+        this.unreadCount$.next(notifications.filter(n => !n.isRead).length);
+      })
     );
   }
 

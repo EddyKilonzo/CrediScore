@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, HostListener, signal } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { Navbar } from './shared/components/navbar/navbar';
 import { Footer } from './shared/components/footer/footer';
@@ -18,6 +18,7 @@ export class App {
   protected readonly isLoading = isLoading();
   showNavbar = true;
   showFooter = true;
+  showBackToTop = false;
 
   constructor(private router: Router) {
     this.applyChromeFromUrl(this.router.url);
@@ -32,5 +33,15 @@ export class App {
     const path = url.split('?')[0];
     this.showNavbar = path !== '/' && path !== '/home';
     this.showFooter = !path.startsWith('/auth');
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop || 0;
+    this.showBackToTop = scrollTop > 400;
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
