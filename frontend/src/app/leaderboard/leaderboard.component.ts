@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { animate, query, stagger, style, transition, trigger } from '@angular/animations';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { forkJoin } from 'rxjs';
@@ -29,12 +30,42 @@ interface LeaderboardBusiness {
   leadTier: string;
 }
 
+const leaderboardListAnim = trigger('leaderboardListAnim', [
+  transition('* => *', [
+    query(
+      ':enter',
+      [
+        style({ opacity: 0, transform: 'translateY(6px)' }),
+        stagger(
+          '28ms',
+          animate(
+            '220ms cubic-bezier(0.22, 1, 0.36, 1)',
+            style({ opacity: 1, transform: 'translateY(0)' })
+          )
+        ),
+      ],
+      { optional: true }
+    ),
+    query(
+      ':leave',
+      [
+        animate(
+          '150ms cubic-bezier(0.4, 0, 1, 1)',
+          style({ opacity: 0, transform: 'translateY(-4px)' })
+        ),
+      ],
+      { optional: true }
+    ),
+  ]),
+]);
+
 @Component({
   selector: 'app-leaderboard',
   standalone: true,
   imports: [NgIf, NgFor, NgClass, RouterModule],
   templateUrl: './leaderboard.component.html',
-  styleUrl: './leaderboard.component.css'
+  styleUrl: './leaderboard.component.css',
+  animations: [leaderboardListAnim],
 })
 export class LeaderboardComponent implements OnInit {
   private http = inject(HttpClient);
@@ -125,6 +156,22 @@ export class LeaderboardComponent implements OnInit {
 
   setActiveBoard(board: 'customers' | 'businesses'): void {
     this.activeBoard = board;
+  }
+
+  /** Stable row identity for list animations and smoother reordering. */
+  trackCustomerRow = (_index: number, row: LeaderboardUser) => row.id;
+  trackBusinessRow = (_index: number, row: LeaderboardBusiness) => row.id;
+
+  leaderboardCustomersKey(): string {
+    return `c|${this.getCustomerListRows()
+      .map((u) => u.id)
+      .join('|')}`;
+  }
+
+  leaderboardBusinessesKey(): string {
+    return `b|${this.getBusinessListRows()
+      .map((b) => b.id)
+      .join('|')}`;
   }
 
   private calculateBusinessLeadScore(trustScore: number, reviewCount: number, isVerified: boolean): number {

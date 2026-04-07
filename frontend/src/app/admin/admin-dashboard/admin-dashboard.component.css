@@ -69,6 +69,11 @@
   box-shadow: rgba(50, 50, 93, 0.35) 0px 8px 16px -2px, rgba(0, 0, 0, 0.4) 0px 4px 9px -3px;
 }
 
+.refresh-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.95);
+  outline-offset: 3px;
+}
+
 .refresh-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -303,9 +308,22 @@
 }
 
 .stats-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: rgba(50, 50, 93, 0.35) 0px 60px 120px -20px, rgba(0, 0, 0, 0.4) 0px 40px 80px -30px, rgba(10, 37, 64, 0.45) 0px -2px 8px 0px inset;
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: rgba(50, 50, 93, 0.22) 0px 24px 48px -12px, rgba(0, 0, 0, 0.18) 0px 16px 32px -18px, rgba(10, 37, 64, 0.35) 0px -2px 8px 0px inset;
   border-color: rgba(62, 106, 138, 0.2);
+}
+
+/* Matches other dashboards; pairs with .stats-card hover for consistent lift */
+.hover-lift {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 18px 36px rgba(62, 106, 138, 0.18);
 }
 
 .stats-card .card-icon {
@@ -846,7 +864,12 @@
 .chart-bar {
   background: linear-gradient(135deg, #3E6A8A, #5C8BA5);
   border-radius: 0.5rem 0.5rem 0 0;
-  transition: all 0.3s ease;
+  transition:
+    height 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease,
+    background 0.28s ease,
+    filter 0.28s ease;
   cursor: pointer;
   min-height: 20px;
   flex: 1;
@@ -1131,10 +1154,32 @@
   font-weight: 700;
 }
 
+.activity-list-inner {
+  position: relative;
+}
+
+.activity-item-inner {
+  transition:
+    background-color 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+}
+
+.activity-item:hover .activity-item-inner,
+.activity-item:focus-within .activity-item-inner {
+  background: rgba(62, 106, 138, 0.06);
+  border-color: rgba(62, 106, 138, 0.12);
+  box-shadow: 0 4px 14px rgba(62, 106, 138, 0.1);
+  transform: translateY(-1px);
+}
+
 .activity-item:hover .activity-icon {
-  transform: scale(1.1) rotate(5deg);
+  transform: scale(1.06) rotate(3deg);
   background: linear-gradient(135deg, #C5D6E3, #9FBDD1);
-  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.3);
+  box-shadow: 0 4px 12px rgba(62, 106, 138, 0.28);
 }
 
 /* Section Links */
@@ -1146,7 +1191,11 @@
   color: #374151;
   text-decoration: none;
   border-radius: 0.5rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
   font-weight: 500;
 }
 
@@ -1154,6 +1203,12 @@
   background: rgba(62, 106, 138, 0.1);
   color: #3E6A8A;
   transform: translateX(4px);
+}
+
+.section-link:focus-visible {
+  outline: 2px solid rgba(62, 106, 138, 0.55);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(62, 106, 138, 0.2);
 }
 
 .section-link svg {

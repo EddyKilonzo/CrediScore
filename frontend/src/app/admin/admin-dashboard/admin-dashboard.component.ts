@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { animate, query, stagger, style, transition, trigger } from '@angular/animations';
 import { AuthService, User } from '../../core/services/auth.service';
 import { AdminService, AdminDashboardStats, HistoricalData, MonthlyData } from '../../core/services/admin.service';
 import { ToastService } from '../../shared/components/toast/toast.service';
@@ -34,12 +35,43 @@ interface ActivityRingDatum {
   dashOffset: number;
 }
 
+/** Staggered enter/leave when recent activity list identity or order changes. */
+const recentActivityListAnimation = trigger('recentActivityList', [
+  transition('* => *', [
+    query(
+      ':enter',
+      [
+        style({ opacity: 0, transform: 'translateY(8px)' }),
+        stagger(
+          '40ms',
+          animate(
+            '240ms cubic-bezier(0.22, 1, 0.36, 1)',
+            style({ opacity: 1, transform: 'translateY(0)' })
+          )
+        ),
+      ],
+      { optional: true }
+    ),
+    query(
+      ':leave',
+      [
+        animate(
+          '160ms cubic-bezier(0.4, 0, 1, 1)',
+          style({ opacity: 0, transform: 'translateY(-6px)' })
+        ),
+      ],
+      { optional: true }
+    ),
+  ]),
+]);
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
   imports: [CommonModule, RouterModule, TPipe],
   templateUrl: './admin-dashboard.component.html',
-  styleUrls: ['./admin-dashboard.component.css']
+  styleUrls: ['./admin-dashboard.component.css'],
+  animations: [recentActivityListAnimation],
 })
 export class AdminDashboardComponent implements OnInit {
   private authService = inject(AuthService);
@@ -56,6 +88,12 @@ export class AdminDashboardComponent implements OnInit {
   error = signal<string | null>(null);
   monthlyUserRegistrations = signal<{ month: string; count: number }[]>([]);
   recentActivities = signal<AdminRecentActivity[]>([]);
+  /** Drives list animation when items are added, removed, or reordered. */
+  readonly recentActivitiesFingerprint = computed(() =>
+    this.recentActivities()
+      .map((a) => a.id)
+      .join('|')
+  );
   private readonly hiddenActivityKeywords = [
     'fraud report submitted for artistic village',
     'artistic village verified',

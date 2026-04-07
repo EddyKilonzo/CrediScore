@@ -122,6 +122,34 @@ interface ReputationTier {
   color: string;
 }
 
+interface TrustSignalBadge {
+  id: string;
+  label: string;
+  iconClass: string;
+  description: string;
+  tone: 'success' | 'info' | 'warning';
+}
+
+interface ProfileCompletenessItem {
+  key: string;
+  label: string;
+  done: boolean;
+}
+
+interface OwnerResponseTimeSummary {
+  headline: string;
+  sub: string;
+  hasData: boolean;
+}
+
+interface BusinessRecentActivityItem {
+  id: string;
+  kind: 'trust' | 'review';
+  title: string;
+  subtitle: string;
+  at: string;
+}
+
 @Component({
   selector: 'app-business-view',
   standalone: true,
@@ -514,6 +542,200 @@ export class BusinessViewComponent implements OnInit, AfterViewInit, OnDestroy {
     ];
     const passed = checks.filter(Boolean).length;
     return this.clampScore((passed / checks.length) * 100);
+  }
+
+  getProfileCompletenessItems(): ProfileCompletenessItem[] {
+    if (!this.business) return [];
+    const b: any = this.business;
+    return [
+      { key: 'logo', label: 'Logo', done: !!b.logo },
+      { key: 'description', label: 'Description', done: !!b.description },
+      { key: 'phone', label: 'Phone', done: !!b.phone },
+      { key: 'email', label: 'Email', done: !!b.email },
+      { key: 'website', label: 'Website', done: !!b.website },
+      { key: 'location', label: 'Location / address', done: !!(b.location || b.address) },
+      { key: 'hours', label: 'Business hours', done: this.getBusinessHoursForDisplay().length > 0 },
+      { key: 'social', label: 'Social links', done: this.hasSocialLinks() },
+      { key: 'category', label: 'Category', done: !!this.getBusinessCategoryLabel() },
+      { key: 'verified', label: 'Platform verification', done: this.isBusinessVerified() },
+    ];
+  }
+
+  /**
+   * Badges shown to visitors (verification state, docs, payments, engagement).
+   */
+  getTrustSignalBadges(): TrustSignalBadge[] {
+    if (!this.business) return [];
+    const b: any = this.business;
+    const status = (b.status || '').toString().toUpperCase();
+    const pendingStatuses = ['PENDING', 'UNDER_REVIEW', 'DOCUMENTS_REQUIRED'];
+    const docs: unknown[] = Array.isArray(b.documents) ? b.documents : [];
+    const pays: unknown[] = Array.isArray(b.payments) ? b.payments : [];
+    const badges: TrustSignalBadge[] = [];
+
+    if (this.isBusinessVerified()) {
+      badges.push({
+        id: 'verified',
+        label: 'Verified business',
+        iconClass: 'uil uil-shield-check',
+        description: 'Identity and documentation have been checked by CrediScore.',
+        tone: 'success',
+      });
+    } else if (pendingStatuses.includes(status)) {
+      badges.push({
+        id: 'pending',
+        label: 'Verification in progress',
+        iconClass: 'uil uil-clock-three',
+        description: 'This listing is being reviewed. Check back for updates.',
+        tone: 'warning',
+      });
+    } else if (docs.length > 0) {
+      badges.push({
+        id: 'docs',
+        label: 'Verified documents on file',
+        iconClass: 'uil uil-file-check-alt',
+        description: 'Supporting documents have been uploaded and verified.',
+        tone: 'info',
+      });
+    }
+
+    if (pays.length > 0) {
+      badges.push({
+        id: 'payments',
+        label: 'Payment options listed',
+        iconClass: 'uil uil-credit-card',
+        description: 'Customers can see verified payment methods for this business.',
+        tone: 'info',
+      });
+    }
+
+    const rate = this.getResponseRate();
+    if (rate > 0) {
+      badges.push({
+        id: 'responds',
+        label: rate >= 50 ? 'Usually replies to reviews' : 'Replies to some reviews',
+        iconClass: 'uil uil-chat-bubble-user',
+        description: `${rate}% of reviews on this page have at least one owner reply.`,
+        tone: 'success',
+      });
+    }
+
+    const n = this.totalReviews || 0;
+    if (n >= 5) {
+      badges.push({
+        id: 'community',
+        label: `${n}+ reviews`,
+        iconClass: 'uil uil-users-alt',
+        description: 'Backed by multiple customer reviews on CrediScore.',
+        tone: 'info',
+      });
+    }
+
+    return badges;
+  }
+
+  getOwnerResponseTimeSummary(): OwnerResponseTimeSummary {
+    const deltasHours: number[] = [];
+    for (const r of this.reviews || []) {
+      if (!r.replies?.length) continue;
+      const reviewAt = new Date(r.createdAt).getTime();
+      const replyTimes = r.replies
+        .map((rep) => new Date(rep.createdAt).getTime())
+        .filter((t) => t >= reviewAt && Number.isFinite(t));
+      if (!replyTimes.length) continue;
+      const firstReply = Math.min(...replyTimes);
+      const hours = (firstReply - reviewAt) / (1000 * 60 * 60);
+      if (hours >= 0 && hours < 8784) {
+        deltasHours.push(hours);
+      }
+    }
+
+    if (deltasHours.length === 0) {
+      const rate = this.getResponseRate();
+      if (rate > 0) {
+        return {
+          headline: `${rate}% reply rate`,
+          sub: 'Median response time will appear after enough timed replies are available.',
+          hasData: false,
+        };
+      }
+      return {
+        headline: '—',
+        sub: 'No owner replies yet on visible reviews, so response time is not measured.',
+        hasData: false,
+      };
+    }
+
+    deltasHours.sort((a, b) => a - b);
+    const mid = deltasHours.length % 2 === 1
+      ? deltasHours[(deltasHours.length - 1) / 2]
+      : (deltasHours[deltasHours.length / 2 - 1] + deltasHours[deltasHours.length / 2]) / 2;
+
+    return {
+      headline: this.formatMedianHoursToHeadline(mid),
+      sub: `Median time to first owner reply, from ${deltasHours.length} review${deltasHours.length === 1 ? '' : 's'} with replies (recent page sample).`,
+      hasData: true,
+    };
+  }
+
+  private formatMedianHoursToHeadline(hours: number): string {
+    if (!Number.isFinite(hours) || hours < 0) return '—';
+    if (hours < 1) return 'Typically within an hour';
+    if (hours < 24) return `Typically within ${Math.round(hours)} hours`;
+    const days = hours / 24;
+    if (days < 14) return `Typically within ${Math.max(1, Math.round(days))} days`;
+    return `Typically within ${Math.round(days)} days`;
+  }
+
+  formatRelativeActivityTime(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso).getTime();
+    if (Number.isNaN(d)) return '';
+    const s = Math.floor((Date.now() - d) / 1000);
+    if (s < 45) return 'Just now';
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
+    return this.formatDate(iso);
+  }
+
+  getBusinessRecentActivity(limit = 6): BusinessRecentActivityItem[] {
+    const items: BusinessRecentActivityItem[] = [];
+
+    for (const p of this.trustScoreHistory || []) {
+      const delta = p.changeDelta ?? 0;
+      items.push({
+        id: `trust-${p.id}`,
+        kind: 'trust',
+        title:
+          delta > 0
+            ? `Trust score up ${delta} pts`
+            : delta < 0
+              ? `Trust score adjusted (${delta} pts)`
+              : 'Trust score updated',
+        subtitle: (p.reason || p.eventType || 'Score recalculated').toString().slice(0, 120),
+        at: p.createdAt,
+      });
+    }
+
+    for (const r of this.reviews || []) {
+      const name = r.user?.name?.trim() || 'Customer';
+      let sub = `${name}`;
+      if (r.comment && String(r.comment).trim()) {
+        const snippet = String(r.comment).trim().slice(0, 72);
+        sub = `${name} — ${snippet}${String(r.comment).length > 72 ? '…' : ''}`;
+      }
+      items.push({
+        id: `review-${r.id}`,
+        kind: 'review',
+        title: `${r.rating}-star review`,
+        subtitle: sub,
+        at: r.createdAt,
+      });
+    }
+
+    items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+    return items.slice(0, limit);
   }
 
   getGradeColor(grade: string): string {

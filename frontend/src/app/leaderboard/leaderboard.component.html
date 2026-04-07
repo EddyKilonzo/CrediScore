@@ -151,7 +151,8 @@
         <span class="col-reviews">Reviews</span>
         <span class="col-rep">Reputation</span>
       </div>
-      <div *ngFor="let user of getCustomerListRows()" class="table-row">
+      <div [@leaderboardListAnim]="leaderboardCustomersKey()">
+      <div *ngFor="let user of getCustomerListRows(); trackBy: trackCustomerRow" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(user.rank) + '20'" [style.color]="getRankBadgeColor(user.rank)">
             <ng-container *ngIf="user.rank <= 3; else userTextRank">
@@ -175,6 +176,7 @@
           <small>{{ user.reputationLevel }}</small>
         </span>
       </div>
+      </div>
     </div>
 
     <div class="leaderboard-table" *ngIf="activeBoard === 'businesses'">
@@ -184,7 +186,8 @@
         <span class="col-reviews">Reviews</span>
         <span class="col-rep">Lead Score</span>
       </div>
-      <div *ngFor="let business of getBusinessListRows()" class="table-row">
+      <div [@leaderboardListAnim]="leaderboardBusinessesKey()">
+      <div *ngFor="let business of getBusinessListRows(); trackBy: trackBusinessRow" class="table-row">
         <span class="col-rank">
           <span class="rank-badge" [style.background-color]="getRankBadgeColor(business.rank) + '20'" [style.color]="getRankBadgeColor(business.rank)">
             <ng-container *ngIf="business.rank <= 3; else businessTextRank">
@@ -207,6 +210,7 @@
           <span class="rep-badge">{{ business.leadScore }} pts</span>
           <small>{{ business.leadTier }}</small>
         </span>
+      </div>
       </div>
     </div>
 

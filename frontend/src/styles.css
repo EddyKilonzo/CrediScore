@@ -29,6 +29,27 @@
   /* Primary reusable box shadow across the app */
   --shadow-primary: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px,
     rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
+  /* Subtle motion defaults */
+  --motion-duration-sm: 0.2s;
+  --motion-duration-md: 0.28s;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Keyboard focus ring; hide outline for pointer focus only (where supported) */
+:where(a, button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])):focus:not(:focus-visible) {
+  outline: none;
+}
+
+:where(a, button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid rgba(62, 106, 138, 0.55);
+  outline-offset: 2px;
+  transition: outline-offset var(--motion-duration-sm) var(--motion-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* ============================================

@@ -57,6 +57,23 @@
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.board-tab-btn:hover:not(.active) {
+  border-color: rgba(44, 82, 112, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(44, 82, 112, 0.1);
+}
+
+.board-tab-btn:focus-visible {
+  outline: 2px solid rgba(62, 106, 138, 0.55);
+  outline-offset: 2px;
 }
 
 .board-tab-btn.active {
@@ -86,6 +103,16 @@
   border-radius: 8px;
   background: #fff;
   padding: 8px 10px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tier-item:hover {
+  border-color: rgba(62, 106, 138, 0.25);
+  box-shadow: 0 4px 12px rgba(44, 82, 112, 0.08);
+  transform: translateY(-1px);
 }
 
 .tier-dot {
@@ -239,6 +266,15 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.podium-item:hover {
+  transform: translateY(-3px);
+}
+
+.first:hover {
+  transform: translateY(calc(-20px - 3px));
 }
 
 .podium-crown { font-size: 1.5rem; color: #f59e0b; line-height: 1; }
@@ -328,11 +364,18 @@
   padding: 14px 20px;
   border-bottom: 1px solid #f1f5f9;
   align-items: center;
-  transition: background 0.15s;
+  transition:
+    background 0.2s ease,
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease;
 }
 
 .table-row:last-child { border-bottom: none; }
-.table-row:hover { background: #f8fafc; }
+.table-row:hover {
+  background: #f8fafc;
+  transform: translateX(3px);
+  box-shadow: inset 3px 0 0 0 rgba(62, 106, 138, 0.35);
+}
 .table-row.top-three { background: #f3f8fc; }
 
 .rank-badge {

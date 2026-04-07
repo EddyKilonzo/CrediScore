@@ -109,6 +109,87 @@
 
     <!-- Trust Score and Rating Section -->
     <div class="trust-rating-section">
+      <div class="trust-signals-card" *ngIf="business">
+        <div class="trust-signals-header">
+          <h3 class="trust-signals-title">
+            <i class="uil uil-award"></i>
+            Trust signals
+          </h3>
+          <p class="trust-signals-lead">Verification, profile depth, responsiveness, and recent movement — at a glance.</p>
+        </div>
+
+        <div class="trust-badge-strip" *ngIf="getTrustSignalBadges().length > 0">
+          <span
+            *ngFor="let badge of getTrustSignalBadges()"
+            class="trust-badge"
+            [ngClass]="'trust-badge--' + badge.tone"
+            [attr.title]="badge.description">
+            <i [class]="badge.iconClass"></i>
+            {{ badge.label }}
+          </span>
+        </div>
+        <p class="trust-badge-empty" *ngIf="getTrustSignalBadges().length === 0">
+          This listing has not earned verification or engagement badges yet. Use the profile checklist below to see what is still open.
+        </p>
+
+        <div class="trust-signals-inner">
+          <div class="trust-signal-panel completeness-panel">
+            <h4 class="trust-signal-panel-title">
+              <i class="uil uil-clipboard-notes"></i>
+              Profile completeness
+            </h4>
+            <div class="completeness-meter-head">
+              <span class="completeness-label">How complete this profile is</span>
+              <span class="completeness-pct">{{ getBusinessProfileCompleteness() }}%</span>
+            </div>
+            <div class="score-bar completeness-bar">
+              <div
+                class="score-bar-fill"
+                [style.width.%]="getBusinessProfileCompleteness()"
+                style="background: linear-gradient(90deg, #2c5270, #5c8ba5); transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1)">
+              </div>
+            </div>
+            <ul class="completeness-checklist">
+              <li *ngFor="let row of getProfileCompletenessItems()" [class.completeness-done]="row.done" [class.completeness-missing]="!row.done">
+                <i class="uil" [ngClass]="row.done ? 'uil-check-circle' : 'uil-circle'"></i>
+                <span>{{ row.label }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="trust-signal-panel response-panel">
+            <h4 class="trust-signal-panel-title">
+              <i class="uil uil-stopwatch"></i>
+              Owner response time
+            </h4>
+            <p class="response-time-headline">{{ getOwnerResponseTimeSummary().headline }}</p>
+            <p class="response-time-sub">{{ getOwnerResponseTimeSummary().sub }}</p>
+            <div class="response-rate-chip" *ngIf="getResponseRate() > 0">
+              <i class="uil uil-comment-alt-check"></i>
+              <span>{{ getResponseRate() }}% of visible reviews have an owner reply</span>
+            </div>
+          </div>
+
+          <div class="trust-signal-panel activity-panel">
+            <h4 class="trust-signal-panel-title">
+              <i class="uil uil-history"></i>
+              Recent activity
+            </h4>
+            <ul class="recent-activity-list" *ngIf="getBusinessRecentActivity().length > 0">
+              <li *ngFor="let item of getBusinessRecentActivity()" class="recent-activity-row" [class.recent-activity--review]="item.kind === 'review'" [class.recent-activity--trust]="item.kind === 'trust'">
+                <span class="recent-activity-dot" aria-hidden="true"></span>
+                <div class="recent-activity-body">
+                  <span class="recent-activity-title">{{ item.title }}</span>
+                  <span class="recent-activity-sub">{{ item.subtitle }}</span>
+                </div>
+                <span class="recent-activity-when">{{ formatRelativeActivityTime(item.at) }}</span>
+              </li>
+            </ul>
+            <p class="recent-activity-empty" *ngIf="getBusinessRecentActivity().length === 0">No trust updates or reviews to show yet.</p>
+          </div>
+        </div>
+      </div>
+
       <div class="score-tabs-card">
         <div class="score-tabs">
           <button class="score-tab-btn" [class.active]="activeScoreTab === 'trust'" (click)="setScoreTab('trust')">
