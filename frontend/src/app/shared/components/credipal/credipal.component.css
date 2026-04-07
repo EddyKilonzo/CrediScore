@@ -19,6 +19,7 @@
   cursor: pointer;
   box-shadow: 0 12px 26px rgba(44, 82, 112, 0.3), 0 2px 8px rgba(62, 106, 138, 0.25);
   font-size: 1.4rem;
+  position: relative;
 }
 
 .credipal-toggle-btn.pulse {
@@ -63,6 +64,9 @@
   margin: 0;
   font-size: 0.95rem;
   color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .credipal-header p {
@@ -116,6 +120,33 @@
   border: 1px solid #dbe7f1;
   box-shadow: 0 6px 14px rgba(44, 82, 112, 0.1);
   animation: credipal-message-in 0.2s ease-out;
+}
+
+.credipal-bot-stamp {
+  margin-right: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.credipal-animal-inline {
+  display: inline-block;
+  animation: credipal-wiggle 2.2s ease-in-out infinite;
+}
+
+.credipal-animal-bubble {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #d7e2ec;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  box-shadow: 0 4px 10px rgba(44, 82, 112, 0.2);
+  animation: credipal-bob 1.8s ease-in-out infinite;
 }
 
 .credipal-message.user {
@@ -242,6 +273,19 @@
   }
 }
 
+@keyframes credipal-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes credipal-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(6deg); }
+  60% { transform: rotate(-4deg); }
+  80% { transform: rotate(3deg); }
+}
+
 .credipal-actions {
   border-top: 1px solid #edf2f7;
   background: linear-gradient(180deg, #f8fbff 0%, #f3f8fc 100%);
@@ -262,6 +306,33 @@
 
 .credipal-prompts button:hover,
 .credipal-actions button:hover {
+  background: #f2f8fd;
+}
+
+.credipal-nav-link {
+  border: 1px solid #d7e2ec;
+  background: #fff;
+  color: #2c5270;
+  border-radius: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  box-shadow: 0 4px 10px rgba(44, 82, 112, 0.06);
+  text-decoration: none;
+  display: grid;
+  gap: 2px;
+}
+
+.credipal-nav-link span {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.credipal-nav-link small {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.credipal-nav-link:hover {
   background: #f2f8fd;
 }
 

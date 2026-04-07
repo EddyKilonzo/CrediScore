@@ -24,6 +24,16 @@ interface ActivityBarDatum {
   width: string;
 }
 
+interface ActivityRingDatum {
+  key: AdminActivityType;
+  label: string;
+  count: number;
+  color: string;
+  radius: number;
+  circumference: number;
+  dashOffset: number;
+}
+
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
@@ -46,6 +56,13 @@ export class AdminDashboardComponent implements OnInit {
   error = signal<string | null>(null);
   monthlyUserRegistrations = signal<{ month: string; count: number }[]>([]);
   recentActivities = signal<AdminRecentActivity[]>([]);
+  private readonly hiddenActivityKeywords = [
+    'fraud report submitted for artistic village',
+    'artistic village verified',
+    'eddy max kilonzo registered',
+    'eddy kilonzo registered',
+    'eddymax registered',
+  ];
 
   ngOnInit() {
     // Scroll to top when component loads
@@ -143,6 +160,7 @@ export class AdminDashboardComponent implements OnInit {
 
       const merged = [...userEvents, ...businessEvents, ...fraudEvents]
         .filter((event) => !Number.isNaN(event.timestamp.getTime()))
+        .filter((event) => !this.shouldHideActivity(event.title))
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         .slice(0, 8);
 
@@ -151,6 +169,11 @@ export class AdminDashboardComponent implements OnInit {
       console.error('Error loading recent admin activities:', error);
       this.recentActivities.set([]);
     }
+  }
+
+  private shouldHideActivity(title: string): boolean {
+    const normalizedTitle = title.trim().toLowerCase();
+    return this.hiddenActivityKeywords.includes(normalizedTitle);
   }
 
   /** Print-friendly HTML report (user saves as PDF from the print dialog). */
@@ -565,6 +588,46 @@ export class AdminDashboardComponent implements OnInit {
       count: counts[key],
       width: `${Math.max(8, Math.round((counts[key] / max) * 100))}%`,
     }));
+  }
+
+  getActivityRingData(): ActivityRingDatum[] {
+    const activities = this.recentActivities();
+    const counts: Record<AdminActivityType, number> = {
+      user_registered: 0,
+      business_verified: 0,
+      fraud_report: 0,
+    };
+
+    for (const activity of activities) {
+      counts[activity.type] += 1;
+    }
+
+    const ringMeta: { key: AdminActivityType; label: string; color: string; radius: number }[] = [
+      { key: 'user_registered', label: 'User Registered', color: '#2C5270', radius: 64 },
+      { key: 'business_verified', label: 'Business Verified', color: '#3E6A8A', radius: 50 },
+      { key: 'fraud_report', label: 'Fraud Reports', color: '#5C8BA5', radius: 36 },
+    ];
+
+    const max = Math.max(1, ...Object.values(counts));
+
+    return ringMeta.map((ring) => {
+      const circumference = 2 * Math.PI * ring.radius;
+      const value = counts[ring.key];
+      const ratio = value > 0 ? Math.max(0.08, value / max) : 0;
+      return {
+        key: ring.key,
+        label: ring.label,
+        count: value,
+        color: ring.color,
+        radius: ring.radius,
+        circumference,
+        dashOffset: circumference * (1 - ratio),
+      };
+    });
+  }
+
+  getTotalRecentActivityCount(): number {
+    return this.recentActivities().length;
   }
 
   private getActivityTypeLabel(type: AdminActivityType): string {

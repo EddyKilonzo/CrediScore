@@ -278,27 +278,41 @@
           <div class="dashboard-card">
             <h2 class="section-title">Recent Activity</h2>
             <div class="activity-chart-wrap">
-              @for (bar of getActivityBarData(); track bar.key; let i = $index) {
-              <div class="activity-bar-row">
-                <div class="activity-bar-head">
-                  <div class="activity-bar-label">
-                    <i [class]="getRecentActivityIcon(bar.key)"></i>
-                    <span>{{ bar.label }}</span>
-                  </div>
-                  <span class="activity-bar-count">{{ bar.count }}</span>
-                </div>
-                <div class="activity-bar-track">
-                  <div
-                    class="activity-bar-fill"
-                    [class.users]="bar.key === 'user_registered'"
-                    [class.verified]="bar.key === 'business_verified'"
-                    [class.fraud]="bar.key === 'fraud_report'"
-                    [style.width]="bar.width"
-                    [style.animation-delay.ms]="i * 120">
-                  </div>
+              <div class="activity-radial-chart">
+                <svg viewBox="0 0 180 180" class="activity-radial-svg" aria-hidden="true">
+                  @for (ring of getActivityRingData(); track ring.key) {
+                  <circle
+                    cx="90"
+                    cy="90"
+                    [attr.r]="ring.radius"
+                    class="activity-radial-track">
+                  </circle>
+                  <circle
+                    cx="90"
+                    cy="90"
+                    [attr.r]="ring.radius"
+                    class="activity-radial-value"
+                    [attr.stroke]="ring.color"
+                    [attr.stroke-dasharray]="ring.circumference"
+                    [attr.stroke-dashoffset]="ring.dashOffset">
+                  </circle>
+                  }
+                </svg>
+                <div class="activity-radial-center">
+                  <strong>{{ getTotalRecentActivityCount() }}</strong>
+                  <span>events</span>
                 </div>
               </div>
-              }
+
+              <div class="activity-radial-legend">
+                @for (ring of getActivityRingData(); track ring.key) {
+                <div class="activity-radial-legend-item">
+                  <span class="activity-radial-dot" [style.backgroundColor]="ring.color"></span>
+                  <span>{{ ring.label }}</span>
+                  <strong>{{ ring.count }}</strong>
+                </div>
+                }
+              </div>
             </div>
 
             <div class="space-y-4 mt-5">
@@ -306,7 +320,9 @@
               <div class="activity-item">
                 <div class="flex items-center gap-3 p-3 rounded-lg">
                   <div class="activity-icon">
-                    <i class="uil uil-history text-xl"></i>
+                    <span class="barcode-circle" aria-hidden="true">
+                      <span class="barcode-lines"></span>
+                    </span>
                   </div>
                   <div class="flex-1">
                     <p class="text-sm font-medium text-gray-900">No recent platform activity</p>
@@ -319,7 +335,9 @@
               <div class="activity-item">
                 <div class="flex items-center gap-3 p-3 rounded-lg">
                   <div class="activity-icon">
-                    <i [class]="getRecentActivityIcon(activity.type) + ' text-xl'"></i>
+                    <span class="barcode-circle" aria-hidden="true">
+                      <span class="barcode-lines"></span>
+                    </span>
                   </div>
                   <div class="flex-1">
                     <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>

@@ -440,10 +440,7 @@ export class ManageBusinessesComponent implements OnInit {
     // Open a placeholder tab while still in the user gesture context,
     // then populate it after async work to avoid popup blockers.
     const openedWindow = window.open('', '_blank', 'noopener');
-    if (!openedWindow) {
-      this.toastService.error('Unable to open document. Please allow popups and try again.');
-      return;
-    }
+    const useSameTabFallback = !openedWindow;
 
     // Internal API links can require bearer auth. Fetch first, then open blob in a new tab.
     if (!hasProtocol || resolvedUrl.includes('/api/')) {
@@ -459,13 +456,22 @@ export class ManageBusinessesComponent implements OnInit {
 
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
-        openedWindow.location.href = objectUrl;
+        if (useSameTabFallback) {
+          window.location.assign(objectUrl);
+        } else {
+          openedWindow.location.href = objectUrl;
+        }
 
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
         return;
       } catch (error) {
         console.error('Error opening verified document via fetch:', error);
       }
+    }
+
+    if (useSameTabFallback) {
+      window.location.assign(resolvedUrl);
+      return;
     }
 
     openedWindow.location.href = resolvedUrl;

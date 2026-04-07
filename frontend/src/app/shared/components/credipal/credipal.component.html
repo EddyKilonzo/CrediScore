@@ -7,13 +7,14 @@
     [attr.aria-expanded]="isOpen"
     aria-label="Open CrediPal assistant"
   >
+    <span class="credipal-animal-bubble" aria-hidden="true">🦉</span>
     <i class="uil" [ngClass]="isOpen ? 'uil-times' : 'uil-comment-question'"></i>
   </button>
 
   <div class="credipal-panel" *ngIf="isOpen">
     <div class="credipal-header">
       <div class="credipal-header-copy">
-        <h4>CrediPal</h4>
+        <h4><span class="credipal-animal-inline" aria-hidden="true">🦉</span> CrediPal</h4>
         <p>Your site interaction guide</p>
       </div>
       <div class="credipal-header-actions">
@@ -30,6 +31,7 @@
 
     <div class="credipal-messages">
       <div *ngFor="let message of messages" class="credipal-message" [class.user]="message.role === 'user'">
+        <span *ngIf="message.role === 'bot'" class="credipal-bot-stamp" aria-hidden="true">🦉</span>
         {{ message.text }}
       </div>
       <div *ngIf="isTyping" class="credipal-typing">
@@ -55,9 +57,15 @@
         <i class="uil" [ngClass]="showQuickActions ? 'uil-angle-up' : 'uil-angle-down'"></i>
       </button>
       <div class="credipal-actions" *ngIf="showQuickActions">
-        <button type="button" (click)="goTo('/search')">Open Search</button>
-        <button type="button" (click)="goTo('/dashboard')">Open Dashboard</button>
-        <button type="button" (click)="goTo('/leaderboard')">Open Leaderboard</button>
+        <a
+          *ngFor="let item of quickNavigationLinks"
+          [routerLink]="item.path"
+          class="credipal-nav-link"
+          (click)="$event.preventDefault(); goTo(item.path)"
+        >
+          <span>{{ item.label }}</span>
+          <small>{{ item.path }} · {{ item.hint }}</small>
+        </a>
       </div>
     </div>
 
