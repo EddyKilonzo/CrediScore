@@ -84,7 +84,7 @@ export class LeaderboardComponent implements OnInit {
           name: u.name,
           avatar: u.avatar,
           reputation: u.reputation ?? 0,
-          reputationLevel: u.reputationLevel ?? this.getTierByScore(u.reputation ?? 0).name,
+          reputationLevel: this.getTierByScore(u.reputation ?? 0).name,
           reviewCount: u._count?.reviews ?? u.reviewCount ?? 0,
           verifiedReviews: u.verifiedReviews ?? 0,
         }));
