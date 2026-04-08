@@ -23,6 +23,7 @@ import {
   OAuthUser,
   CreateUserData,
 } from './interfaces/user.interface';
+import { normalizeEmail } from '../shared/utils/email-normalize';
 
 // Typed wrappers to satisfy strict lint rules
 const bcryptHash: (data: string, salt: number) => Promise<string> = (
@@ -45,8 +46,11 @@ class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByEmail(email: string): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    const normalized = normalizeEmail(email);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        email: { equals: normalized, mode: 'insensitive' },
+      },
     });
     return user as User | null;
   }
@@ -98,7 +102,7 @@ export class AuthService {
       // Create user with selected role
       const userData = {
         name: dto.name,
-        email: dto.email,
+        email: normalizeEmail(dto.email),
         password: hashedPassword,
         role: mappedRole,
         phone: dto.phone,
@@ -528,12 +532,11 @@ export class AuthService {
 
   async validateOAuthUser(oauthUser: OAuthUser): Promise<UserWithoutPassword> {
     try {
-      this.logger.log(`OAuth login attempt for email: ${oauthUser.email}`);
+      const oauthEmail = normalizeEmail(oauthUser.email);
+      this.logger.log(`OAuth login attempt for email: ${oauthEmail}`);
 
       // Check if user exists
-      let user = await this.prisma.user.findUnique({
-        where: { email: oauthUser.email },
-      });
+      let user = await this.users.findByEmail(oauthEmail);
 
       if (user) {
         // Build update payload for existing user
@@ -554,10 +557,10 @@ export class AuthService {
           updateData.role = UserRole.BUSINESS_OWNER;
         }
 
-        user = await this.prisma.user.update({
+        user = (await this.prisma.user.update({
           where: { id: (user as User).id },
           data: updateData,
-        });
+        })) as User;
       } else {
         // Map frontend role string to UserRole enum
         let userRole: UserRole = UserRole.CUSTOMER;
@@ -566,10 +569,10 @@ export class AuthService {
         }
 
         // Create new user
-        user = await this.prisma.user.create({
+        user = (await this.prisma.user.create({
           data: {
             name: oauthUser.name,
-            email: oauthUser.email,
+            email: oauthEmail,
             provider: oauthUser.provider,
             providerId: oauthUser.providerId,
             avatar: oauthUser.avatar,
@@ -577,7 +580,7 @@ export class AuthService {
             isActive: true,
             role: userRole,
           },
-        });
+        })) as User;
       }
 
       // Update last login
@@ -662,9 +665,7 @@ export class AuthService {
         `Resend verification code request for email: ${dto.email}`,
       );
 
-      const user = await this.prisma.user.findUnique({
-        where: { email: dto.email },
-      });
+      const user = await this.users.findByEmail(dto.email);
 
       if (!user) {
         throw new NotFoundException('User not found.');
@@ -677,7 +678,7 @@ export class AuthService {
       // Check if we can resend (rate limiting - max 3 attempts per hour)
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
       const countWhereClause = {
-        email: dto.email,
+        email: user.email,
         emailVerificationSentAt: {
           gt: oneHourAgo,
         },
@@ -744,10 +745,7 @@ export class AuthService {
    * Check if user email is verified before login
    */
   async validateEmailVerification(email: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { emailVerified: true },
-    });
+    const user = await this.users.findByEmail(email);
 
     if (!user) {
       throw new NotFoundException('User not found.');
