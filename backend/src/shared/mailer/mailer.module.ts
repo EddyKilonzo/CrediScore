@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { MailerModule as NestMailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
 import { join } from 'path';
 import { MailerService } from './mailer.service';
+
+const BLOCKED_SMTP_PORTS = new Set([25, 465, 587]);
 
 @Module({
   imports: [
@@ -11,6 +13,7 @@ import { MailerService } from './mailer.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
+        const logger = new Logger('MailerModule');
         const smtpHost =
           configService.get<string>('SMTP_HOST') ||
           configService.get<string>('MAIL_HOST') ||
@@ -40,6 +43,14 @@ import { MailerService } from './mailer.service';
             ? `${configService.get<string>('MAIL_FROM_NAME')} <${configService.get<string>('MAIL_FROM_ADDRESS')}>`
             : undefined) ||
           `CrediScore <${configService.get<string>('SENDER_EMAIL') || 'noreply@crediscore.com'}>`;
+
+        const brevoHttp = configService.get<string>('BREVO_API_KEY')?.trim();
+        if (!brevoHttp && BLOCKED_SMTP_PORTS.has(smtpPort)) {
+          logger.warn(
+            `Outbound SMTP on port ${smtpPort} is often blocked (e.g. Render free web services → ETIMEDOUT). ` +
+              'Set BREVO_API_KEY to send via Brevo\'s HTTPS API, or use SMTP port 2525 if your provider supports it.',
+          );
+        }
 
         return {
         transport: {
