@@ -190,6 +190,7 @@
         </div>
       </div>
 
+      <div class="trust-rating-columns">
       <div class="score-tabs-card">
         <div class="score-tabs">
           <button class="score-tab-btn" [class.active]="activeScoreTab === 'trust'" (click)="setScoreTab('trust')">
@@ -203,37 +204,41 @@
           </button>
         </div>
 
-        <div class="trust-score-card" *ngIf="activeScoreTab === 'trust'">
-          <div class="score-header">
-            <h3>Trust Score</h3>
-            <div class="grade-badge-large" [style.background-color]="getGradeColor(getBusinessGrade()) + '20'" [style.color]="getGradeColor(getBusinessGrade())">
-              <span class="grade-text">{{ getBusinessGrade() }}</span>
+        <div class="trust-score-card trust-score-layout" *ngIf="activeScoreTab === 'trust'">
+          <div class="trust-score-summary">
+            <div class="score-header">
+              <h3>Trust Score</h3>
+              <div class="grade-badge-large" [style.background-color]="getGradeColor(getBusinessGrade()) + '20'" [style.color]="getGradeColor(getBusinessGrade())">
+                <span class="grade-text">{{ getBusinessGrade() }}</span>
+              </div>
+            </div>
+            <div class="score-value">{{ getBusinessScore() }}%</div>
+            <div class="score-bar">
+              <div class="score-bar-fill" [style.width.%]="getBusinessScore()" [style.background]="'linear-gradient(90deg, ' + getGradeColor(getBusinessGrade()) + ', ' + getGradeColor(getBusinessGrade()) + 'CC)'"></div>
             </div>
           </div>
-          <div class="score-value">{{ getBusinessScore() }}%</div>
-          <div class="score-bar">
-            <div class="score-bar-fill" [style.width.%]="getBusinessScore()" [style.background]="'linear-gradient(90deg, ' + getGradeColor(getBusinessGrade()) + ', ' + getGradeColor(getBusinessGrade()) + 'CC)'"></div>
-          </div>
-          <div class="trust-explain-panel" *ngIf="getTrustExplanationFactors().length > 0">
-            <h4>Why this score?</h4>
-            <div class="trust-meta-copy">
-              <span>Confidence: {{ getTrustConfidence() }}%</span>
-              <span *ngIf="getTrustEventReason()">{{ getTrustEventReason() }}</span>
-            </div>
-            <p class="trust-trend-copy">{{ getTrustTrendCopy() }}</p>
-            <div class="factor-row" *ngFor="let factor of getTrustExplanationFactors()">
-              <span>{{ factor.label }} ({{ factor.weight }})</span>
-              <strong>{{ factor.contribution > 0 ? '+' : '' }}{{ factor.contribution | number:'1.0-1' }}</strong>
-            </div>
-            <div class="history-chart-wrap" *ngIf="trustScoreHistory.length > 1">
-              <svg viewBox="0 0 360 120" preserveAspectRatio="none" class="history-chart">
-                <polyline [attr.points]="getHistoryPointsForChart()" fill="none" stroke="#3E6A8A" stroke-width="2"></polyline>
-              </svg>
-              <div class="history-events">
-                <div class="history-event" *ngFor="let point of trustScoreHistory.slice(-5)">
-                  <span>{{ formatDate(point.createdAt) }}</span>
-                  <span>{{ point.score }} ({{ point.changeDelta > 0 ? '+' : '' }}{{ point.changeDelta }})</span>
-                  <small>{{ point.reason }}</small>
+          <div class="trust-score-explain-col" *ngIf="getTrustExplanationFactors().length > 0">
+            <div class="trust-explain-panel trust-explain-panel--split">
+              <h4>Why this score?</h4>
+              <div class="trust-meta-copy">
+                <span>Confidence: {{ getTrustConfidence() }}%</span>
+                <span *ngIf="getTrustEventReason()">{{ getTrustEventReason() }}</span>
+              </div>
+              <p class="trust-trend-copy">{{ getTrustTrendCopy() }}</p>
+              <div class="factor-row" *ngFor="let factor of getTrustExplanationFactors()">
+                <span>{{ factor.label }} ({{ factor.weight }})</span>
+                <strong>{{ factor.contribution > 0 ? '+' : '' }}{{ factor.contribution | number:'1.0-1' }}</strong>
+              </div>
+              <div class="history-chart-wrap" *ngIf="trustScoreHistory.length > 1">
+                <svg viewBox="0 0 360 120" preserveAspectRatio="none" class="history-chart">
+                  <polyline [attr.points]="getHistoryPointsForChart()" fill="none" stroke="#3E6A8A" stroke-width="2"></polyline>
+                </svg>
+                <div class="history-events">
+                  <div class="history-event" *ngFor="let point of trustScoreHistory.slice(-5)">
+                    <span>{{ formatDate(point.createdAt) }}</span>
+                    <span>{{ point.score }} ({{ point.changeDelta > 0 ? '+' : '' }}{{ point.changeDelta }})</span>
+                    <small>{{ point.reason }}</small>
+                  </div>
                 </div>
               </div>
             </div>
@@ -273,8 +278,26 @@
                  [style.background]="'linear-gradient(90deg, ' + getTierByScore(getBusinessLeadScore()).color + ', ' + getTierByScore(getBusinessLeadScore()).color + 'CC)'"></div>
           </div>
         </div>
+      </div>
 
-        <div class="tier-legend">
+      <div class="trust-rating-aside">
+        <div class="rating-card">
+          <div class="rating-header">
+            <h3>Customer Rating</h3>
+            <div class="star-rating-large">
+              <i
+                *ngFor="let i of [1,2,3,4,5]"
+                class="uil uil-star"
+                [class.star-filled]="i <= (averageRating || 0)"
+                [class.star-empty]="i > (averageRating || 0)"
+              ></i>
+            </div>
+          </div>
+          <div class="rating-value">{{ averageRating || 0 }}/5</div>
+          <div class="review-count-text">{{ totalReviews || 0 }} {{ (totalReviews || 0) === 1 ? 'review' : 'reviews' }}</div>
+        </div>
+
+        <div class="tier-legend tier-legend-aside">
           <div class="tier-pill" *ngFor="let tier of getReputationTiers()">
             <span class="tier-dot" [style.background]="tier.color"></span>
             <span>{{ tier.name }}</span>
@@ -282,21 +305,6 @@
           </div>
         </div>
       </div>
-
-      <div class="rating-card">
-        <div class="rating-header">
-          <h3>Customer Rating</h3>
-          <div class="star-rating-large">
-            <i
-              *ngFor="let i of [1,2,3,4,5]"
-              class="uil uil-star"
-              [class.star-filled]="i <= (averageRating || 0)"
-              [class.star-empty]="i > (averageRating || 0)"
-            ></i>
-          </div>
-        </div>
-        <div class="rating-value">{{ averageRating || 0 }}/5</div>
-        <div class="review-count-text">{{ totalReviews || 0 }} {{ (totalReviews || 0) === 1 ? 'review' : 'reviews' }}</div>
       </div>
     </div>
 
