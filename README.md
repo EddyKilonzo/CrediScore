@@ -10,7 +10,7 @@
 
 Logos are shown for quick recognition; they remain the property of their respective projects.
 
-<!-- Logo CDNs: Devicon, Simple Icons (jsDelivr), official/Wikimedia where noted -->
+<!-- Logo sources: Devicon, Simple Icons (jsDelivr), Iconify (logos), Unicons repo raw, flagcdn, Wikimedia where noted -->
 
 <p>
   <strong>Frontend</strong><br>
@@ -19,7 +19,7 @@ Logos are shown for quick recognition; they remain the property of their respect
   <a href="https://tailwindcss.com/" title="Tailwind CSS"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg" alt="Tailwind CSS" width="40" height="40"></a>&nbsp;
   <a href="https://developer.mozilla.org/en-US/docs/Web/SVG" title="SVG"><img src="https://www.w3.org/Icons/SVG/svg-logo-v.svg" alt="SVG" width="40" height="40"></a>&nbsp;
   <a href="https://leafletjs.com/" title="Leaflet"><img src="https://raw.githubusercontent.com/Leaflet/Leaflet/main/src/images/logo.svg" alt="Leaflet" width="40" height="40"></a>&nbsp;
-  <a href="https://iconscout.com/unicons" title="Unicons"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/iconscout.svg" alt="IconScout Unicons" width="40" height="40"></a>
+  <a href="https://iconscout.com/unicons" title="Unicons"><img src="https://raw.githubusercontent.com/Iconscout/unicons/v4.2.0/svg/line/icons.svg" alt="Unicons (IconScout)" width="40" height="40"></a>
 </p>
 <p>
   <strong>API &amp; runtime</strong><br>
@@ -31,7 +31,7 @@ Logos are shown for quick recognition; they remain the property of their respect
   <strong>Data &amp; jobs</strong><br>
   <a href="https://www.prisma.io/" title="Prisma"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/prisma/prisma-original.svg" alt="Prisma" width="40" height="40"></a>&nbsp;
   <a href="https://www.postgresql.org/" title="PostgreSQL"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg" alt="PostgreSQL" width="40" height="40"></a>&nbsp;
-  <a href="https://neon.tech/" title="Neon"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/neon.svg" alt="Neon" width="40" height="40"></a>&nbsp;
+  <a href="https://neon.tech/" title="Neon"><img src="https://api.iconify.design/logos:neon-icon.svg" alt="Neon" width="40" height="40"></a>&nbsp;
   <a href="https://redis.io/" title="Redis"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/redis/redis-original.svg" alt="Redis" width="40" height="40"></a>
 </p>
 <p>
@@ -47,7 +47,7 @@ Logos are shown for quick recognition; they remain the property of their respect
   <a href="https://cloud.google.com/vision" title="Google Cloud Vision"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/googlecloud/googlecloud-original.svg" alt="Google Cloud" width="40" height="40"></a>&nbsp;
   <a href="https://tesseract.projectnaptha.com/" title="Tesseract OCR"><img src="https://upload.wikimedia.org/wikipedia/commons/9/9f/Tesseract_OCR_logo.svg" alt="Tesseract" width="40" height="40"></a>&nbsp;
   <a href="https://www.anthropic.com/" title="Anthropic (optional)"><img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/anthropic.svg" alt="Anthropic" width="40" height="40"></a>&nbsp;
-  <a href="https://www.safaricom.co.ke/" title="M-Pesa (Safaricom)"><img src="https://upload.wikimedia.org/wikipedia/commons/9/9e/Safaricom_logo.svg" alt="M-Pesa / Safaricom" width="40" height="40"></a>&nbsp;
+  <a href="https://www.safaricom.co.ke/" title="M-Pesa (Safaricom)"><img src="https://flagcdn.com/w40/ke.png" alt="Kenya (M-Pesa / Safaricom)" width="40" height="40"></a>&nbsp;
   <a href="https://fastapi.tiangolo.com/" title="FastAPI"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/fastapi/fastapi-original.svg" alt="FastAPI" width="40" height="40"></a>&nbsp;
   <a href="https://www.python.org/" title="Python"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" alt="Python" width="40" height="40"></a>&nbsp;
   <a href="https://scikit-learn.org/" title="scikit-learn"><img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Scikit_learn_logo_small.svg" alt="scikit-learn" width="40" height="40"></a>
